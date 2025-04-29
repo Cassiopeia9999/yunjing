@@ -1,0 +1,30 @@
+{
+  "name": "thirdweb",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development vite",
+    "build": "cross-env NODE_ENV=production vite build",
+    "preview": "vite preview",
+    "local": "cross-env NODE_ENV=development vite"
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "dotenv": "^16.5.0",
+    "element-plus": "^2.9.9",
+    "js-cookie": "^3.0.5",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.1",
+    "vuex": "^4.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.4",
+    "@vitejs/plugin-vue": "^5.2.2",
+    "autoprefixer": "^10.4.21",
+    "cross-env": "^7.0.3",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "vite": "^6.3.1"
+  }
+}
