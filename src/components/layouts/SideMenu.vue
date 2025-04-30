@@ -7,7 +7,7 @@
           type="text"
           :icon="Grid"
           class="mr-4 text-blue-600"
-          :style="{ fontSize: '20px' }"
+          :style="{ fontSize: '24px'  ,color: '#2563eb'}"
       />
       <span class="font-semibold">菜单</span>
     </div>

@@ -1,13 +1,12 @@
 <template>
-  <header class="flex justify-between items-center px-4 py-2 bg-gray-100 shadow-md w-full h-14">
+  <header class="flex justify-between items-center px-4 py-1 bg-gray-100 shadow-md w-full h-12">
     <!-- 左侧按钮 -->
     <el-button
         @click="toggleMenu"
         type="text"
         :icon="Grid"
         circle
-        class="text-blue-600 text-xl"
-        :style="{ fontSize: '20px' }"
+        :style="{ fontSize: '20px'  ,color: '#2563eb'}"
     />
 
 
@@ -27,14 +26,14 @@
 
     <!-- 右侧按钮 -->
     <div class="flex space-x-2">
-      <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">请求</button>
+      <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-600">请求</button>
       <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">云效+DeepSeek</button>
       <el-button
           @click="confirmLogout"
           type="text"
           :icon="User"
           circle
-          class="text-blue-600 hover:text-red-800"
+          :style="{ fontSize: '24px', color: '#2563eb' }"
       />
     </div>
   </header>
