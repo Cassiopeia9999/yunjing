@@ -1,36 +1,31 @@
 <template>
-  <div class="login-container flex justify-center items-center min-h-screen bg-gray-100">
-    <div class="login-form p-8 bg-white rounded-xl shadow-lg max-w-lg w-full">
-      <!-- 登录二维码 -->
-      <div class="flex justify-center mb-6">
-        <img src="https://via.placeholder.com/150" alt="二维码" class="w-24 h-24" />
-      </div>
-
-      <!-- 登录表单 -->
-      <h2 class="text-2xl font-bold text-center mb-4">登录</h2>
+  <div class="flex justify-center items-center min-h-screen bg-gray-100">
+    <div class="bg-white p-8 rounded-xl shadow-lg max-w-lg w-full">
+      <!-- Login Form -->
+      <h2 class="text-2xl font-bold text-center mb-4">Login</h2>
       <el-form :model="form" ref="formRef" label-width="100px">
-        <!-- 用户名输入框 -->
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" placeholder="请输入用户名"></el-input>
+        <!-- Username input -->
+        <el-form-item label="Username" prop="username">
+          <el-input v-model="form.username" placeholder="Enter your username" class="w-full p-2 border rounded-md" />
         </el-form-item>
 
-        <!-- 密码输入框 -->
-        <el-form-item label="密码" prop="password">
-          <el-input v-model="form.password" type="password" placeholder="请输入密码"></el-input>
+        <!-- Password input -->
+        <el-form-item label="Password" prop="password">
+          <el-input v-model="form.password" type="password" placeholder="Enter your password" class="w-full p-2 border rounded-md" />
         </el-form-item>
 
-        <!-- 登录按钮 -->
+        <!-- Login button -->
         <el-form-item>
-          <el-button type="primary" class="w-full" @click="handleLogin">登录</el-button>
+          <el-button type="primary" class="w-full py-3 font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md" @click="handleLogin">Login</el-button>
         </el-form-item>
 
-        <!-- 记住我和忘记密码 -->
+        <!-- Remember me and forgot password links -->
         <el-form-item>
-          <div class="flex justify-between">
-            <label class="text-sm">
-              <input type="checkbox" class="mr-2" /> 记住我
+          <div class="flex justify-between text-sm text-gray-700">
+            <label>
+              <input type="checkbox" class="mr-2" /> Remember me
             </label>
-            <a href="#" class="text-sm text-blue-500">忘记密码?</a>
+            <a href="#" class="text-blue-500 hover:underline">Forgot password?</a>
           </div>
         </el-form-item>
       </el-form>
@@ -41,57 +36,46 @@
 <script setup>
 import { ref } from 'vue'
 import { ElForm, ElFormItem, ElInput, ElButton } from 'element-plus'
+import { useStore } from 'vuex' // 引入 Vuex store
+import { useRouter } from 'vue-router' // 引入 Vue Router
 
+// 表单模型
 const form = ref({
   username: '',
   password: ''
 })
 
-const handleLogin = () => {
+// 获取 Vuex store 和 Vue Router 实例
+const store = useStore()
+const router = useRouter()
+
+// 登录处理方法
+const handleLogin = async () => {
   if (!form.value.username || !form.value.password) {
-    alert('请输入用户名和密码')
-  } else {
-    alert(`欢迎，${form.value.username}`)
-    // 你可以在这里添加实际的登录逻辑，进行跳转等操作
+    alert('Please enter username and password')
+    return
+  }
+
+  const userInfo = {
+    username: form.value.username,
+    password: form.value.password,
+    type: 'username'  // 可以根据需要添加其他类型标识
+  }
+
+  try {
+    // 调用 Vuex 的 Login action
+    await store.dispatch('user/Login', userInfo)
+
+    // 登录成功后，可以进行跳转
+    alert(`Welcome, ${form.value.username}`)
+    router.push('/home')  // 登录成功后跳转到首页
+  } catch (error) {
+    alert('Login failed, please check your username and password')
+    console.error('Login error:', error)
   }
 }
 </script>
 
 <style scoped>
-.login-container {
-  background-color: #f4f4f4;
-}
-
-.login-form {
-  background-color: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-}
-
-.el-form-item {
-  margin-bottom: 20px;
-}
-
-.el-button {
-  padding: 0.8em;
-  font-size: 1.2em;
-}
-
-input[type="checkbox"] {
-  margin-right: 8px;
-}
-
-/* 针对大屏幕（PC）调整样式 */
-@media (min-width: 1024px) {
-  .login-form {
-    width: 40%;  /* 设置在PC端登录框的宽度 */
-  }
-}
-
-/* 响应式设计：在手机端调整 */
-@media (max-width: 1024px) {
-  .login-form {
-    width: 80%;  /* 在移动端调整为更宽的登录框 */
-  }
-}
+/* 使用 TailwindCSS 进行样式设置 */
 </style>

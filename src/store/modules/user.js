@@ -1,7 +1,7 @@
-import {login, logout, getInfo, socialLogin, socialLogin2, weChatSocialLogin} from '@/api/login'
-import { getToken, setToken, removeToken } from '@/utils/auth'
-import Cookies from 'js-cookie'
-import { setJwt } from '../../utils/auth'
+import { login, socialLogin2, weChatSocialLogin } from '@/api/login'; // 导入登录相关的接口函数
+import { getToken, setToken, removeToken } from '@/utils/auth'; // 自定义的 token 管理工具
+import Cookies from 'js-cookie'; // Cookie 管理库
+import { setJwt } from '@/utils/auth'; // 用于设置 JWT 的工具
 
 const user = {
   state: {
@@ -15,95 +15,75 @@ const user = {
 
   mutations: {
     SET_ID: (state, id) => {
-      state.id = id
+      state.id = id;
     },
     SET_TOKEN: (state, token) => {
-      state.token = token
+      state.token = token;
     },
     SET_NAME: (state, name) => {
-      state.name = name
+      state.name = name;
     },
     SET_AVATAR: (state, avatar) => {
-      state.avatar = avatar
+      state.avatar = avatar;
     },
     SET_ROLES: (state, roles) => {
-      state.roles = roles
+      state.roles = roles;
     },
     SET_PERMISSIONS: (state, permissions) => {
-      state.permissions = permissions
+      state.permissions = permissions;
     }
   },
 
   actions: {
     // 登录
-    Login({commit}, userInfo) {
-      // const username = userInfo.username.trim()
-      // const username = userInfo.username.trim()
-      // const password = userInfo.password
-      // const code = userInfo.code
-      // const uuid = userInfo.uuid
+    Login({ commit }, userInfo) {
       return new Promise((resolve, reject) => {
-        console.log(userInfo)
-        if (userInfo.type) {
+        // 判断是否为社交登录类型
+        if (userInfo.type === 'social') {
+          // 如果是社交登录，调用 socialLogin2 接口
           socialLogin2(userInfo).then(res => {
             res = res.data;
-            setToken(res.token)
-            setJwt(res.jwt)
-            commit('SET_TOKEN', res.token)
-            resolve()
+            setToken(res.token);  // 设置 token
+            setJwt(res.jwt);  // 设置 JWT
+            commit('SET_TOKEN', res.token);  // 提交 token 到 Vuex
+            resolve();
           }).catch(error => {
-            reject(error)
-          })
-        } else {
+            reject(error);
+          });
+        } else if(userInfo.type === 'username'){
+          // 常规登录，调用 login 接口
           login(userInfo).then(res => {
             res = res.data;
-            setToken(res.token)
-            setJwt(res.jwt)
-            commit('SET_TOKEN', res.token)
-            if(res.tenantId){Cookies.set('tenantId', res.tenantId);}
-            resolve()
+            setToken(res.token);  // 设置 token
+            setJwt(res.jwt);  // 设置 JWT
+            commit('SET_TOKEN', res.token);  // 提交 token 到 Vuex
+
+            // 如果有租户 ID，存储在 Cookies 中
+            if (res.tenantId) {
+              Cookies.set('tenantId', res.tenantId);
+            }
+
+            resolve();
           }).catch(error => {
-            reject(error)
-          })
+            reject(error);
+          });
         }
-
-      })
-    },
-
-    // 社交登录
-    SocialLogin({ commit }, userInfo) {
-      const code = userInfo.code
-      const state = userInfo.state
-      const type = userInfo.type
-      return new Promise((resolve, reject) => {
-        socialLogin(type, code, state).then(res => {
-          res = res.data;
-          setToken(res.token)
-          commit('SET_TOKEN', res.token);
-          if(res.tenantId){Cookies.set('tenantId', res.tenantId);}
-          resolve()
-        }).catch(error => {
-          reject(error)
-        })
-      })
+      });
     },
 
     // 微信公众号新登录逻辑
     weChatSocialLogin({ commit }, userInfo) {
-
       return new Promise((resolve, reject) => {
         weChatSocialLogin(userInfo).then(res => {
-          var result = res.data;
-          if (result.status=='LOGIN_OK') {
-            // 用户已注册且已关注，直接登录
-            setToken(result.token);
-            commit('SET_TOKEN', result.token);
+          const result = res.data;
+          if (result.status === 'LOGIN_OK') {
+            setToken(result.token);  // 设置 token
+            commit('SET_TOKEN', result.token);  // 提交 token 到 Vuex
             if (res.tenantId) {
               Cookies.set('tenantId', result.tenantId);
             }
           }
           resolve(res);
-
         }).catch(error => {
           console.error("社交登录失败", error);
           reject(error);
@@ -111,32 +91,10 @@ const user = {
       });
     },
 
-
-
-    // 社交登录
-    SocialLogin2({ commit }, userInfo) {
-      const code = userInfo.code
-      const state = userInfo.state
-      const type = userInfo.type
-      const username = userInfo.username.trim()
-      const password = userInfo.password
-      return new Promise((resolve, reject) => {
-        socialLogin2(type, code, state, username, password).then(res => {
-          res = res.data;
-          setToken(res.token)
-          commit('SET_TOKEN', res.token)
-          resolve()
-        }).catch(error => {
-          reject(error)
-        })
-      })
-    },
-
     // 获取用户信息
     GetInfo({ commit, state }) {
       return new Promise((resolve, reject) => {
         getInfo(state.token).then(res => {
-          // 没有 data 数据，赋予个默认值
           if (!res) {
             res = {
               data: {
@@ -147,55 +105,55 @@ const user = {
                   userName: ''
                 }
               }
-            }
+            };
           }
 
-          res = res.data; // 读取 data 数据
+          res = res.data;  // 读取 data 数据
 
           const user = res.user;
           const id = user.id;
           Cookies.set('id', id);
           const avatar = user.avatar === "" ? require("@/assets/images/profile.jpg") : user.avatar;
-          if (res.roles && res.roles.length > 0) { // 验证返回的roles是否是一个非空数组
-            commit('SET_ROLES', res.roles)
-            commit('SET_PERMISSIONS', res.permissions)
+          if (res.roles && res.roles.length > 0) {  // 验证返回的 roles 是否是非空数组
+            commit('SET_ROLES', res.roles);
+            commit('SET_PERMISSIONS', res.permissions);
           } else {
-            commit('SET_ROLES', ['ROLE_DEFAULT'])
+            commit('SET_ROLES', ['ROLE_DEFAULT']);
           }
-          commit('SET_ID', user.id)
-          commit('SET_NAME', user.nickname)
+          commit('SET_ID', user.id);
+          commit('SET_NAME', user.nickname);
           commit('SET_AVATAR', avatar);
-          resolve(res)
+          resolve(res);
         }).catch(error => {
-          reject(error)
-        })
-      })
+          reject(error);
+        });
+      });
     },
 
     // 退出系统
     LogOut({ commit, state }) {
       return new Promise((resolve, reject) => {
         logout(state.token).then(() => {
-          commit('SET_TOKEN', '')
-          commit('SET_ROLES', [])
-          commit('SET_PERMISSIONS', [])
-          removeToken()
-          resolve()
+          commit('SET_TOKEN', '');
+          commit('SET_ROLES', []);
+          commit('SET_PERMISSIONS', []);
+          removeToken();  // 删除 token
+          resolve();
         }).catch(error => {
-          reject(error)
-        })
-      })
+          reject(error);
+        });
+      });
     },
 
-    // 前端 登出
+    // 前端登出
     FedLogOut({ commit }) {
       return new Promise(resolve => {
-        commit('SET_TOKEN', '')
-        removeToken()
-        resolve()
-      })
+        commit('SET_TOKEN', '');
+        removeToken();
+        resolve();
+      });
     }
   }
 }
 
-export default user
+export default user;

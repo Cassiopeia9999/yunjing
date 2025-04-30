@@ -14,6 +14,9 @@
           <el-menu-item index="3">
             <router-link to="/dashboard">业务页面</router-link>
           </el-menu-item>
+          <el-menu-item index="4">
+            <router-link to="/dev/globalview">地图页面</router-link>
+          </el-menu-item>
         </el-menu>
       </div>
 
@@ -27,6 +30,9 @@
         </el-menu-item>
         <el-menu-item index="3">
           <router-link to="/dashboard">业务页面</router-link>
+        </el-menu-item>
+        <el-menu-item index="4">
+          <router-link to="/dev/globalview">地图页面</router-link>
         </el-menu-item>
       </el-menu>
 

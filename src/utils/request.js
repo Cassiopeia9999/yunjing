@@ -1,13 +1,12 @@
-import axios from 'axios'
-import { Notification, MessageBox, Message } from 'element-plus'
-import store from '@/store'
-import { getToken } from '@/utils/auth'
-import errorCode from '@/utils/errorCode'
-import Cookies from "js-cookie"
-import { useRouter } from 'vue-router'  // Vue 3 路由
-import { reactive } from 'vue'  // 使用 Vue 3 的 Composition API
+import axios from 'axios' // 导入 axios
+import { ElMessage, ElNotification, ElMessageBox as MessageBox } from 'element-plus' // 正确导入 Element Plus 的组件
+import store from '@/store' // Vuex store 导入
+import { getToken } from '@/utils/auth' // 自定义的身份认证工具
+import errorCode from '@/utils/errorCode' // 错误码工具
+import Cookies from 'js-cookie' // Cookie 管理库
+import { useRouter } from 'vue-router' // Vue 3 路由钩子
 
-// 创建axios实例
+// 创建 axios 实例
 const service = axios.create({
   baseURL: import.meta.env.VITE_APP_BASE_API + '/admin-api/', // 后端的基础路径
   timeout: 100000
@@ -145,25 +144,25 @@ service.interceptors.response.use(res => {
       })
     })
   } else if (code === 500) {
-    Message({
+    ElMessage({
       message: msg,
       type: 'error'
     })
     return Promise.reject(new Error(msg))
   } else if (code === 901) {
-    Message({
+    ElMessage({
       type: 'error',
       duration: 0,
       dangerouslyUseHTMLString: true,
-      message: '<div>演示模式，无法进行写操作</div>'
-          + '<div> &nbsp; </div>'
-          + '<div>参考 https://alidocs.dingtalk.com/i/p/r98znlY19PD4RmLx 教程</div>'
-          + '<div> &nbsp; </div>'
-          + '<div>30 分钟搭建本地环境</div>',
+      message: '<div>演示模式，无法进行写操作</div>' +
+          '<div> &nbsp; </div>' +
+          '<div>参考 https://alidocs.dingtalk.com/i/p/r98znlY19PD4RmLx 教程</div>' +
+          '<div> &nbsp; </div>' +
+          '<div>30 分钟搭建本地环境</div>',
     })
     return Promise.reject(new Error(msg))
   } else if (code !== 200) {
-    Notification.error({
+    ElNotification.error({
       title: msg
     })
     return Promise.reject(msg)
@@ -180,7 +179,7 @@ service.interceptors.response.use(res => {
   } else if (message.includes("Request failed with status code")) {
     message = "系统接口" + message.substr(message.length - 3) + "异常"
   }
-  Message({
+  ElMessage({
     message: message,
     type: 'error',
     duration: 5 * 1000
