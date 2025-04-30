@@ -6,7 +6,7 @@
         type="text"
         :icon="Grid"
         circle
-        :style="{ fontSize: '20px'  ,color: '#2563eb'}"
+        :style="{ fontSize: '24px'  ,color: '#2563eb'}"
     />
 
 

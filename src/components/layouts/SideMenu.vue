@@ -1,7 +1,7 @@
 <template>
   <div class="side-menu fixed top-0 left-0 h-full bg-gray-100 text-blue-600 z-50">
     <!-- 顶部按钮和名称 -->
-    <div class="menu-header flex items-center p-4 h-14 bg-gray-100 text-blue-600">
+    <div class="menu-header flex items-center p-4 h-12 bg-gray-100 text-blue-600">
       <el-button
           @click="toggleMenu"
           type="text"
