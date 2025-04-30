@@ -64,7 +64,7 @@ const handleLogin = async () => {
 
   try {
     // 调用 Vuex 的 Login action
-    await store.dispatch('user/Login', userInfo)
+    await store.dispatch('Login', userInfo)
 
     // 登录成功后，可以进行跳转
     alert(`Welcome, ${form.value.username}`)
