@@ -1,13 +1,13 @@
 <template>
-  <div class="side-menu fixed top-0 left-0 h-full bg-gray-100 text-blue-950 z-50">
+  <div class="side-menu fixed top-0 left-0 h-full bg-gray-100 text-blue-600 z-50">
     <!-- 顶部按钮和名称 -->
-    <div class="menu-header flex items-center p-4 h-14 bg-gray-100 text-blue-950">
+    <div class="menu-header flex items-center p-4 h-14 bg-gray-100 text-blue-600">
       <el-button
           @click="toggleMenu"
           type="text"
           :icon="Grid"
-          circle
-          class="mr-4"
+          class="mr-4 text-blue-600"
+          :style="{ fontSize: '20px' }"
       />
       <span class="font-semibold">菜单</span>
     </div>
@@ -18,9 +18,9 @@
           v-for="(item, index) in menuItems"
           :key="index"
           :index="index.toString()"
-          class="p-2 hover:bg-gray-100 text-blue-400"
+          class="p-2 hover:bg-gray-100 text-blue-600"
       >
-        <router-link :to="item.link" class="text-blue-400">
+        <router-link :to="item.link" class="text-blue-600">
           <el-icon :size="16" class="mr-2">
             <component :is="item.icon" />
           </el-icon>
@@ -66,9 +66,9 @@ const menuItems = [
 <style scoped>
 .side-menu {
   width: 286px;
-  transition: transform 0.3s ease-in-out;
+  transition: transform 2s ease-in-out;
   z-index: 50;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 22px rgba(0, 0, 0, 0.55);
   border-radius: 2px;
 }
 </style>

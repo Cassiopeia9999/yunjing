@@ -66,8 +66,6 @@ const handleLogin = async () => {
     // 调用 Vuex 的 Login action
     await store.dispatch('Login', userInfo)
 
-    // 登录成功后，可以进行跳转
-    alert(`Welcome, ${form.value.username}`)
     router.push('/inner/dashboard')  // 登录成功后跳转到首页
   } catch (error) {
     alert('Login failed, please check your username and password')

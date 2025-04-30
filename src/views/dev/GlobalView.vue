@@ -19,7 +19,7 @@ onMounted(() => {
   myChart.showLoading()
 
   // 使用 fetch 加载本地 china.json 地图数据
-  fetch('/assets/maps/china.json')  // 从 public 目录加载文件
+  fetch('/assets/maps/china-province.json')  // 从 public 目录加载文件
       .then((response) => response.json())
       .then((chinaJson) => {
         // 注册中国地图数据
