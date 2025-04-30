@@ -68,7 +68,7 @@ const handleLogin = async () => {
 
     // 登录成功后，可以进行跳转
     alert(`Welcome, ${form.value.username}`)
-    router.push('/home')  // 登录成功后跳转到首页
+    router.push('/inner/dashboard')  // 登录成功后跳转到首页
   } catch (error) {
     alert('Login failed, please check your username and password')
     console.error('Login error:', error)

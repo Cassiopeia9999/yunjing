@@ -4,7 +4,6 @@ import store from '@/store' // Vuex store 导入
 import { getToken } from '@/utils/auth' // 自定义的身份认证工具
 import errorCode from '@/utils/errorCode' // 错误码工具
 import Cookies from 'js-cookie' // Cookie 管理库
-import { useRouter } from 'vue-router' // Vue 3 路由钩子
 
 // 创建 axios 实例
 const service = axios.create({
@@ -76,12 +75,11 @@ service.interceptors.request.use(config => {
     });
 
     if (!isWhiteListed) {
-      const router = useRouter();  // 获取 Vue 3 路由
       if (isMobile()) {
         startWeChatLogin(); // 确保该方法内部无异常
       } else {
         const redirect = encodeURIComponent((window.location.pathname || '') + (window.location.search || ''));
-        router.push(`/login?redirect=${redirect}`);
+        window.location.href = `/login?redirect=${redirect}`;
       }
       return Promise.resolve({
         status: 302,
