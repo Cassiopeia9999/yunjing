@@ -51,7 +51,7 @@ import Navbar from './components/Navbar.vue'
 /* 设置最大宽度并居中对齐 */
 @media (min-width: 1024px) {
   #app {
-    max-width: 1800px;  /* 限制最大宽度 */
+    max-width: 2000px;  /* 限制最大宽度 */
     margin: 0 auto;  /* 居中显示 */
     padding: 5px;  /* 增加内边距 */
   }
