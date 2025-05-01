@@ -22,7 +22,7 @@
     </div>
   </el-header>
 
-  <main class="flex-1 w-full h-full p-6 bg-gray-50">
+  <main class="flex-1 w-full h-full p-0 bg-gray-50">
     <div class="w-full h-full flex flex-col justify-start">
       <!-- 动态路由显示区域 -->
       <router-view class="flex-1 w-full h-full" />

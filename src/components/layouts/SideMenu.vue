@@ -19,13 +19,12 @@
           :key="index"
           :index="index.toString()"
           class="p-2 hover:bg-gray-100 text-blue-600"
+          @click="handleMenuClick(item)"
       >
-        <router-link :to="item.link" class="text-blue-600">
-          <el-icon :size="16" class="mr-2">
-            <component :is="item.icon" />
-          </el-icon>
-          {{ item.name }}
-        </router-link>
+        <el-icon :size="16" class="mr-2">
+          <component :is="item.icon" />
+        </el-icon>
+        <span>{{ item.name }}</span>
       </el-menu-item>
     </el-menu>
   </div>
@@ -43,24 +42,46 @@ const toggleMenu = () => {
   emit('toggle-menu');
 };
 
-// 菜单配置数据
+import { useRouter } from 'vue-router'
+import { getToken, getTenantId } from '@/utils/auth'
+
+const router = useRouter()
+
+const handleMenuClick = (item) => {
+  if (item.external) {
+    const token = getToken()
+    const tenantId = getTenantId()
+    const url = `${item.link}?token=${encodeURIComponent(token)}&tenant-id=${encodeURIComponent(tenantId)}`
+    window.open(url, '_blank')
+  } else {
+    router.push(item.link)
+  }
+}
 const menuItems = [
   {
     name: '工作台',
-    icon: 'Menu', // 图标组件名称
-    link: '/inner/dashboard',
+    icon: 'Menu',
+    link: '/inner/dashboard'
   },
   {
     name: '全球视图',
-    icon: 'ChromeFilled', // 图标组件名称
-    link: '/inner/globalview',
+    icon: 'ChromeFilled',
+    link: '/inner/globalview'
   },
   {
-    name: '设置',
-    icon: 'Setting', // 图标组件名称
-    link: '/inner/settings',
+    name: '数据后台',
+    icon: 'Setting',
+    link: 'https://dev.xlingdata.com/index/workbench',
+    external: true  // 标记为新窗口跳转
   },
-];
+  {
+    name: '生产环节',
+    icon: 'Setting',
+    link: 'https://dev.xlingdata.com/management/lowcode/dynamicInfo/7799',
+    external: true  // 标记为新窗口跳转
+  }
+]
+
 </script>
 
 <style scoped>

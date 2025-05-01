@@ -29,7 +29,9 @@
 /* 在移动端适配 */
 @media (max-width: 1024px) {
   #app {
-    padding: 10px;  /* 在移动端减小内边距 */
+    background-color: #f5f5f5;
+
+    padding: 0px;  /* 在移动端减小内边距 */
   }
 }
 </style>

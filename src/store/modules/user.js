@@ -1,5 +1,5 @@
 import {login, logout, socialLogin2, weChatSocialLogin} from '@/api/login'; // 导入登录相关的接口函数
-import { getToken, setToken, removeToken } from '@/utils/auth'; // 自定义的 token 管理工具
+import {getToken, setToken, removeToken, setTenantId, removeTenantId} from '@/utils/auth'; // 自定义的 token 管理工具
 import Cookies from 'js-cookie'; // Cookie 管理库
 import { setJwt } from '@/utils/auth'; // 用于设置 JWT 的工具
 
@@ -61,7 +61,7 @@ const user = {
 
             // 如果有租户 ID，存储在 Cookies 中
             if (res.tenantId) {
-              Cookies.set('tenantId', res.tenantId);
+              setTenantId(res.tenantId)
             }
 
             resolve();
@@ -81,7 +81,7 @@ const user = {
             setToken(result.token);  // 设置 token
             commit('SET_TOKEN', result.token);  // 提交 token 到 Vuex
             if (res.tenantId) {
-              Cookies.set('tenantId', result.tenantId);
+              setTenantId(res.tenantId)
             }
           }
           resolve(res);
@@ -141,6 +141,7 @@ const user = {
           localStorage.removeItem('isLoggedIn');
 
           removeToken();  // 删除 token
+          removeTenantId()
           resolve();
         }).catch(error => {
           reject(error);
@@ -153,6 +154,7 @@ const user = {
       return new Promise(resolve => {
         commit('SET_TOKEN', '');
         removeToken();
+
         resolve();
       });
     }

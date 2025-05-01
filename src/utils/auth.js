@@ -2,28 +2,49 @@ import Cookies from 'js-cookie'
 
 const TokenKey = 'Admin-Token'
 const JwtKey = 'Admin-Jwt'
+const TenantKey = 'tenantId'
 
+// token
 export function getToken() {
-  return Cookies.get(TokenKey)
+  return Cookies.get(TokenKey) || localStorage.getItem(TokenKey)
 }
 
 export function setToken(token) {
-  return Cookies.set(TokenKey, token)
+  Cookies.set(TokenKey, token)
+  localStorage.setItem(TokenKey, token)
 }
 
 export function removeToken() {
-  return Cookies.remove(TokenKey)
+  Cookies.remove(TokenKey)
+  localStorage.removeItem(TokenKey)
 }
 
-
+// jwt
 export function getJwt() {
-  return Cookies.get(JwtKey)
+  return Cookies.get(JwtKey) || localStorage.getItem(JwtKey)
 }
 
 export function setJwt(token) {
-  return Cookies.set(JwtKey, token)
+  Cookies.set(JwtKey, token)
+  localStorage.setItem(JwtKey, token)
 }
 
 export function removeJwt() {
-  return Cookies.remove(JwtKey)
+  Cookies.remove(JwtKey)
+  localStorage.removeItem(JwtKey)
+}
+
+// tenantId
+export function getTenantId() {
+  return Cookies.get(TenantKey) || localStorage.getItem(TenantKey)
+}
+
+export function setTenantId(tenantId) {
+  Cookies.set(TenantKey, tenantId)
+  localStorage.setItem(TenantKey, tenantId)
+}
+
+export function removeTenantId() {
+  Cookies.remove(TenantKey)
+  localStorage.removeItem(TenantKey)
 }

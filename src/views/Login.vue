@@ -1,28 +1,39 @@
 <template>
-  <div class="flex justify-center items-center min-h-screen bg-gray-100">
-    <div class="bg-white p-8 rounded-xl shadow-lg max-w-lg w-full">
+  <div class="flex justify-center items-center min-h-screen m-0 p-0 bg-gray-200">
+    <div class="bg-white p-8 rounded-xl shadow-lg max-w-lg w-full absolute top-60 right-60 transform translate-x-10 translate-y-10">
       <!-- Login Form -->
-      <h2 class="text-2xl font-bold text-center mb-4">Login</h2>
-      <el-form :model="form" ref="formRef" label-width="100px">
+      <h2 class="text-2xl font-bold text-center mb-6">Login</h2>
+      <el-form :model="form" ref="formRef" label-width="80px" class="space-y-4">
         <!-- Username input -->
-        <el-form-item label="Username" prop="username">
-          <el-input v-model="form.username" placeholder="Enter your username" class="w-full p-2 border rounded-md" />
+        <el-form-item label="用户名" prop="username" class="flex items-center">
+          <el-input
+              v-model="form.username"
+              placeholder="请输入用户名"
+           />
         </el-form-item>
 
         <!-- Password input -->
-        <el-form-item label="Password" prop="password">
-          <el-input v-model="form.password" type="password" placeholder="Enter your password" class="w-full p-2 border rounded-md" />
+        <el-form-item label="密码" prop="password" class="flex items-center">
+          <el-input
+              v-model="form.password"
+              type="password"
+              placeholder="请输入密码"
+           />
         </el-form-item>
 
         <!-- Login button -->
         <el-form-item>
-          <el-button type="primary" class="w-full py-3 font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md" @click="handleLogin">Login</el-button>
+          <el-button
+              type="primary"
+              class="w-full py-3 font-medium text-white bg-blue-500 hover:bg-blue-600 rounded"
+              @click="handleLogin"
+          >Login</el-button>
         </el-form-item>
 
         <!-- Remember me and forgot password links -->
         <el-form-item>
-          <div class="flex justify-between text-sm text-gray-700">
-            <label>
+          <div class="flex justify-between text-sm text-gray-700 w-full">
+            <label class="flex items-center">
               <input type="checkbox" class="mr-2" /> Remember me
             </label>
             <a href="#" class="text-blue-500 hover:underline">Forgot password?</a>
@@ -75,5 +86,5 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
-/* 使用 TailwindCSS 进行样式设置 */
+
 </style>

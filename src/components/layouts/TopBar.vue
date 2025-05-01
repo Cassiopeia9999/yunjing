@@ -12,14 +12,14 @@
 
     <!-- 应用名称 -->
     <div class="text-xl font-semibold text-gray-800">
-      云效 工作台
+      故障诊断工作台
     </div>
 
     <!-- 搜索框 -->
     <div class="flex items-center">
       <input
           type="text"
-          placeholder="在 云效 中搜索"
+          placeholder="在 故障 中搜索"
           class="p-2 rounded-md border border-gray-300 w-64"
       />
     </div>
