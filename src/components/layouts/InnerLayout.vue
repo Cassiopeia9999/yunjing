@@ -1,18 +1,22 @@
 <template>
-  <div class="flex h-screen w-full">
-    <!-- 左侧菜单栏 -->
-    <SideMenu v-if="isMenuVisible"  @toggle-menu="toggleMenu" />
-    <!-- 主内容区域 -->
-    <div class="flex flex-col w-full">
-      <!-- 顶部信息栏 -->
+  <div class="relative h-screen w-full">
+    <!-- 菜单栏（fixed 占位） -->
+    <SideMenu
+        v-if="isMenuVisible"
+        class="fixed top-0 left-0 h-full w-[286px] z-50"
+        @toggle-menu="toggleMenu"
+    />
+
+    <!-- 主内容区域（动态 margin）-->
+    <div :class="['flex flex-col h-full transition-all duration-300', isMenuVisible ? 'ml-[286px]' : 'ml-0']">
       <TopBar @toggle-menu="toggleMenu" />
-      <!-- 内容区域 -->
-      <main class="flex-1 p-4 overflow-auto">
-        <router-view />  <!-- 子路由的视图会在这里渲染 -->
+      <main class="flex-1 p-1 overflow-auto">
+        <router-view />
       </main>
     </div>
   </div>
 </template>
+
 
 <script setup>
 import { ref } from 'vue';

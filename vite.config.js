@@ -28,8 +28,8 @@ export default defineConfig(({ mode }) => {
     server: {
       port: env.VITE_APP_PORT || 3000,  // 使用 VITE_APP_PORT 环境变量
       proxy: {
-        '/api': {
-          target: env.VITE_APP_BACKEND_URL,  // 使用 VITE_APP_BACKEND_URL 环境变量
+        '/admin-api': {
+          target: env.VITE_APP_BASE_API,  // 使用 VITE_APP_BACKEND_URL 环境变量
           changeOrigin: true,
           secure: false,
         },

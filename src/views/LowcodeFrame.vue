@@ -1,6 +1,6 @@
 <template>
   <!-- 外层容器减去顶部高度 -->
-  <div class="w-full overflow-hidden h-[calc(100vh-80px)]">
+  <div class="w-full overflow-hidden h-[calc(100vh-60px)] p-0 m-0">
     <iframe
         id="xling-iframe"
         class="w-full border-none"
@@ -20,8 +20,8 @@ const route = useRoute()
 const token = getToken()
 const tenantId = getTenantId()
 
-const basePrefix = import.meta.env.VITE_IFRAME_BASE_URL || 'https://dev.xlingdata.com'
-
+const basePrefix = import.meta.env.VITE_IFRAME_BASE_URL || 'https://platform.xlingdata.com'
+console.log("VITE_IFRAME_BASE_URL : "+ import.meta.env.VITE_IFRAME_BASE_URL)
 // 构造完整 iframe URL
 const iframeFullUrl = computed(() => {
   const rawPath = route.query.url || '/'

@@ -1,5 +1,6 @@
+<!-- SideMenu.vue -->
 <template>
-  <div class="side-menu fixed top-0 left-0 h-full bg-gray-100 text-blue-600 z-50">
+  <div class="side-menu w-[286px] h-full bg-gray-100 text-blue-600 shrink-0">
     <!-- 顶部按钮和名称 -->
     <div class="menu-header flex items-center p-4 h-12 bg-gray-100 text-blue-600">
       <el-button
@@ -7,7 +8,7 @@
           type="text"
           :icon="Grid"
           class="mr-4 text-blue-600"
-          :style="{ fontSize: '24px'  ,color: '#2563eb'}"
+          :style="{ fontSize: '24px', color: '#2563eb' }"
       />
       <span class="font-semibold">菜单</span>
     </div>
@@ -29,6 +30,7 @@
     </el-menu>
   </div>
 </template>
+
 
 <script setup>
 import { defineEmits } from 'vue';
