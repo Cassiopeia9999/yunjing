@@ -46,17 +46,34 @@ import { useRouter } from 'vue-router'
 import { getToken, getTenantId } from '@/utils/auth'
 
 const router = useRouter()
+const BASE_EXTERNAL_URL = import.meta.env.VITE_LOWCODE_BASE_URL || 'https://dev.xlingdata.com'
 
 const handleMenuClick = (item) => {
+  const token = getToken()
+  const tenantId = getTenantId()
+
+  // ✅ 构造带 token 的完整 URL
+  const fullUrl = `${BASE_EXTERNAL_URL}${item.link}?token=${encodeURIComponent(token)}&tenant-id=${encodeURIComponent(tenantId)}`
+
   if (item.external) {
-    const token = getToken()
-    const tenantId = getTenantId()
-    const url = `${item.link}?token=${encodeURIComponent(token)}&tenant-id=${encodeURIComponent(tenantId)}`
-    window.open(url, '_blank')
+    if (item.openInFrame) {
+      // ✅ 内嵌 iframe 打开
+      router.push({
+        path: '/inner/lowcodeframe',
+        query: {
+          url: item.link
+        }
+      })
+    } else {
+      // ✅ 新窗口打开
+      window.open(fullUrl, '_blank')
+    }
   } else {
+    // ✅ 内部路由跳转
     router.push(item.link)
   }
 }
+
 const menuItems = [
   {
     name: '工作台',
@@ -69,18 +86,20 @@ const menuItems = [
     link: '/inner/globalview'
   },
   {
-    name: '数据后台',
+    name: '数据后台（新窗口）',
     icon: 'Setting',
-    link: 'https://dev.xlingdata.com/index/workbench',
-    external: true  // 标记为新窗口跳转
+    link: '/index/workbench',
+    external: true
   },
   {
-    name: '生产环节',
+    name: '生产环节（嵌入页）',
     icon: 'Setting',
-    link: 'https://dev.xlingdata.com/management/lowcode/dynamicInfo/7799',
-    external: true  // 标记为新窗口跳转
+    link: '/lowcode/dynamicInfo/index/7784',
+    external: true,
+    openInFrame: true
   }
 ]
+
 
 </script>
 

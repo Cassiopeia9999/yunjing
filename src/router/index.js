@@ -5,7 +5,7 @@ import Home from '@/views/Home.vue';
 import Login from '@/views/Login.vue';
 import Dashboard from '@/views/Dashboard.vue';
 import GlobalView from '@/views/dev/GlobalView.vue';
-import LowcodePlatform from "@/views/LowcodePlatform.vue";
+import LowcodeFrame from "@/views/LowcodeFrame.vue";
 
 const routes = [
     {
@@ -45,9 +45,9 @@ const routes = [
                 meta: { requiresAuth: true }
             },
             {
-                path: 'lowcodeplatform',
-                name: 'LowcodePlatform',
-                component: LowcodePlatform,
+                path: 'Lowcodeframe',
+                name: 'LowcodeFrame',
+                component: LowcodeFrame,
                 meta: { requiresAuth: true },
              }
         ]
