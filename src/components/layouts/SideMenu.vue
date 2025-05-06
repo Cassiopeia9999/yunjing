@@ -44,9 +44,12 @@ const toggleMenu = () => {
 
 import { useRouter } from 'vue-router'
 import { getToken, getTenantId } from '@/utils/auth'
+import {FORM_ID_PRODUCTION_7784, FORM_ID_PRODUCTION_7800} from "@/api/form_constant.js";
 
 const router = useRouter()
 const BASE_EXTERNAL_URL = import.meta.env.VITE_LOWCODE_BASE_URL || 'https://dev.xlingdata.com'
+
+const buildLowcodeUrl = (formId) => `/lowcode/dynamicInfo/index/${formId}`;
 
 const handleMenuClick = (item) => {
   const token = getToken()
@@ -54,6 +57,7 @@ const handleMenuClick = (item) => {
 
   // ✅ 构造带 token 的完整 URL
   const fullUrl = `${BASE_EXTERNAL_URL}${item.link}?token=${encodeURIComponent(token)}&tenant-id=${encodeURIComponent(tenantId)}`
+
 
   if (item.external) {
     if (item.openInFrame) {
@@ -94,7 +98,14 @@ const menuItems = [
   {
     name: '生产环节（嵌入页）',
     icon: 'Setting',
-    link: '/lowcode/dynamicInfo/index/7784',
+    link: buildLowcodeUrl(FORM_ID_PRODUCTION_7784),
+    external: true,
+    openInFrame: true
+  },
+  {
+    name: '生产环节（嵌入页）',
+    icon: 'Setting',
+    link: buildLowcodeUrl(FORM_ID_PRODUCTION_7800),
     external: true,
     openInFrame: true
   }
