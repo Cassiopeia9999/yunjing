@@ -51,11 +51,9 @@ function onBaseChange(base) {
   deviceOptions.value = []
   pointOptions.value = []
 
-  fetchTableData(1, 1000, UNIT_FORM_ID, {
-    queryParamVOs: JSON.stringify([
-      { key: 'parent_site', value: base.name, queryType: 1 }
-    ])
-  }).then(res => {
+  fetchTableData(1, 1000, UNIT_FORM_ID, [
+      { key: 'parent_site', value: base.id, queryType: 1 }
+    ]).then(res => {
     unitOptions.value = res.data.list || []
   })
 }
@@ -66,12 +64,11 @@ function onUnitChange(unit) {
   deviceOptions.value = []
   pointOptions.value = []
 
-  fetchTableData(1, 1000, DEVICE_FORM_ID, {
-    queryParamVOs: JSON.stringify([
-      { key: 'parent_system', value: unit.system_name, queryType: 1 },
-      { key: 'parent_site', value: selectedBase.value.name, queryType: 1 }
-    ])
-  }).then(res => {
+  fetchTableData(1, 1000, DEVICE_FORM_ID, [
+      { key: 'parent_system', value: unit.id, queryType: 1 },
+      { key: 'parent_site', value: selectedBase.value.id, queryType: 1 }
+    ]
+  ).then(res => {
     deviceOptions.value = res.data.list || []
   })
 }
@@ -80,11 +77,9 @@ function onDeviceChange(device) {
   selectedPoint.value = null
   pointOptions.value = []
 
-  fetchTableData(1, 1000, POINT_FORM_ID, {
-    queryParamVOs: JSON.stringify([
-      { key: 'equipment_id', value: device.component_name, queryType: 1 }
-    ])
-  }).then(res => {
+  fetchTableData(1, 1000, POINT_FORM_ID, [
+      { key: 'equipment_id', value: device.id, queryType: 1 }
+    ]).then(res => {
     pointOptions.value = res.data.list || []
   })
 }
