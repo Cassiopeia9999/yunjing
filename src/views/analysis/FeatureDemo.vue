@@ -22,25 +22,59 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import * as echarts from 'echarts'
+import { ref, onMounted } from 'vue';
+import * as echarts from 'echarts';
 import PointSelector from "@/components/common/PointSelector.vue";
+import axios from 'axios';
 
-const showFilter = ref(true)
+const showFilter = ref(true);
 const toggleFilter = () => {
-  showFilter.value = !showFilter.value
-}
+  showFilter.value = !showFilter.value;
+};
 
 // 接收选中的测点 ID
 function onPointSelected(pointId) {
-  console.log('✅ 选中测点 ID:', pointId)
+  console.log('✅ 选中测点 ID:', pointId);
   // TODO: 加载特征数据并更新图表
 }
 
-const chartRef = ref(null)
+const chartRef = ref(null);
 
-onMounted(() => {
-  const chart = echarts.init(chartRef.value)
+// 模拟获取数据的函数
+const fetchData = async () => {
+  try {
+    // 这里可以添加一个标志来判断是否使用真实数据库
+    const useRealDatabase = false;
+    if (useRealDatabase) {
+      // 若使用真实数据库，发送请求到后端 API
+      const response = await axios.get('/api/data');
+      return response.data;
+    } else {
+      // 若不使用真实数据库，返回预设默认数据
+      return [
+        { date: 'Mon', highest: 10, lowest: 1 },
+        { date: 'Tue', highest: 11, lowest: -2 },
+        { date: 'Wed', highest: 13, lowest: 2 },
+        { date: 'Thu', highest: 19, lowest: 5 },
+        { date: 'Fri', highest: 12, lowest: 3 },
+        { date: 'Sat', highest: 12, lowest: 2 },
+        { date: 'Sun', highest: 9, lowest: 0 }
+      ];
+    }
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    return [];
+  }
+};
+
+onMounted(async () => {
+  const chart = echarts.init(chartRef.value);
+
+  const data = await fetchData();
+
+  const xAxisData = data.map(item => item.date);
+  const highestData = data.map(item => item.highest);
+  const lowestData = data.map(item => item.lowest);
 
   const option = {
     title: {
@@ -63,7 +97,7 @@ onMounted(() => {
     xAxis: {
       type: 'category',
       boundaryGap: false,
-      data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      data: xAxisData
     },
     yAxis: {
       type: 'value',
@@ -73,7 +107,7 @@ onMounted(() => {
       {
         name: 'Highest',
         type: 'line',
-        data: [10, 11, 13, 11, 12, 12, 9],
+        data: highestData,
         markPoint: {
           data: [{ type: 'max', name: 'Max' }, { type: 'min', name: 'Min' }]
         },
@@ -84,9 +118,9 @@ onMounted(() => {
       {
         name: 'Lowest',
         type: 'line',
-        data: [1, -2, 2, 5, 3, 2, 0],
+        data: lowestData,
         markPoint: {
-          data: [{ name: '周最低', value: -2, xAxis: 1, yAxis: -1.5 }]
+          data: [{ name: '周最低', value: Math.min(...lowestData), xAxis: lowestData.indexOf(Math.min(...lowestData)), yAxis: Math.min(...lowestData) - 1.5 }]
         },
         markLine: {
           data: [
@@ -104,8 +138,8 @@ onMounted(() => {
         }
       }
     ]
-  }
+  };
 
-  chart.setOption(option)
-})
+  chart.setOption(option);
+});
 </script>
