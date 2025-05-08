@@ -6,6 +6,7 @@ import Login from '@/views/Login.vue';
 import Dashboard from '@/views/Dashboard.vue';
 import GlobalView from '@/views/dev/GlobalView.vue';
 import LowcodeFrame from "@/views/LowcodeFrame.vue";
+import FeatureDemo from "@/views/analysis/FeatureDemo.vue";
 
 const routes = [
     {
@@ -50,6 +51,13 @@ const routes = [
                 component: LowcodeFrame,
                 meta: { requiresAuth: true },
              }
+            ,
+            {
+                path: 'featuredemo',
+                name: 'featuredemo',
+                component: FeatureDemo,
+                meta: { requiresAuth: true },
+            }
         ]
     }
 ];

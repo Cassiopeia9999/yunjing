@@ -92,6 +92,11 @@ const menuItems = [
     link: '/inner/globalview'
   },
   {
+    name: '特征分析',
+    icon: 'ChromeFilled',
+    link: '/inner/featuredemo'
+  },
+  {
     name: '数据后台（新窗口）',
     icon: 'Setting',
     link: '/index/workbench',
