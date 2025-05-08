@@ -77,20 +77,21 @@ onMounted(() => {
               {
                 type: 'scatter',
                 coordinateSystem: 'geo',
-                data: locations.map((item) => ({
+                symbol: 'pin',             // ✅ 内置图形：pin
+                symbolSize: 40,
+                data: locations.map(item => ({
                   name: item.name,
-                  value: [item.longitude, item.latitude, item.value], // 经纬度和数值
+                  value: [item.longitude, item.latitude, item.value]
                 })),
-                symbol: 'image://icons/marker-icon.svg', // 使用图标文件作为标记
-                symbolSize: 30, // 图标大小
+                itemStyle: {
+                  color: '#e74c3c'
+                },
                 label: {
                   show: true,
+                  formatter: '{b}',
                   color: '#fff',
-                  fontSize: 12,
-                },
-                itemStyle: {
-                  color: 'transparent',  // 图标颜色透明，因为我们已经设置了自定义图标
-                },
+                  fontSize: 12
+                }
               }
             ]
           }

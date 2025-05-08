@@ -24,7 +24,7 @@ import TopBar from '@/components/layouts/TopBar.vue';  // 顶部信息栏组件
 import SideMenu from '@/components/layouts/SideMenu.vue';  // 左侧菜单组件
 
 // 控制菜单显示与隐藏
-const isMenuVisible = ref(false);
+const isMenuVisible = ref(true);
 
 // 切换菜单显示与隐藏
 const toggleMenu = () => {
