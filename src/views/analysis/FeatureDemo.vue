@@ -10,7 +10,7 @@
       </div>
       <div v-show="showFilter" class="mt-4">
         <!-- 替换为我们封装好的选择组件 -->
-        <PointSelector @point-selected="onPointSelected" />
+        <PointSelector @points-selected="handleSelectedPoints" />
       </div>
     </el-card>
 
@@ -32,10 +32,11 @@ const toggleFilter = () => {
 }
 
 // 接收选中的测点 ID
-function onPointSelected(pointId) {
-  console.log('✅ 选中测点 ID:', pointId)
-  // TODO: 加载特征数据并更新图表
+function handleSelectedPoints(selectedPoints) {
+  console.log("✅ 已选测点对象：", selectedPoints)
+  // selectedPoints 是包含 id / point_name 等信息的数组
 }
+
 
 const chartRef = ref(null)
 
