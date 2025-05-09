@@ -40,11 +40,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import {ref, onMounted, onUnmounted} from 'vue'
 import * as echarts from 'echarts'
 import PointSelector from '@/components/common/PointSelector.vue'
-import { fetchTableData } from '@/api/querydata.js'
-import { FEATURE_TYPE_FORM_ID, FEATURE_DATA_FORM_ID } from '@/api/form_constant.js'
+import {fetchTableData} from '@/api/querydata.js'
+import {FEATURE_TYPE_FORM_ID, FEATURE_DATA_FORM_ID} from '@/api/form_constant.js'
 
 // 控制折叠
 const showFilter = ref(true)
@@ -62,14 +62,18 @@ let chart = null
 // 初始化图表
 onMounted(() => {
   chart = echarts.init(chartRef.value)
-})
 
-// 加载特征类型下拉选项
-fetchTableData(1, 1000, FEATURE_TYPE_FORM_ID).then((res) => {
-  featureTypeOptions.value = res.data.list || []
-  if (featureTypeOptions.value.length > 0) {
-    selectedFeatureType.value = featureTypeOptions.value[0].id
-  }
+  // 加载特征类型下拉选项
+  fetchTableData(1, 1000, FEATURE_TYPE_FORM_ID)
+      .then((res) => {
+        featureTypeOptions.value = res.data.list || []
+        if (featureTypeOptions.value.length > 0) {
+          selectedFeatureType.value = featureTypeOptions.value[0].id
+        }
+      })
+      .catch((error) => {
+        console.error('加载特征类型选项失败:', error)
+      })
 })
 
 // 当测点发生变化时触发
@@ -97,44 +101,80 @@ async function loadFeatureData() {
     }
   ]
 
-  const res = await fetchTableData(1, 1000, FEATURE_DATA_FORM_ID, queryParams)
-  const data = res.data.list || []
+  try {
+    const res = await fetchTableData(1, 1000, FEATURE_DATA_FORM_ID, queryParams)
+    const data = res.data.list || []
 
-  // 提取所有时间戳并排序
-  const timestamps = [...new Set(data.map((d) => d.cur_timestamp))].sort()
+    // 提取所有时间戳并排序
+    const timestamps = [...new Set(data.map((d) => d.cur_timestamp))].sort()
 
-  // 每个测点一条线
-  const series = selectedPoints.value.map((point) => {
-    const pointData = data
-        .filter((d) => d.point_id.value === point.id)
-        .sort((a, b) => a.cur_timestamp.localeCompare(b.cur_timestamp))
+    // 每个测点一条线
+    const series = selectedPoints.value.map((point) => {
+      const pointData = data
+          .filter((d) => d.point_id.value === point.id)
+          .sort((a, b) => a.cur_timestamp.localeCompare(b.cur_timestamp))
 
-    return {
-      name: point.point_name,
-      type: 'line',
-      data: timestamps.map((ts) => {
-        const found = pointData.find((d) => d.cur_timestamp === ts)
-        return found ? found.feature_value : null
-      })
-    }
-  })
+      return {
+        name: point.point_name,
+        type: 'line',
+        data: timestamps.map((ts) => {
+          const found = pointData.find((d) => d.cur_timestamp === ts)
+          return found ? found.feature_value : null
+        })
+      }
+    })
 
-  // 更新图表
-  chart.setOption({
-    title: {
-      text: '特征趋势图'
-    },
-    tooltip: { trigger: 'axis' },
-    legend: {},
-    xAxis: {
-      type: 'category',
-      data: timestamps
-    },
-    yAxis: {
-      type: 'value',
-      axisLabel: { formatter: '{value}' }
-    },
-    series
-  })
+    // 更新图表
+    chart.setOption({
+      title: {
+        text: '特征趋势图'
+      },
+      tooltip: {trigger: 'axis'},
+      legend: {
+        data: selectedPoints.value.map((point) => point.point_name)
+      },
+      xAxis: {
+        type: 'category',
+        data: timestamps
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: {formatter: '{value}'}
+      },
+      series,
+      dataZoom: [
+        {
+          show: true,
+          realtime: true,
+          start: 65,
+          end: 85
+        },
+        {
+          type: 'inside',
+          realtime: true,
+          start: 65,
+          end: 85
+        }
+      ],
+      toolbox: {
+        feature: {
+          dataZoom: {
+            yAxisIndex: 'none'
+          },
+          restore: {},
+          saveAsImage: {}
+        }
+      }
+    })
+  } catch (error) {
+    console.error('加载特征数据失败:', error)
+  }
 }
+
+// 组件销毁时销毁图表实例
+onUnmounted(() => {
+  if (chart) {
+    chart.dispose()
+  }
+})
 </script>
