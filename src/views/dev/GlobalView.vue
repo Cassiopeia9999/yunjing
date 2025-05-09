@@ -100,12 +100,17 @@ onMounted(() => {
               myChart.on('click', (params) => {
                 if (params.seriesType === 'scatter') {
                   const baseName = params.name
+                  const longitude = params.value[0]  // 获取经度
+                  const latitude = params.value[1]   // 获取纬度
+
+                  // 跳转到 'baseinfo' 页面，携带 baseName、longitude 和 latitude 参数
                   router.push({
                     name: 'baseinfo',
-                    query: {baseName}
-                  });
+                    query: { baseName, longitude, latitude }
+                  })
                 }
               });
+
             })
             .catch(error => {
               console.error('动态数据加载失败:', error.message, error.stack);
