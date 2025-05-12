@@ -123,7 +123,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { fetchTableData } from '@/api/querydata.js'
-import { FORM_ID_PRODUCTION_7800, DEVICE_FORM_ID, POINT_FORM_ID } from '@/api/form_constant.js'
+import { UNIT_FORM_ID, DEVICE_FORM_ID, POINT_FORM_ID } from '@/api/form_constant.js'
 import { Document } from '@element-plus/icons-vue'
 
 // 基础信息
@@ -193,7 +193,7 @@ onMounted(async () => {
   longitude.value = route.query.longitude
   latitude.value = route.query.latitude
 
-  const res = await fetchTableData(1, 10, FORM_ID_PRODUCTION_7800, {})
+  const res = await fetchTableData(1, 10, UNIT_FORM_ID, {})
   const data = res.data.list || []
 
   systemNames.value = data.filter(item =>
