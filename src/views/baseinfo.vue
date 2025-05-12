@@ -14,16 +14,15 @@
       </div>
 
       <el-menu
-          default-active="0"
+          :default-active="activeIndex"
           class="el-menu-vertical-demo bg-gray-100 border-none"
-          router
       >
         <el-menu-item
             v-for="(system, index) in systemNames"
             :key="index"
             :index="index.toString()"
             class="py-3 px-4 hover:bg-gray-200 transition-colors"
-            @click="handleSystemClick(system)"
+            @click="handleSystemClick(system, index)"
         >
           <el-icon class="mr-2">
             <Document />
@@ -36,7 +35,7 @@
     <!-- 中间和右侧内容 -->
     <div class="flex-1 overflow-auto p-4">
       <div class="flex gap-4">
-        <!-- 中间：基地名称、经纬度 -->
+        <!-- 中间：基地信息 + 设备列表 -->
         <div class="middle-column flex-1 min-w-[300px]">
           <div class="info-card bg-white shadow-sm rounded-lg p-5 mb-4">
             <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">基地名称</h2>
@@ -48,15 +47,31 @@
               <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">经度</h2>
               <p class="text-gray-600 text-lg">{{ longitude }}</p>
             </div>
-
             <div class="info-card bg-white shadow-sm rounded-lg p-5">
               <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">纬度</h2>
               <p class="text-gray-600 text-lg">{{ latitude }}</p>
             </div>
           </div>
+
+          <!-- 设备列表 -->
+          <div class="info-card bg-white shadow-sm rounded-lg p-5 mb-4">
+            <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">设备列表</h2>
+            <ul v-if="deviceList.length > 0">
+              <li
+                  v-for="(device, idx) in deviceList"
+                  :key="idx"
+                  class="text-gray-600 text-lg cursor-pointer hover:text-blue-600"
+                  :class="{ 'font-bold text-blue-700': device.component_name === selectedDevice }"
+                  @click="handleDeviceClick(device)"
+              >
+                {{ device.component_name }}
+              </li>
+            </ul>
+            <p v-else class="text-gray-500">未找到匹配设备</p>
+          </div>
         </div>
 
-        <!-- 右侧：基地详细信息 -->
+        <!-- 右侧：基地详细信息 + 测点列表 -->
         <div class="right-column flex-2 min-w-[400px]">
           <div class="detail-card bg-white shadow-sm rounded-lg p-5">
             <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">基地详细信息</h2>
@@ -83,6 +98,21 @@
               </div>
             </div>
           </div>
+
+          <!-- 测点列表 -->
+          <div class="detail-card bg-white shadow-sm rounded-lg p-5 mt-4">
+            <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">测点列表</h2>
+            <ul v-if="pointList.length > 0">
+              <li
+                  v-for="(point, idx) in pointList"
+                  :key="idx"
+                  class="text-gray-600 text-base"
+              >
+                {{ point.point_name }}
+              </li>
+            </ul>
+            <p v-else class="text-gray-500">未找到匹配测点</p>
+          </div>
         </div>
       </div>
     </div>
@@ -93,27 +123,71 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { fetchTableData } from '@/api/querydata.js'
-import { FORM_ID_PRODUCTION_7800 } from '@/api/form_constant.js'
+import { FORM_ID_PRODUCTION_7800, DEVICE_FORM_ID, POINT_FORM_ID } from '@/api/form_constant.js'
 import { Document } from '@element-plus/icons-vue'
 
+// 基础信息
 const route = useRoute()
 const baseName = ref('')
 const longitude = ref(null)
 const latitude = ref(null)
+
+// 系统、设备、测点数据状态
 const systemNames = ref([])
+const deviceList = ref([])
+const pointList = ref([])
+
+// 当前选中项
+const activeIndex = ref('0')
+const selectedSystem = ref('')
+const selectedDevice = ref('')
 const sidebarCollapsed = ref(false)
 
-// 侧边栏折叠/展开
+// 折叠侧边栏
 const toggleSidebar = () => {
   sidebarCollapsed.value = !sidebarCollapsed.value
 }
 
-// 系统项点击处理
-const handleSystemClick = (system) => {
-  console.log('选中系统:', system)
-  // 这里可以添加系统点击后的逻辑，如加载系统详情
+// 点击系统项
+const handleSystemClick = async (system, index) => {
+  activeIndex.value = index.toString()
+  selectedSystem.value = system
+  selectedDevice.value = ''
+  deviceList.value = []
+  pointList.value = []
+  await fetchDeviceList()
 }
 
+// 点击设备项
+const handleDeviceClick = async (device) => {
+  selectedDevice.value = device.component_name
+  await fetchPointList()
+}
+
+// 获取设备数据
+const fetchDeviceList = async () => {
+  const res = await fetchTableData(1, 10, DEVICE_FORM_ID, {})
+  const data = res.data.list || []
+
+  deviceList.value = data.filter(device =>
+      device.parent_site?.name === baseName.value &&
+      device.parent_system?.name === selectedSystem.value
+  )
+}
+
+// 获取测点数据
+const fetchPointList = async () => {
+  const res = await fetchTableData(1, 10, POINT_FORM_ID, {})
+  const data = res.data.list || []
+
+  pointList.value = data.filter(point =>
+      point.parent_site?.name === baseName.value &&
+      point.parent_system?.name === selectedSystem.value &&
+      point.equipment_id?.name === selectedDevice.value
+  )
+}
+
+// 初始加载
 onMounted(async () => {
   baseName.value = route.query.baseName
   longitude.value = route.query.longitude
@@ -122,15 +196,14 @@ onMounted(async () => {
   const res = await fetchTableData(1, 10, FORM_ID_PRODUCTION_7800, {})
   const data = res.data.list || []
 
-  console.log("Base Name from URL:", baseName.value, typeof baseName.value);
-  console.log("Fetched Data:", data);
+  systemNames.value = data.filter(item =>
+      item.parent_site?.name === baseName.value
+  ).map(item => item.system_name)
 
-  systemNames.value = data.filter(item => {
-    return item.parent_site && typeof item.parent_site === 'object' && item.parent_site.name === baseName.value;
-  }).map(item => item.system_name);
-
-  if (systemNames.value.length === 0) {
-    console.warn(`No systems found related to base "${baseName.value}"`);
+  if (systemNames.value.length > 0) {
+    selectedSystem.value = systemNames.value[0]
+    activeIndex.value = '0'
+    await fetchDeviceList()
   }
 })
 </script>
