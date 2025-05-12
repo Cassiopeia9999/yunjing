@@ -1,42 +1,33 @@
 <template>
-  <div class="flex justify-center items-center min-h-screen m-0 p-0 bg-gray-200">
-    <div class="bg-white p-8 rounded-xl shadow-lg max-w-lg w-full absolute top-60 right-60 transform translate-x-10 translate-y-10">
-      <!-- Login Form -->
-      <h2 class="text-2xl font-bold text-center mb-6">Login</h2>
+  <div class="min-h-screen bg-cover bg-center flex items-center justify-center" style="background-image: url('/images/login-bg.png')">
+    <div
+        class="absolute bg-white rounded-lg shadow-lg px-10 py-8 max-w-md w-full transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl"
+        style="top: 30%; right: 10%;"
+    >
+      <h2 class="text-2xl font-bold text-center mb-6">欢迎登录</h2>
       <el-form :model="form" ref="formRef" label-width="80px" class="space-y-4">
-        <!-- Username input -->
-        <el-form-item label="用户名" prop="username" class="flex items-center">
-          <el-input
-              v-model="form.username"
-              placeholder="请输入用户名"
-           />
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="form.username" placeholder="请输入用户名" />
         </el-form-item>
 
-        <!-- Password input -->
-        <el-form-item label="密码" prop="password" class="flex items-center">
-          <el-input
-              v-model="form.password"
-              type="password"
-              placeholder="请输入密码"
-           />
+        <el-form-item label="密码" prop="password">
+          <el-input v-model="form.password" type="password" placeholder="请输入密码" show-password />
         </el-form-item>
 
-        <!-- Login button -->
         <el-form-item>
           <el-button
               type="primary"
-              class="w-full py-3 font-medium text-white bg-blue-500 hover:bg-blue-600 rounded"
+              class="w-full py-3 font-medium rounded-md"
               @click="handleLogin"
-          >Login</el-button>
+          >登 录</el-button>
         </el-form-item>
 
-        <!-- Remember me and forgot password links -->
         <el-form-item>
-          <div class="flex justify-between text-sm text-gray-700 w-full">
+          <div class="flex justify-between text-sm text-gray-600 w-full px-1">
             <label class="flex items-center">
-              <input type="checkbox" class="mr-2" /> Remember me
+              <el-checkbox v-model="rememberMe" class="mr-2" /> 记住我
             </label>
-            <a href="#" class="text-blue-500 hover:underline">Forgot password?</a>
+            <a href="#" class="text-blue-500 hover:underline">忘记密码？</a>
           </div>
         </el-form-item>
       </el-form>
@@ -45,46 +36,69 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { ElForm, ElFormItem, ElInput, ElButton } from 'element-plus'
-import { useStore } from 'vuex' // 引入 Vuex store
-import { useRouter } from 'vue-router' // 引入 Vue Router
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useStore } from 'vuex'
+import { ElMessage } from 'element-plus'
+import Cookies from 'js-cookie'
+import { getToken } from '@/utils/auth'
 
-// 表单模型
 const form = ref({
   username: '',
   password: ''
 })
-
-// 获取 Vuex store 和 Vue Router 实例
-const store = useStore()
+const rememberMe = ref(false)
 const router = useRouter()
+const store = useStore()
 
-// 登录处理方法
 const handleLogin = async () => {
+  const token = getToken()
+  if (token) {
+    ElMessage.success('您已登录，正在跳转首页...')
+    router.push('/inner/dashboard')
+    return
+  }
+
   if (!form.value.username || !form.value.password) {
-    alert('Please enter username and password')
+    ElMessage.warning('请输入用户名和密码')
     return
   }
 
   const userInfo = {
     username: form.value.username,
     password: form.value.password,
-    type: 'username'  // 可以根据需要添加其他类型标识
+    tenantId: 180,
+    type: 'username'
   }
 
   try {
-    // 调用 Vuex 的 Login action
     await store.dispatch('Login', userInfo)
-
-    router.push('/inner/dashboard')  // 登录成功后跳转到首页
+    ElMessage.success('登录成功，欢迎回来！')
+    if (rememberMe.value) {
+      Cookies.set('remember_username', form.value.username, { expires: 7 })
+      Cookies.set('remember_password', form.value.password, { expires: 7 })
+    } else {
+      Cookies.remove('remember_username')
+      Cookies.remove('remember_password')
+    }
+    router.push('/inner/dashboard')
   } catch (error) {
-    alert('Login failed, please check your username and password')
-    console.error('Login error:', error)
+    ElMessage.error('登录失败，请检查用户名和密码')
+    console.error('登录错误:', error)
   }
 }
+
+onMounted(() => {
+  const savedUsername = Cookies.get('remember_username')
+  const savedPassword = Cookies.get('remember_password')
+  if (savedUsername && savedPassword) {
+    form.value.username = savedUsername
+    form.value.password = savedPassword
+    rememberMe.value = true
+  }
+})
 </script>
 
 <style scoped>
-
+/* 无需样式块，全部由 Tailwind 控制 */
 </style>
