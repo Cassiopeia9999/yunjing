@@ -36,7 +36,7 @@
     <div class="flex-1 overflow-auto p-4">
       <div class="flex gap-4">
         <!-- 中间：基地信息 + 设备列表 -->
-        <div class="middle-column flex-1 min-w-[300px]">
+        <div class="middle-column flex-1 min-w-[400px]">
           <div class="info-card bg-white shadow-sm rounded-lg p-5 mb-4">
             <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">基地名称</h2>
             <p class="text-gray-600 text-lg">{{ baseName }}</p>
@@ -72,7 +72,7 @@
         </div>
 
         <!-- 右侧：基地详细信息 + 测点列表 -->
-        <div class="right-column flex-2 min-w-[400px]">
+        <div class="right-column flex-2 min-w-[500px]">
           <div class="detail-card bg-white shadow-sm rounded-lg p-5">
             <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">基地详细信息</h2>
             <div class="prose max-w-none text-gray-600">
