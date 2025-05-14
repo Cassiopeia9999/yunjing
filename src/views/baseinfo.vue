@@ -1,7 +1,7 @@
 <template>
   <div class="base-info-container flex h-screen overflow-hidden">
     <!-- 左侧：系统名称侧边栏 -->
-    <div class="side-menu w-[286px] h-full bg-gray-100 text-blue-600 shrink-0 shadow-lg transition-all duration-300">
+    <div class="side-menu w-[286px] h-full bg-gray-100 text-blue-600 shrink-0 shadow-lg transition-all duration-300" :class="{ 'collapsed': sidebarCollapsed }">
       <div class="menu-header flex items-center p-4 h-12 bg-gray-200">
         <el-button
             @click="toggleSidebar"
@@ -10,7 +10,7 @@
             class="mr-4 text-blue-600"
             :style="{ fontSize: '24px' }"
         />
-        <span class="font-semibold text-gray-800">装置列表</span>
+        <span class="font-semibold text-gray-800" :class="{ 'hidden': sidebarCollapsed }">装置列表</span>
       </div>
 
       <el-menu
