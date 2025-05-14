@@ -53,21 +53,21 @@
             </div>
           </div>
 
-          <!-- 设备列表 -->
+          <!-- 设备列表表格 -->
           <div class="info-card bg-white shadow-sm rounded-lg p-5 mb-4">
             <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">设备列表</h2>
-            <ul v-if="deviceList.length > 0">
-              <li
-                  v-for="(device, idx) in deviceList"
-                  :key="idx"
-                  class="text-gray-600 text-lg cursor-pointer hover:text-blue-600"
-                  :class="{ 'font-bold text-blue-700': device.component_name === selectedDevice }"
-                  @click="handleDeviceClick(device)"
-              >
-                {{ device.component_name }}
-              </li>
-            </ul>
-            <p v-else class="text-gray-500">未找到匹配设备</p>
+            <el-table
+                :data="deviceList"
+                highlight-current-row
+                style="width: 100%"
+                @row-click="handleDeviceClick"
+                :row-class-name="getDeviceRowClass"
+                empty-text="未找到匹配设备"
+            >
+              <el-table-column prop="component_name" label="设备名称" />
+              <el-table-column prop="parent_site.name" label="基地" />
+              <el-table-column prop="parent_system.name" label="装置" />
+            </el-table>
           </div>
         </div>
 
@@ -102,16 +102,16 @@
           <!-- 测点列表 -->
           <div class="detail-card bg-white shadow-sm rounded-lg p-5 mt-4">
             <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">测点列表</h2>
-            <ul v-if="pointList.length > 0">
-              <li
-                  v-for="(point, idx) in pointList"
-                  :key="idx"
-                  class="text-gray-600 text-base"
-              >
-                {{ point.point_name }}
-              </li>
-            </ul>
-            <p v-else class="text-gray-500">未找到匹配测点</p>
+            <el-table
+                :data="pointList"
+                style="width: 100%"
+                empty-text="未找到匹配测点"
+            >
+              <el-table-column prop="point_name" label="测点名称" />
+              <el-table-column prop="point_alias" label="测点别名" />
+              <el-table-column prop="data_type" label="数据类型" />
+            </el-table>
+
           </div>
         </div>
       </div>
@@ -158,7 +158,7 @@ const handleSystemClick = async (system, index) => {
   await fetchDeviceList()
 }
 
-// 点击设备项
+// 点击设备行
 const handleDeviceClick = async (device) => {
   selectedDevice.value = device.component_name
   await fetchPointList()
@@ -185,6 +185,11 @@ const fetchPointList = async () => {
       point.parent_system?.name === selectedSystem.value &&
       point.equipment_id?.name === selectedDevice.value
   )
+}
+
+// 高亮当前选中设备行
+const getDeviceRowClass = ({ row }) => {
+  return row.component_name === selectedDevice.value ? 'selected-device-row' : ''
 }
 
 // 初始加载
@@ -248,5 +253,9 @@ onMounted(async () => {
 
 .info-card:hover, .detail-card:hover {
   transform: translateY(-2px);
+}
+
+.selected-device-row {
+  background-color: rgba(64, 158, 255, 0.1) !important;
 }
 </style>
