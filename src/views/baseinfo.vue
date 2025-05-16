@@ -111,7 +111,6 @@
               <el-table-column prop="point_alias" label="测点别名" />
               <el-table-column prop="data_type" label="数据类型" />
             </el-table>
-
           </div>
         </div>
       </div>
