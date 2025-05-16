@@ -42,16 +42,7 @@
             <p class="text-gray-600 text-lg">{{ baseName }}</p>
           </div>
 
-          <div class="grid grid-cols-2 gap-4 mb-4">
-            <div class="info-card bg-white shadow-sm rounded-lg p-5">
-              <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">经度</h2>
-              <p class="text-gray-600 text-lg">{{ longitude }}</p>
-            </div>
-            <div class="info-card bg-white shadow-sm rounded-lg p-5">
-              <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">纬度</h2>
-              <p class="text-gray-600 text-lg">{{ latitude }}</p>
-            </div>
-          </div>
+
 
           <!-- 设备列表表格 -->
           <div class="info-card bg-white shadow-sm rounded-lg p-5 mb-4">
@@ -71,36 +62,20 @@
           </div>
         </div>
 
-        <!-- 右侧：基地详细信息 + 测点列表 -->
+        <!-- 右侧： 测点列表 -->
         <div class="right-column flex-1 min-w-[600px] max-w-[11000px]">
-          <div class="detail-card bg-white shadow-sm rounded-lg p-5">
-            <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">基地详细信息</h2>
-            <div class="prose max-w-none text-gray-600">
-              <p>这里显示基地的详细信息。</p>
-              <p>包括基地的建设时间、占地面积、主要功能、设备配置等信息。</p>
-              <div class="mt-4 grid grid-cols-2 gap-4">
-                <div>
-                  <span class="text-sm text-gray-500 block">建设时间</span>
-                  <span class="text-gray-800">2020年10月</span>
-                </div>
-                <div>
-                  <span class="text-sm text-gray-500 block">占地面积</span>
-                  <span class="text-gray-800">5000平方米</span>
-                </div>
-                <div>
-                  <span class="text-sm text-gray-500 block">负责人</span>
-                  <span class="text-gray-800">张三</span>
-                </div>
-                <div>
-                  <span class="text-sm text-gray-500 block">联系电话</span>
-                  <span class="text-gray-800">13800138000</span>
-                </div>
-              </div>
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="info-card bg-white shadow-sm rounded-lg p-5">
+              <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">经度</h2>
+              <p class="text-gray-600 text-lg">{{ longitude }}</p>
+            </div>
+            <div class="info-card bg-white shadow-sm rounded-lg p-5">
+              <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">纬度</h2>
+              <p class="text-gray-600 text-lg">{{ latitude }}</p>
             </div>
           </div>
-
           <!-- 测点列表 -->
-          <div class="detail-card bg-white shadow-sm rounded-lg p-5 mt-4">
+          <div class="detail-card bg-white shadow-sm rounded-lg p-5 mt-0">
             <h2 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">测点列表</h2>
             <el-table
                 :data="pointList"

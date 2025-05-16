@@ -8,6 +8,7 @@ import GlobalView from '@/views/dev/GlobalView.vue';
 import LowcodeFrame from "@/views/LowcodeFrame.vue";
 import FeatureDemo from "@/views/analysis/FeatureDemo.vue";
 import baseinfo from "@/views/baseinfo.vue";
+import period from "@/views/period.vue"
 
 const routes = [
     {
@@ -63,6 +64,12 @@ const routes = [
                 path: 'baseinfo',
                 name: 'baseinfo',
                 component: baseinfo,
+                meta: { requiresAuth: true },
+            },
+            {
+                path: 'period',
+                name: 'period',
+                component: period,
                 meta: { requiresAuth: true },
             }
         ]
