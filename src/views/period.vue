@@ -61,51 +61,51 @@ const periodTableRef = ref(null);
 // --- 数据获取与过滤逻辑 ---
 // 监听 PeriodSelector 中设备选择的变化
 watch(() => {
-  // 使用可选链 ?. 确保 selectorRef.value 存在
-  return selectorRef.value?.selectedDeviceId;
-}, async (newDeviceId) => { // 使用 async 因为 fetchPeriodData 是异步的
-  console.log(`Watch triggered. New Device ID: ${newDeviceId}`); // Debug log
-
-  // 等待 PeriodSelector 组件完全渲染并暴露属性
+  const selector = selectorRef.value;
+  return {
+    siteId: selector?.selectedSiteId,
+    systemId: selector?.selectedSystemId,
+    deviceId: selector?.selectedDeviceId
+  };
+}, async (newFilters) => {
   await nextTick();
+
   if (!selectorRef.value) {
-    console.warn("PeriodSelector ref not available in watch after nextTick");
-    filteredPeriods.value = []; // 确保表格清空
+    filteredPeriods.value = [];
     return;
   }
 
-  // 如果设备ID被选中 (非 null 或 undefined)
-  if (newDeviceId !== null && newDeviceId !== undefined) {
-    fetchPeriodData(newDeviceId);
-  } else {
-    // 如果设备ID未选中，则清空表格
-    console.log("Device ID cleared, showing empty table."); // Debug log
-    filteredPeriods.value = [];
-    await nextTick(); // 等待 DOM 更新
-    if (periodTableRef.value) {
-      periodTableRef.value.doLayout(); // 触发表格布局更新
-    }
-  }
-
-}, { immediate: true }); // immediate: true 确保 watch 在组件加载后立即执行一次
+  // 提交请求
+  await fetchPeriodData(newFilters);
+}, { immediate: true, deep: true });
+ // immediate: true 确保 watch 在组件加载后立即执行一次
 
 // 根据设备ID获取周期数据
-async function fetchPeriodData(deviceId) {
+async function fetchPeriodData({ siteId, systemId, deviceId }) {
   loading.value = true;
-  try {
-    // 根据设备ID查询周期数据
-    // 假设 Period 表单有一个字段 (例如 'equipment_id') 存储关联的设备ID
-    // 如果你的字段名不同，请修改这里的 key
-    const res = await fetchTableData(1, 10, PERIOD_FORM_ID, [ // 假设周期和设备一对一，理论上只会返回一条或零条数据
-      { key: 'parent_device', value: deviceId, queryType: 1 } // *** 请根据实际API和表单字段修改这里的 key ***
-    ]);
 
-    // 由于是一对一关系，理论上 list 中最多只有一项
+  try {
+    const conditions = [];
+
+    if (siteId) {
+      conditions.push({ key: 'parent_site', value: siteId, queryType: 1 });
+    }
+
+    if (systemId) {
+      conditions.push({ key: 'parent_system', value: systemId, queryType: 1 });
+    }
+
+    if (deviceId) {
+      conditions.push({ key: 'parent_device', value: deviceId, queryType: 1 });
+    }
+
+    const res = await fetchTableData(1, 100, PERIOD_FORM_ID, conditions); // 提高上限为 100 条
+
     filteredPeriods.value = res.data.list || [];
-    console.log("Fetched period data count:", filteredPeriods.value.length); // Debug log
-    await nextTick(); // 等待 DOM 更新
+
+    await nextTick();
     if (periodTableRef.value) {
-      periodTableRef.value.doLayout(); // 触发表格布局更新
+      periodTableRef.value.doLayout();
     }
   } catch (error) {
     console.error('加载周期数据失败:', error);
@@ -114,6 +114,7 @@ async function fetchPeriodData(deviceId) {
     loading.value = false;
   }
 }
+
 
 </script>
 
