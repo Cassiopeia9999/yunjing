@@ -9,6 +9,7 @@ import LowcodeFrame from "@/views/LowcodeFrame.vue";
 import FeatureDemo from "@/views/analysis/FeatureDemo.vue";
 import baseinfo from "@/views/baseinfo.vue";
 import period from "@/views/period.vue"
+import rsituation from "@/views/rsituation.vue"
 
 const routes = [
     {
@@ -70,6 +71,12 @@ const routes = [
                 path: 'period',
                 name: 'period',
                 component: period,
+                meta: { requiresAuth: true },
+            },
+            {
+                path: 'rsituation',
+                name: 'rsituation',
+                component: rsituation,
                 meta: { requiresAuth: true },
             }
         ]

@@ -1,6 +1,6 @@
 <template>
-  <div class="p-6">
-    <el-card shadow="never" class="mb-4">
+  <div class="p-0">
+    <el-card shadow="never" class="mb-2">
       <div class="flex justify-between items-center">
         <span class="text-lg font-semibold">周期数据筛选与展示</span>
       </div>
@@ -61,32 +61,38 @@ const periodTableRef = ref(null);
 // --- 数据获取与过滤逻辑 ---
 // 监听 PeriodSelector 中设备选择的变化
 watch(() => {
-  const selector = selectorRef.value;
+  // 确保 selectorRef.value 存在后再访问其属性
+  if (!selectorRef.value) return { siteId: null, systemId: null, deviceId: null };
+
   return {
-    siteId: selector?.selectedSiteId,
-    systemId: selector?.selectedSystemId,
-    deviceId: selector?.selectedDeviceId
+    siteId: selectorRef.value.selectedSiteId,
+    systemId: selectorRef.value.selectedSystemId,
+    deviceId: selectorRef.value.selectedDeviceId
   };
 }, async (newFilters) => {
-  await nextTick();
+  console.log('Filter changed:', newFilters); // Debug log
 
+  await nextTick();
   if (!selectorRef.value) {
+    console.warn("PeriodSelector ref not available in watch after nextTick");
     filteredPeriods.value = [];
     return;
   }
 
-  // 提交请求
+  // 不管筛选条件如何，都调用 fetchPeriodData
   await fetchPeriodData(newFilters);
+
 }, { immediate: true, deep: true });
  // immediate: true 确保 watch 在组件加载后立即执行一次
 
 // 根据设备ID获取周期数据
 async function fetchPeriodData({ siteId, systemId, deviceId }) {
   loading.value = true;
-
   try {
+    // 构建查询条件数组
     const conditions = [];
 
+    // 只有当筛选条件有值时才添加到查询条件中
     if (siteId) {
       conditions.push({ key: 'parent_site', value: siteId, queryType: 1 });
     }
@@ -99,9 +105,11 @@ async function fetchPeriodData({ siteId, systemId, deviceId }) {
       conditions.push({ key: 'parent_device', value: deviceId, queryType: 1 });
     }
 
-    const res = await fetchTableData(1, 100, PERIOD_FORM_ID, conditions); // 提高上限为 100 条
+    // 如果没有任何筛选条件，则获取所有周期数据
+    const res = await fetchTableData(1, 100, PERIOD_FORM_ID, conditions);
 
     filteredPeriods.value = res.data.list || [];
+    console.log("Fetched period data count:", filteredPeriods.value.length); // Debug log
 
     await nextTick();
     if (periodTableRef.value) {

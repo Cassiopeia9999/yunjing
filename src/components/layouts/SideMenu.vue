@@ -102,6 +102,11 @@ const menuItems = [
     link: '/inner/period'
   },
   {
+    name: '实时情况',
+    icon: 'ChromeFilled',
+    link: '/inner/rsituation'
+  },
+  {
     name: '数据后台（新窗口）',
     icon: 'Setting',
     link: '/index/workbench',
