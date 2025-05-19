@@ -1,179 +1,125 @@
 <template>
-  <div class="device-management">
-    <!-- 筛选栏 -->
-    <div class="filter-bar bg-white shadow-sm p-4 mb-4">
-      <div class="flex flex-wrap items-center gap-4 md:gap-6">
-        <!-- 搜索基地 -->
-        <div class="flex-1 min-w-[200px]">
-          <el-select
-              v-model="selectedBase"
-              placeholder="搜索基地"
-              filterable
-              remote
-              :remote-method="searchBase"
-              :loading="baseLoading"
-              style="width: 100%"
-          >
-            <el-option
-                v-for="base in baseOptions"
-                :key="base.id"
-                :label="base.name"
-                :value="base.id"
-            ></el-option>
-          </el-select>
-        </div>
-
-        <!-- 搜索装置 -->
-        <div class="flex-1 min-w-[200px]">
-          <el-select
-              v-model="selectedDeviceStatus"
-              placeholder="搜索装置"
-              filterable
-              @change="handleDeviceStatusChange"
-              style="width: 100%"
-          >
-            <el-option
-                v-for="status in deviceStatusOptions"
-                :key="status.value"
-                :label="status.label"
-                :value="status.value"
-            ></el-option>
-          </el-select>
-        </div>
-
-        <!-- 状态筛选 -->
-        <div class="w-[180px]">
-          <el-select v-model="filterStatus" placeholder="筛选状态">
-            <el-option label="全部" value="all"></el-option>
-            <el-option label="正常" value="normal"></el-option>
-            <el-option label="预警" value="warning"></el-option>
-            <el-option label="过期" value="expired"></el-option>
-          </el-select>
-        </div>
-
-        <!-- 类型筛选 -->
-        <div class="w-[180px]">
-          <el-select v-model="filterType" placeholder="设备类型">
-            <el-option
-                v-for="type in deviceTypes"
-                :key="type.id"
-                :label="type.name"
-                :value="type.id"
-            ></el-option>
-          </el-select>
-        </div>
-
-        <!-- 时间筛选 -->
-        <div class="flex flex-wrap gap-4 w-full md:w-[500px]">
-          <div class="w-full md:w-[210px]">
-            <el-date-picker v-model="startDate" type="date" placeholder="选择开始日期" value-format="YYYY-MM-DD" format="YYYY-MM-DD" class="w-full"></el-date-picker>
-          </div>
-          <div class="w-full md:w-[210px]">
-            <el-date-picker v-model="endDate" type="date" placeholder="选择结束日期" value-format="YYYY-MM-DD" format="YYYY-MM-DD" class="w-full"></el-date-picker>
-          </div>
-        </div>
-
-        <el-button type="primary" @click="handleFilter">
-          <el-icon><Search /></el-icon>筛选
-        </el-button>
-
-        <el-button type="default" @click="resetFilter">
-          重置
-        </el-button>
+  <div class="p-6">
+    <el-card shadow="never" class="mb-4">
+      <div class="flex justify-between items-center">
+        <span class="text-lg font-semibold">周期数据筛选与展示</span>
       </div>
-    </div>
 
-    <!-- 侧边栏和主内容区域保持不变 -->
-    <!-- ... -->
+      <div class="mt-4">
+        <!-- 使用 PeriodSelector 组件作为筛选器 -->
+        <!-- 使用 ref 访问子组件实例，以便获取其内部状态 -->
+        <PeriodSelector ref="selectorRef" />
+      </div>
+    </el-card>
+
+    <el-card shadow="never">
+      <template #header>
+        <div class="card-header">
+          <span>匹配的周期列表</span>
+        </div>
+      </template>
+      <!-- 周期数据表格 -->
+      <el-table :data="filteredPeriods" style="width: 100%" border stripe v-loading="loading" ref="periodTableRef">
+        <!-- 注意：这里的 prop 需要与你的周期数据结构中的字段匹配 -->
+        <el-table-column prop="parent_site.name" label="所属基地" width="180" show-overflow-tooltip align="left">
+          <template #default="{ row }">
+            {{ row.parent_site ? row.parent_site.name : 'N/A' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="parent_system.name" label="所属装置" width="180" show-overflow-tooltip align="left">
+          <template #default="{ row }">
+            {{ row.parent_system ? row.parent_system.name : 'N/A' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="period_name" label="周期名称" show-overflow-tooltip width="500" align="left"></el-table-column>
+        <el-table-column prop="start_time" label="开始时间" width="120"></el-table-column>
+        <el-table-column prop="end_time" label="结束时间" width="120"></el-table-column> <!-- 使用 end_time -->
+      </el-table>
+      <div class="pagination-container mt-4 flex justify-end">
+        <!-- 如果需要分页，可以添加 Element Plus Pagination 组件 -->
+        <!-- 注意：如果周期和设备是一对一，通常不会有很多周期，分页可能不是必须的 -->
+      </div>
+    </el-card>
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      selectedBase: null, // 选中的基地ID
-      baseOptions: [], // 基地选项列表
-      baseLoading: false, // 基地加载状态
+<script setup>
+import { ref, watch, nextTick } from 'vue'; // 移除 onMounted，因为数据获取由 watch 触发
+import PeriodSelector from '@/components/common/PeriodSelector.vue'; // 确保路径正确
+import { fetchTableData } from '@/api/querydata.js';
+import { PERIOD_FORM_ID } from '@/api/form_constant.js'; // 确保导入周期FORM_ID
 
-      selectedDeviceStatus: null, // 选中的装置状态
-      deviceStatusOptions: [ // 装置状态选项
-        { value: 'online', label: '在线' },
-        { value: 'offline', label: '离线' },
-        { value: 'active', label: '激活' },
-        { value: 'inactive', label: '未激活' },
-      ],
+// 模板引用，用于访问 PeriodSelector 组件实例
+const selectorRef = ref(null);
 
-      // 其他原有数据
-      startDate: null,
-      endDate: null,
-      filterStatus: 'all',
-      filterType: '',
-    };
-  },
-  methods: {
-    // 搜索基地（模拟）
-    searchBase(query) {
-      if (!query) {
-        this.baseOptions = [];
-        return;
-      }
-      this.baseLoading = true;
-      // 模拟异步请求（实际需调用API）
-      setTimeout(() => {
-        this.baseLoading = false;
-        // 假设返回包含基地ID和名称的列表
-        this.baseOptions = this.mockBaseList.filter(base =>
-            base.name.includes(query)
-        );
-      }, 500);
-    },
+// 存储根据筛选条件获取的周期数据，用于表格展示
+const filteredPeriods = ref([]); // 初始化为空数组
+// 加载状态
+const loading = ref(false);
 
-    // 模拟基地数据
-    mockBaseList: [
-      {id: 'base1', name: '基地A'},
-      {id: 'base2', name: '基地B'},
-      {id: 'base3', name: '基地C'},
-    ],
+const periodTableRef = ref(null);
+// --- 数据获取与过滤逻辑 ---
+// 监听 PeriodSelector 中设备选择的变化
+watch(() => {
+  // 使用可选链 ?. 确保 selectorRef.value 存在
+  return selectorRef.value?.selectedDeviceId;
+}, async (newDeviceId) => { // 使用 async 因为 fetchPeriodData 是异步的
+  console.log(`Watch triggered. New Device ID: ${newDeviceId}`); // Debug log
 
-    // 装置状态变化
-    handleDeviceStatusChange(value) {
-      console.log('选中的装置状态:', value);
-      this.handleFilter(); // 自动触发筛选
-    },
+  // 等待 PeriodSelector 组件完全渲染并暴露属性
+  await nextTick();
+  if (!selectorRef.value) {
+    console.warn("PeriodSelector ref not available in watch after nextTick");
+    filteredPeriods.value = []; // 确保表格清空
+    return;
+  }
 
-    handleFilter() {
-      const filterParams = {
-        baseId: this.selectedBase,
-        deviceStatus: this.selectedDeviceStatus,
-        filterStatus: this.filterStatus,
-        filterType: this.filterType,
-        startDate: this.startDate,
-        endDate: this.endDate,
-      };
-      // 调用数据获取方法
-      this.fetchDeviceList(filterParams);
-    },
-
-    resetFilter() {
-      this.selectedBase = null;
-      this.selectedDeviceStatus = null;
-      this.filterStatus = 'all';
-      this.filterType = '';
-      this.startDate = null;
-      this.endDate = null;
-      this.baseOptions = [];
-      this.fetchDeviceList();
-    },
-
-    fetchDeviceList(params = {}) {
-      console.log("获取设备列表，参数：", params);
-      // 这里可接 API 实现获取设备列表逻辑
+  // 如果设备ID被选中 (非 null 或 undefined)
+  if (newDeviceId !== null && newDeviceId !== undefined) {
+    fetchPeriodData(newDeviceId);
+  } else {
+    // 如果设备ID未选中，则清空表格
+    console.log("Device ID cleared, showing empty table."); // Debug log
+    filteredPeriods.value = [];
+    await nextTick(); // 等待 DOM 更新
+    if (periodTableRef.value) {
+      periodTableRef.value.doLayout(); // 触发表格布局更新
     }
-  },
-};
+  }
+
+}, { immediate: true }); // immediate: true 确保 watch 在组件加载后立即执行一次
+
+// 根据设备ID获取周期数据
+async function fetchPeriodData(deviceId) {
+  loading.value = true;
+  try {
+    // 根据设备ID查询周期数据
+    // 假设 Period 表单有一个字段 (例如 'equipment_id') 存储关联的设备ID
+    // 如果你的字段名不同，请修改这里的 key
+    const res = await fetchTableData(1, 10, PERIOD_FORM_ID, [ // 假设周期和设备一对一，理论上只会返回一条或零条数据
+      { key: 'parent_device', value: deviceId, queryType: 1 } // *** 请根据实际API和表单字段修改这里的 key ***
+    ]);
+
+    // 由于是一对一关系，理论上 list 中最多只有一项
+    filteredPeriods.value = res.data.list || [];
+    console.log("Fetched period data count:", filteredPeriods.value.length); // Debug log
+    await nextTick(); // 等待 DOM 更新
+    if (periodTableRef.value) {
+      periodTableRef.value.doLayout(); // 触发表格布局更新
+    }
+  } catch (error) {
+    console.error('加载周期数据失败:', error);
+    filteredPeriods.value = [];
+  } finally {
+    loading.value = false;
+  }
+}
+
 </script>
 
 <style scoped>
-/* 可按需添加样式 */
+.pagination-container {
+  /* 样式调整分页容器 */
+}
+/* 您可以添加其他样式 */
 </style>
