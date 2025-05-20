@@ -1,10 +1,9 @@
 <template>
-  <div class="p-0">
-    <el-card shadow="never" class="mb-2">
+  <div class="p-1" >
+    <el-card shadow="hover" class="mb-2">
       <div class="flex justify-between items-center">
         <span class="text-lg font-semibold">周期数据筛选与展示</span>
       </div>
-
       <div class="mt-4">
         <!-- 使用 PeriodSelector 组件作为筛选器 -->
         <!-- 使用 ref 访问子组件实例，以便获取其内部状态 -->
@@ -12,7 +11,7 @@
       </div>
     </el-card>
 
-    <el-card shadow="never">
+    <el-card shadow="hover">
       <template #header>
         <div class="card-header">
           <span>匹配的周期列表</span>
@@ -33,7 +32,7 @@
         </el-table-column>
         <el-table-column prop="period_name" label="周期名称" show-overflow-tooltip width="500" align="left"></el-table-column>
         <el-table-column prop="start_time" label="开始时间" width="120"></el-table-column>
-        <el-table-column prop="end_time" label="结束时间" width="120"></el-table-column> <!-- 使用 end_time -->
+        <el-table-column prop="end_time" label="结束时间" width="120"></el-table-column>
       </el-table>
       <div class="pagination-container mt-4 flex justify-end">
         <!-- 如果需要分页，可以添加 Element Plus Pagination 组件 -->
@@ -130,5 +129,7 @@ async function fetchPeriodData({ siteId, systemId, deviceId }) {
 .pagination-container {
   /* 样式调整分页容器 */
 }
-/* 您可以添加其他样式 */
+.el-table {
+  display: table-cell !important;
+}
 </style>
