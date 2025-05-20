@@ -2,7 +2,7 @@
   <div class="container mx-auto px-1 py-2">
     <!-- 设备数据展示表格 -->
     <div class="mb-8 bg-white rounded-lg shadow-lg overflow-hidden">
-      <div class="px-6 py-4 bg-primary text-white flex justify-between items-center">
+      <div class="px-6 py-4 bg-primary text-black flex justify-between items-center">
         <h2 class="text-xl font-semibold">设备数据展示</h2>
         <div class="flex space-x-2">
           <button class="bg-white text-primary px-3 py-1 rounded text-sm hover:bg-gray-100 transition-colors">
@@ -77,7 +77,7 @@
             <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
               <button class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
                 <span class="sr-only">上一页</span>
-                <i class="fa fa-chevron-left"></i>
+                <i class="fa fa-chevron-left"><</i>
               </button>
               <button aria-current="page" class="z-10 bg-indigo-50 border-indigo-500 text-indigo-600 relative inline-flex items-center px-4 py-2 border text-sm font-medium">
                 1
@@ -96,7 +96,9 @@
               </button>
               <button class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
                 <span class="sr-only">下一页</span>
-                <i class="fa fa-chevron-right"></i>
+                <i class="fa fa-chevron-right">
+                  >
+                </i>
               </button>
             </nav>
           </div>

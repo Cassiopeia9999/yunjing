@@ -18,7 +18,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, defineExpose } from 'vue' // 引入 defineExpose
+import { ref, onMounted } from 'vue' // 引入 defineExpose
 import { fetchTableData } from '@/api/querydata.js'
 import {
   BASE_FORM_ID,
