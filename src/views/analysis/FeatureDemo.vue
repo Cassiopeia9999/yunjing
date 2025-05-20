@@ -1,53 +1,70 @@
 <template>
   <div class="p-6">
-    <div class="flex flex-col lg:flex-row gap-6">
+    <div :class="['flex flex-col lg:flex-row gap-6', !showSidebar ? 'justify-center' : '']">
       <!-- 左侧数据选择区域 - 使用固定宽度和min-width -->
-      <div class="lg:w-[300px] min-w-[300px]">
-        <el-card shadow="never">
-          <!-- 新增图片区域 -->
-          <div class="mb-6 text-center">
-            <img
-                src="/images/R-C.jpg"
-                alt="数据选择图标"
-                class="w-full max-w-lg mx-auto border rounded-lg border-gray-300 shadow-sm"
-            >
-          </div>
+      <!-- 左侧数据选择区域 - 添加折叠按钮 -->
+      <div class="relative">
+        <!-- 折叠按钮：浮在卡片右边中间 -->
+        <button
+            @click="showSidebar = !showSidebar"
+            class="absolute -right-4 top-1/2 transform -translate-y-1/2 z-20 bg-blue-500 text-white rounded-full shadow-lg w-8 h-8 flex items-center justify-center hover:bg-blue-600 transition"
+            title="折叠/展开左侧"
+        >
+          <span class="text-lg font-bold">{{ showSidebar ? '⮜' : '⮞' }}</span>
+        </button>
 
-          <div class="flex justify-between items-center">
-            <span class="text-lg font-semibold">数据选择</span>
-            <el-button @click="toggleFilter" type="primary" size="small">
-              {{ showFilter ? '收起' : '展开' }}
-            </el-button>
-          </div>
+        <!-- 原左侧卡片 -->
+        <div v-show="showSidebar" class="lg:w-[300px] min-w-[300px]">
+          <el-card shadow="never">
+            <!-- 原内容不变 -->
+            <div class="mb-6 text-center">
+              <img
+                  src="/images/R-C.jpg"
+                  alt="数据选择图标"
+                  class="w-full max-w-lg mx-auto border rounded-lg border-gray-300 shadow-sm"
+              >
+            </div>
 
-          <div v-show="showFilter" class="mt-4 space-y-4">
-            <!-- 测点多选 -->
-            <PointSelector @points-selected="handleSelectedPoints" />
+            <div class="flex justify-between items-center">
+              <span class="text-lg font-semibold">数据选择</span>
+              <el-button @click="toggleFilter" type="primary" size="small">
+                {{ showFilter ? '收起' : '展开' }}
+              </el-button>
+            </div>
 
-            <!-- 特征类型单选 -->
-            <el-select
-                v-if="featureTypeOptions.length > 0"
-                v-model="selectedFeatureType"
-                filterable
-                clearable
-                placeholder="请选择特征类型"
-                class="w-full"
-                @change="loadFeatureData"
-            >
-              <el-option
-                  v-for="item in featureTypeOptions"
-                  :key="item.id"
-                  :label="item.feature_alias || item.name"
-                  :value="item.id"
-              />
-            </el-select>
-          </div>
-        </el-card>
+            <div v-show="showFilter" class="mt-4 space-y-4">
+              <PointSelector @points-selected="handleSelectedPoints" />
+
+              <el-select
+                  v-if="featureTypeOptions.length > 0"
+                  v-model="selectedFeatureType"
+                  filterable
+                  clearable
+                  placeholder="请选择特征类型"
+                  class="w-full"
+                  @change="loadFeatureData"
+              >
+                <el-option
+                    v-for="item in featureTypeOptions"
+                    :key="item.id"
+                    :label="item.feature_alias || item.name"
+                    :value="item.id"
+                />
+              </el-select>
+            </div>
+          </el-card>
+        </div>
       </div>
 
+
       <!-- 右侧图表展示区域 - 使用flex-1占满剩余空间 -->
-      <div class="flex-1 min-w-0">
-        <el-card shadow="never" class="h-full flex flex-col">
+      <div
+          :class="[
+    'min-w-0 transition-all duration-300',
+    showSidebar ? 'flex-1' : 'max-w-[1000px] w-full'
+  ]"
+      >
+        <el-card shadow="never" class="h-full flex flex-col items-center">
           <div class="flex justify-between items-center mb-4">
             <h3 class="font-semibold">特征趋势图</h3>
             <el-button
@@ -58,7 +75,11 @@
             ></el-button>
           </div>
           <!-- 使用flex-1确保图表容器占满剩余高度 -->
-          <div ref="chartRef" class="flex-1 min-h-[400px]" />
+          <div
+              ref="chartRef"
+              class="min-h-[400px]"
+              :style="showSidebar ? 'width: 100%' : 'width: 800px; margin: 0 auto;'"
+          />
           <div v-show="isConfigVisible" class="mt-4 flex items-center space-x-4">
             <el-switch
                 v-model="showDateOnly"
@@ -79,6 +100,9 @@ import * as echarts from 'echarts'
 import PointSelector from '@/components/common/PointSelector.vue'
 import {fetchTableData} from '@/api/querydata.js'
 import {FEATURE_TYPE_FORM_ID, FEATURE_DATA_FORM_ID} from '@/api/form_constant.js'
+const showSidebar = ref(true)
+
+
 
 // 控制折叠
 const showFilter = ref(true)
