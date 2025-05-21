@@ -64,7 +64,7 @@
     showSidebar ? 'flex-1' : 'max-w-[1000px] w-full'
   ]"
       >
-        <el-card shadow="never" class="h-full flex flex-col items-center">
+        <el-card shadow="never" class="h-full flex flex-col">
           <div class="flex justify-between items-center mb-4">
             <h3 class="font-semibold">特征趋势图</h3>
             <el-button
