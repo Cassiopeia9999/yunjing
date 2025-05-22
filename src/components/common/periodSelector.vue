@@ -1,5 +1,5 @@
 <template>
-  <div class="flex gap-4">
+  <div class="flex gap-2">
     <!-- 基地 -->
     <el-select v-model="selectedBaseId" placeholder="选择基地" @change="onBaseChange" class="w-64">
       <el-option v-for="item in baseOptions" :key="item.id" :label="item.name" :value="item.id" />
@@ -12,7 +12,7 @@
 
     <!-- 设备 -->
     <el-select v-model="selectedDeviceId" placeholder="选择设备" @change="onDeviceChange" class="w-64">
-      <el-option v-for="item in deviceOptions" :key="item.id" :label="item.component_name" :value="item.id" />
+        <el-option v-for="item in deviceOptions" :key="item.id" :label="item.device_name" :value="item.id" />
     </el-select>
   </div>
 </template>
