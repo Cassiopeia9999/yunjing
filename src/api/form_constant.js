@@ -8,4 +8,4 @@ export const DEVICE_FORM_ID = 24  // 设备
 export const POINT_FORM_ID = 36    // 测点
 export const FEATURE_TYPE_FORM_ID =  37 // 替换为实际特征类型 formId
 export const FEATURE_DATA_FORM_ID =  38
-
+export const PERIOD_FORM_ID = 39
