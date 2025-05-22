@@ -108,108 +108,36 @@
 
     <!-- 下半部分区域 -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- 左下角3x3区域组件 -->
-      <div class="lg:col-span-1 bg-white rounded-lg shadow-lg overflow-hidden">
-        <div class="px-6 py-4 bg-primary text-black flex justify-between items-center ">
-          <h3 class="font-semibold ">实时监测</h3>
-          <span class="text-xs bg-white/20 px-2 py-1 rounded-full">
-            <i class="fa fa-clock-o mr-1"></i>更新于: 2025-05-19 10:30
-          </span>
-        </div>
-        <div class="p-4">
-          <div class="grid grid-cols-3 gap-3">
-            <!-- 第一行 -->
-            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-              <div class="text-xs font-medium text-gray-500 mb-2">107MV.峭度</div>
-              <div class="text-xl font-bold text-gray-800">85%</div>
-              <div class="text-xs text-green-500 mt-1">
-                <i class="fa fa-arrow-up"></i> 3.2%
-              </div>
-            </div>
-            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-              <div class="text-xs font-medium text-gray-500 mb-2">150MM.峭度</div>
-              <div class="text-xl font-bold text-gray-800">128</div>
-              <div class="text-xs text-green-500 mt-1">
-                <i class="fa fa-arrow-up"></i> 5.7%
-              </div>
-            </div>
-            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-              <div class="text-xs font-medium text-gray-500 mb-2">151MM.峭度</div>
-              <div class="text-xl font-bold text-gray-800">64</div>
-              <div class="text-xs text-red-500 mt-1">
-                <i class="fa fa-arrow-down"></i> 1.2%
-              </div>
-            </div>
-
-            <!-- 第二行 -->
-            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-              <div class="text-xs font-medium text-gray-500 mb-2">152MM.峭度</div>
-              <div class="text-xl font-bold text-gray-800">92%</div>
-              <div class="text-xs text-green-500 mt-1">
-                <i class="fa fa-arrow-up"></i> 2.1%
-              </div>
-            </div>
-            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-              <div class="text-xs font-medium text-gray-500 mb-2">153MM.峭度</div>
-              <div class="text-xl font-bold text-gray-800">42</div>
-              <div class="text-xs text-gray-500 mt-1">
-                <i class="fa fa-minus"></i> 0.0%
-              </div>
-            </div>
-            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-              <div class="text-xs font-medium text-gray-500 mb-2">f153MM.峰峰值</div>
-              <div class="text-xl font-bold text-gray-800">15</div>
-              <div class="text-xs text-red-500 mt-1">
-                <i class="fa fa-arrow-down"></i> 4.3%
-              </div>
-            </div>
-
-            <!-- 第三行 -->
-            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-              <div class="text-xs font-medium text-gray-500 mb-2">153MM.震动烈度</div>
-              <div class="text-xl font-bold text-gray-800">78%</div>
-              <div class="text-xs text-green-500 mt-1">
-                <i class="fa fa-arrow-up"></i> 1.8%
-              </div>
-            </div>
-            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-              <div class="text-xs font-medium text-gray-500 mb-2">150MM.8倍频幅值</div>
-              <div class="text-xl font-bold text-gray-800">256</div>
-              <div class="text-xs text-green-500 mt-1">
-                <i class="fa fa-arrow-up"></i> 6.4%
-              </div>
-            </div>
-            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-              <div class="text-xs font-medium text-gray-500 mb-2">150MM.4倍频幅值</div>
-              <div class="text-xl font-bold text-gray-800">32</div>
-              <div class="text-xs text-red-500 mt-1">
-                <i class="fa fa-arrow-down"></i> 2.9%
-              </div>
-            </div>
-            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-              <div class="text-xs font-medium text-gray-500 mb-2">151MM.1倍频幅值</div>
-              <div class="text-xl font-bold text-gray-800">32</div>
-              <div class="text-xs text-red-500 mt-1">
-                <i class="fa fa-arrow-down"></i> 2.9%
-              </div>
-            </div>
-            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-              <div class="text-xs font-medium text-gray-500 mb-2">107MV.振动烈度</div>
-              <div class="text-xl font-bold text-gray-800">32</div>
-              <div class="text-xs text-red-500 mt-1">
-                <i class="fa fa-arrow-down"></i> 2.9%
-              </div>
-            </div>
-            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-              <div class="text-xs font-medium text-gray-500 mb-2">150MM.2倍频幅值</div>
-              <div class="text-xl font-bold text-gray-800">32</div>
-              <div class="text-xs text-red-500 mt-1">
-                <i class="fa fa-arrow-down"></i> 2.9%
-              </div>
-            </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div
+            v-for="(item, index) in featureBlocks"
+            :key="index"
+            class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
+        >
+          <div class="text-xs font-medium text-gray-500 mb-2">{{ item.name }}</div>
+          <div class="text-xl font-bold text-gray-800">
+            {{ item.value }}{{ item.unit }}
+          </div>
+          <div
+              class="text-xs mt-1"
+              :class="{
+        'text-green-500': item.change_rate > 0,
+        'text-red-500': item.change_rate < 0,
+        'text-gray-500': item.change_rate === 0
+      }"
+          >
+            <i
+                :class="{
+          'fa fa-arrow-up': item.change_rate > 0,
+          'fa fa-arrow-down': item.change_rate < 0,
+          'fa fa-minus': item.change_rate === 0
+        }"
+            ></i>
+            {{ item.change_rate }}%
           </div>
         </div>
       </div>
+
 
       <!-- 右下角ECharts组件 -->
       <div class="lg:col-span-2 bg-white rounded-lg shadow-lg overflow-hidden">
@@ -298,8 +226,61 @@
 </template>
 
 <script setup>
-import {ref, onMounted, onBeforeUnmount} from 'vue';
-import * as echarts from 'echarts';
+
+
+import { onMounted, onBeforeUnmount, reactive, ref } from 'vue'
+import * as echarts from 'echarts'
+
+// 实时特征数据
+const featureBlocks = reactive([])
+
+// WebSocket 地址自动构建
+const baseApi = import.meta.env.VITE_APP_BASE_API
+const wsUrl = (() => {
+  if (baseApi.startsWith('http')) {
+    return baseApi.replace(/^http/, 'ws') + '/websocket/diagnosis/monitor'
+  } else {
+    return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${baseApi}/websocket/diagnosis/monitor`
+  }
+})()
+
+let socket = null
+
+const connectWebSocket = () => {
+  socket = new WebSocket(wsUrl)
+  socket.onopen = () => {
+    console.log('✅ Diagnosis WebSocket 已连接')
+  }
+  socket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+      if (Array.isArray(data.features)) {
+        featureBlocks.splice(0, featureBlocks.length, ...data.features)
+      }
+    } catch (err) {
+      console.error('接收 WebSocket 消息出错:', err)
+    }
+  }
+  socket.onerror = (err) => {
+    console.error('❌ WebSocket 错误', err)
+  }
+  socket.onclose = () => {
+    console.warn('⚠️ WebSocket 断开，3秒后重连')
+    setTimeout(connectWebSocket, 3000)
+  }
+}
+
+onMounted(() => {
+  connectWebSocket()
+  initChart()
+  window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+  if (socket) socket.close()
+  if (chartInstance) chartInstance.dispose()
+  window.removeEventListener('resize', handleResize)
+})
 
 // 模拟设备数据
 const deviceData = ref([

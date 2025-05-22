@@ -92,6 +92,11 @@ const menuItems = [
     link: '/inner/globalview'
   },
   {
+    name: '实时监控测试',
+    icon: 'ChromeFilled',
+    link: '/inner/monitor'
+  },
+  {
     name: '特征分析',
     icon: 'ChromeFilled',
     link: '/inner/featuredemo'
