@@ -110,8 +110,8 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- 左下角3x3区域组件 -->
       <div class="lg:col-span-1 bg-white rounded-lg shadow-lg overflow-hidden">
-        <div class="px-6 py-4 bg-primary text-white flex justify-between items-center">
-          <h3 class="font-semibold">实时监测</h3>
+        <div class="px-6 py-4 bg-primary text-black flex justify-between items-center ">
+          <h3 class="font-semibold ">实时监测</h3>
           <span class="text-xs bg-white/20 px-2 py-1 rounded-full">
             <i class="fa fa-clock-o mr-1"></i>更新于: 2025-05-19 10:30
           </span>
