@@ -238,9 +238,9 @@ const featureBlocks = reactive([])
 const baseApi = import.meta.env.VITE_APP_BASE_API
 const wsUrl = (() => {
   if (baseApi.startsWith('http')) {
-    return baseApi.replace(/^http/, 'ws') + '/websocket/diagnosis/monitor'
+    return baseApi.replace(/^http/, 'ws') + '/socket/diagnosis/monitor'
   } else {
-    return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${baseApi}/websocket/diagnosis/monitor`
+    return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${baseApi}/socket/diagnosis/monitor`
   }
 })()
 
