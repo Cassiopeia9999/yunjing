@@ -108,32 +108,41 @@
 
     <!-- 下半部分区域 -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="grid grid-cols-3 gap-3">
-        <div
-            v-for="(item, index) in featureBlocks"
-            :key="index"
-            class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
-        >
-          <div class="text-xs font-medium text-gray-500 mb-2">{{ item.name }}</div>
-          <div class="text-xl font-bold text-gray-800">
-            {{ item.value }}{{ item.unit }}
-          </div>
+      <div class="bg-white p-4 rounded-lg shadow-sm">
+        <!-- 标题区域 -->
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-black font-semibold">实时数据</h3>
+          <div class="text-xs text-gray-500">更新于: {{ lastUpdateTime }}</div>
+        </div>
+
+        <!-- 数据展示区域 - 使用响应式网格 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           <div
-              class="text-xs mt-1"
-              :class="{
-        'text-green-500': item.change_rate > 0,
-        'text-red-500': item.change_rate < 0,
-        'text-gray-500': item.change_rate === 0
-      }"
+              v-for="(item, index) in featureBlocks"
+              :key="item.id || index"
+              class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
           >
-            <i
+            <div class="text-xs font-medium text-gray-500 mb-2">{{ item.name }}</div>
+            <div class="text-xl font-bold text-gray-800">
+              {{ item.value }}{{ item.unit }}
+            </div>
+            <div
+                class="text-xs mt-1"
                 :class="{
-          'fa fa-arrow-up': item.change_rate > 0,
-          'fa fa-arrow-down': item.change_rate < 0,
-          'fa fa-minus': item.change_rate === 0
+          'text-green-500': item.change_rate > 0,
+          'text-red-500': item.change_rate < 0,
+          'text-gray-500': item.change_rate === 0
         }"
-            ></i>
-            {{ item.change_rate }}%
+            >
+              <i
+                  :class="{
+            'fa fa-arrow-up': item.change_rate > 0,
+            'fa fa-arrow-down': item.change_rate < 0,
+            'fa fa-minus': item.change_rate === 0
+          }"
+              ></i>
+              {{ item.change_rate }}%
+            </div>
           </div>
         </div>
       </div>
