@@ -36,7 +36,7 @@ export function fetchDeviceFeatureValues(
         { key: 'device_id', value: [deviceId] },
         { key: 'feature_name', value: [featureName] },
         { key: 'timestamp', range: [startTime, endTime] },
-        { key: 'featurevalue', value: [featurevalue]}
+        { key: 'feature_value', value: [featurevalue]}
     ];
 
     return request({

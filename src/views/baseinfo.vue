@@ -55,7 +55,7 @@
                 :row-class-name="getDeviceRowClass"
                 empty-text="未找到匹配设备"
             >
-              <el-table-column prop="component_name" label="设备名称" />
+              <el-table-column prop="device_name" label="设备名称" />
               <el-table-column prop="parent_site.name" label="基地" />
               <el-table-column prop="parent_system.name" label="装置" />
             </el-table>
@@ -134,7 +134,7 @@ const handleSystemClick = async (system, index) => {
 
 // 点击设备行
 const handleDeviceClick = async (device) => {
-  selectedDevice.value = device.component_name
+  selectedDevice.value = device.device_name
   await fetchPointList()
 }
 
@@ -155,15 +155,15 @@ const fetchPointList = async () => {
   const data = res.data.list || []
 
   pointList.value = data.filter(point =>
-      point.parent_site?.name === baseName.value &&
-      point.parent_system?.name === selectedSystem.value &&
+      // point.parent_site?.name === baseName.value &&
+      // point.parent_system?.name === selectedSystem.value &&
       point.equipment_id?.name === selectedDevice.value
   )
 }
 
 // 高亮当前选中设备行
 const getDeviceRowClass = ({ row }) => {
-  return row.component_name === selectedDevice.value ? 'selected-device-row' : ''
+  return row.device_name === selectedDevice.value ? 'selected-device-row' : ''
 }
 
 // 初始加载

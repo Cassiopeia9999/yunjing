@@ -188,7 +188,7 @@ onMounted(() => {
   initialOption = JSON.parse(JSON.stringify(baseOption)) // 深拷贝初始配置
 
   // 加载特征类型下拉选项
-  fetchTableData(1, 1000, FEATURE_TYPE_FORM_ID)
+  fetchTableData(1, 1000, FEATURE_TYPE_FORM_ID, {})
       .then((res) => {
         featureTypeOptions.value = res.data.list || []
         if (featureTypeOptions.value.length > 0) {
