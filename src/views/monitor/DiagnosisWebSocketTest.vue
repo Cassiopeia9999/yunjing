@@ -29,10 +29,10 @@ const baseApi = import.meta.env.VITE_APP_BASE_API
 // 将 http(s):// 替换为 ws(s)://，或处理相对路径
 const wsUrl = (() => {
   if (baseApi.startsWith('http')) {
-    return baseApi.replace(/^http/, 'ws') + '/websocket/diagnosis/monitor'
+    return baseApi.replace(/^http/, 'ws') + '/socket/diagnosis/monitor'
   } else {
     // 相对路径，如 /api，拼接 host
-    return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${baseApi}/websocket/diagnosis/monitor`
+    return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${baseApi}/socket/diagnosis/monitor`
   }
 })()
 
@@ -52,7 +52,7 @@ const connectWebSocket = () => {
   socket.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data)
-      if (data.device_id && data.fault_code) {
+      if (data.device_id && data.features) {
         faultList.unshift(data)
         if (faultList.length > 20) faultList.pop() // 保留最多20条
       }
