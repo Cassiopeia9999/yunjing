@@ -21,3 +21,38 @@ export function fetchTableData(pageNo, pageSize, formId, queryFilters) {
         }
     });
 }
+
+export function fetchDeviceFeatureValues(
+    deviceId,
+    featureName,
+    featurevalue,
+    startTime,
+    endTime,
+    pageNo = 1,
+    pageSize = 1000
+) {
+    // 构建查询参数
+    const queryFilters = [
+        { key: 'device_id', value: [deviceId] },
+        { key: 'feature_name', value: [featureName] },
+        { key: 'timestamp', range: [startTime, endTime] },
+        { key: 'featurevalue', value: [featurevalue]}
+    ];
+
+    return request({
+        url: '/api/onlinecode/queryListPage',
+        method: 'post',
+        data: {
+            formId: 'device_feature_value_form',
+            pageNo,
+            pageSize,
+            queryParamVOs: JSON.stringify(queryFilters)
+        }
+    }).then(response => {
+        // 假设response.data格式为 { success: true, data: { records: [...] } }
+        if (response.success) {
+            return response.data.records || [];
+        }
+        throw new Error('获取设备特征值失败: ' + response.message);
+    });
+}
