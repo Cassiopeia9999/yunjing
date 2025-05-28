@@ -11,7 +11,7 @@ import baseinfo from "@/views/baseinfo.vue";
 import period from "@/views/period.vue"
 import rsituation from "@/views/rsituation.vue"
 import DiagnosisWebSocketTest from "@/views/monitor/DiagnosisWebSocketTest.vue";
-import test from "@/views/test.vue"
+
 const routes = [
     {
         path: '/',
@@ -84,12 +84,6 @@ const routes = [
                 path: 'monitor',
                 name: 'monitor',
                 component: DiagnosisWebSocketTest,
-                meta: { requiresAuth: true },
-            },
-            {
-                path: 'test',
-                name: 'test',
-                component: test,
                 meta: { requiresAuth: true },
             }
         ]
