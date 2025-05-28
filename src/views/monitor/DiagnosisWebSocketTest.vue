@@ -5,7 +5,7 @@
 
       <el-table :data="faultList" style="width: 100%">
         <el-table-column prop="device_id" label="设备 ID" width="180" />
-        <el-table-column prop="based_on_feature" label="触发特征" />
+        <el-table-column prop="features" label="触发特征" />
         <el-table-column prop="status" label="状态" />
         <el-table-column prop="fault_code" label="故障码" />
         <el-table-column prop="occurred_at" label="发生时间" />

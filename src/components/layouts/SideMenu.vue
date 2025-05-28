@@ -92,6 +92,11 @@ const menuItems = [
     link: '/inner/globalview'
   },
   {
+    name: '实时情况',
+    icon: 'ChromeFilled',
+    link: '/inner/rsituation'
+  },
+  {
     name: '实时监控测试',
     icon: 'ChromeFilled',
     link: '/inner/monitor'
@@ -107,9 +112,9 @@ const menuItems = [
     link: '/inner/period'
   },
   {
-    name: '实时情况',
+    name: '测试页面',
     icon: 'ChromeFilled',
-    link: '/inner/rsituation'
+    link: '/inner/test'
   },
   {
     name: '数据后台（新窗口）',
