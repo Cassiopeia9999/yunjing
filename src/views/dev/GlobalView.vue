@@ -135,8 +135,9 @@ onMounted(() => {
                     label: {
                       show: true,
                       formatter: '{b}',
-                      color: '#fff', // 图钉标签颜色改为白色
-                      fontSize: 12,
+                      color: '#00ffff', // 图钉标签颜色改为白色
+                      fontSize: 16,
+                      fontWeight: 'bold',
                       position: 'top' // 标签位置在图钉上方
                     }
                   }
