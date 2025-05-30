@@ -1,13 +1,18 @@
 <template>
-  <!-- 父容器，用于放置背景卫星图 -->
-  <div class="map-background-container">
+  <!-- 父容器，用于放置背景卫星图，并应用transform进行缩放平移 -->
+  <!-- overflow: hidden; 确保缩放时内容超出容器不显示滚动条 -->
+  <div
+      class="map-background-container"
+      ref="mapBackgroundContainerRef"
+      :style="transformStyle"
+  >
     <!-- ECharts 容器，背景透明 -->
     <div class="map-container" ref="mapContainer"></div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import * as echarts from 'echarts'
 import { fetchTableData } from '@/api/querydata.js'
 import { BASE_FORM_ID } from "@/api/form_constant.js";
@@ -18,22 +23,118 @@ import { useRouter } from 'vue-router';
 // import coordtransform from 'coordtransform';
 
 const mapContainer = ref(null)
+const mapBackgroundContainerRef = ref(null) // 引用最外层容器
 const router = useRouter();
 
+// --- 调整接口：固定的初始缩放比率 ---
+// 你可以通过修改这个值来调整整个地图的初始放大级别
+const initialScale = ref(1.2); // 固定的初始缩放比率 (例如 1.2 表示 120%)
+
+// --- 手动设置平移范围限制 ---
+// 这些值表示地图可以从其中心点向任意方向平移的最大距离（以未缩放的像素为单位）。
+// 你需要根据你的背景图大小和 initialScale 进行调整，以确保地图不会移出合理范围。
+// 示例值，请根据实际效果调整：
+const manualPanLimitX = ref(50); // 允许水平方向从中心平移的最大距离 (未缩放像素)
+const manualPanLimitY = ref(40); // 允许垂直方向从中心平移的最大距离 (未缩放像素)
+
+
+// 平移状态 (这些值会通过拖拽动态改变)
+const offsetX = ref(0)
+const offsetY = ref(0)
+
+// 拖拽状态
+const isDragging = ref(false)
+const startMouseX = ref(0)
+const startMouseY = ref(0)
+const startOffsetX = ref(0) // 拖拽开始时的平移量
+const startOffsetY = ref(0)
+
+// 计算transform样式
+const transformStyle = computed(() => {
+  return {
+    transform: `scale(${initialScale.value}) translate(${offsetX.value}px, ${offsetY.value}px)`,
+    transformOrigin: 'center center', // 缩放中心点，容器中心
+    cursor: isDragging.value ? 'grabbing' : 'grab', // 鼠标样式
+  }
+})
+
+// 鼠标按下事件处理
+const handleMouseDown = (event) => {
+  isDragging.value = true
+  startMouseX.value = event.clientX
+  startMouseY.value = event.clientY
+  startOffsetX.value = offsetX.value
+  startOffsetY.value = offsetY.value
+  // 阻止默认行为，避免拖拽时选中文字等
+  event.preventDefault()
+}
+
+// 鼠标移动事件处理
+const handleMouseMove = (event) => {
+  if (!isDragging.value) return
+
+  // 计算鼠标在屏幕上移动的距离 (像素)
+  const dx = event.clientX - startMouseX.value
+  const dy = event.clientY - startMouseY.value
+
+  // 计算新的潜在偏移量 (在原始坐标系中)
+  let newOffsetX = startOffsetX.value + dx / initialScale.value
+  let newOffsetY = startOffsetY.value + dy / initialScale.value
+
+  // --- 应用手动设置的平移限制 ---
+  // newOffsetX 应该在 [-manualPanLimitX.value, manualPanLimitX.value] 之间
+  // newOffsetY 应该在 [-manualPanLimitY.value, manualPanLimitY.value] 之间
+  newOffsetX = Math.max(-manualPanLimitX.value, Math.min(manualPanLimitX.value, newOffsetX));
+  newOffsetY = Math.max(-manualPanLimitY.value, Math.min(manualPanLimitY.value, newOffsetY));
+
+  // 更新状态
+  offsetX.value = newOffsetX
+  offsetY.value = newOffsetY
+
+  // 更新起始点，实现平滑拖拽
+  startMouseX.value = event.clientX;
+  startMouseY.value = event.clientY;
+  startOffsetX.value = offsetX.value; // 使用限制后的值更新起始偏移量
+  startOffsetY.value = offsetY.value; // 使用限制后的值更新起始偏移量
+}
+
+// 鼠标松开事件处理
+const handleMouseUp = () => {
+  isDragging.value = false
+}
+
+
+let myChart = null; // 定义 ECharts 实例
+
 onMounted(() => {
-  const mapContainerElement = mapContainer.value
-  if (!mapContainerElement) {
+  const containerElement = mapBackgroundContainerRef.value; // 获取最外层容器
+  const echartsContainerElement = mapContainer.value; // 获取 ECharts 容器
+
+  if (!containerElement || !echartsContainerElement) {
     console.error('地图容器元素未找到')
     return
   }
+
+  // 添加事件监听器
+  containerElement.addEventListener('mousedown', handleMouseDown)
+  // 监听window，即使鼠标移出容器也能继续拖拽
+  window.addEventListener('mousemove', handleMouseMove)
+  window.addEventListener('mouseup', handleMouseUp)
+
+
   // 初始化 ECharts 实例，并设置背景透明
-  const myChart = echarts.init(mapContainerElement, null, {
+  myChart = echarts.init(echartsContainerElement, null, {
     backgroundColor: 'transparent' // 确保 ECharts 渲染的 canvas 背景是透明的
   })
   myChart.showLoading()
 
   fetch('/assets/maps/china-province.json')
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
       .then(chinaJson => {
         echarts.registerMap('china', chinaJson)
 
@@ -53,18 +154,6 @@ onMounted(() => {
               // 或者国测局的 GCJ02 坐标，你必须在这里进行转换。
               // 否则，标记点将无法正确显示在地图上。
 
-              // 示例：如果数据是 BD09，转换为 WGS84
-              // const transformedLocations = locations.map(item => {
-              //   const gcj02Point = coordtransform.bd09togcj02(item.longitude, item.latitude);
-              //   const wgs84Point = coordtransform.gcj02towgs84(gcj02Point[0], gcj02Point[1]);
-              //   return {
-              //     ...item,
-              //     longitude: wgs84Point[0], // 使用转换后的 WGS84 经度
-              //     latitude: wgs84Point[1]   // 使用转换后的 WGS84 纬度
-              //   };
-              // });
-              // 然后在 series.data 中使用 transformedLocations
-
               const option = {
                 // ECharts 标题样式，适应卫星图背景
                 title: {
@@ -82,21 +171,22 @@ onMounted(() => {
                 geo: {
                   map: 'china',
                   // !!! 关键修改：禁用 ECharts 地图的平移和缩放功能 !!!
+                  // 因为我们通过外部CSS transform来控制整个容器的平移缩放
                   roam: false,
 
                   // !!! 关键修改：调整 geo 组件的位置和大小以对齐背景图 !!!
-                  // 这些值需要根据你的 `map2.jpg` 卫星图的实际内容和比例进行微调。
-                  // 你可能需要反复修改这些百分比，直到 ECharts 绘制的地图轮廓与背景图对齐。
+                  // 这些值是相对于 ECharts 容器的。
+                  // 即使父容器被外部 CSS transform 缩放和平移，ECharts 内部的渲染仍然基于这些参数。
+                  // 因此，你仍需要根据你的 `map21.jpg` 卫星图的实际内容和比例进行微调。
+                  // 建议在 `initialScale` 确定后，再来微调这些参数。
                   left: '28.6%',
                   right: '28.6%',
                   top: '6%',
                   bottom: '14%',
-                  zoom: 1.355,// 调整距离容器底部的距离 // 示例值，表示地图距离容器底部 5%
-                  // 也可以使用 width 和 height 来设置地图的绝对或相对大小
-                  // 例如：width: '90%', height: '90%',
-                  // 或者设置中心点和缩放级别，如果你的背景图有明确的中心和范围
-                  center: [104.5, 34.7],
-                  // zoom: 1.0, // 示例：初始缩放级别
+                  zoom: 1.355, // ECharts 内部地图的缩放级别。
+                  // 这个值与外部的 `initialScale` 是独立的，但会共同影响最终视觉效果。
+                  // 如果外部 `initialScale` 增大了，你可能需要适当减小 `geo.zoom` 来避免过度放大。
+                  center: [104.5, 34.7], // 初始中心点
 
                   label: {
                     show: true,
@@ -123,8 +213,7 @@ onMounted(() => {
                     type: 'scatter',
                     coordinateSystem: 'geo',
                     symbol: 'pin',
-                    symbolSize: 40,
-                    // 如果进行了坐标转换，这里使用 transformedLocations
+                    symbolSize: 30,
                     data: locations.map(item => ({
                       name: item.name,
                       value: [item.longitude, item.latitude, item.value]
@@ -135,7 +224,7 @@ onMounted(() => {
                     label: {
                       show: true,
                       formatter: '{b}',
-                      color: '#00ffff', // 图钉标签颜色改为白色
+                      color: '#00ffff', // 图钉标签颜色改为亮青色
                       fontSize: 16,
                       fontWeight: 'bold',
                       position: 'top' // 标签位置在图钉上方
@@ -172,7 +261,22 @@ onMounted(() => {
         myChart.hideLoading()
       })
 
-  window.addEventListener('resize', () => myChart.resize())
+  // 窗口大小改变时，ECharts 容器需要重新计算大小
+  window.addEventListener('resize', () => myChart && myChart.resize())
+})
+
+// 组件卸载时移除事件监听器，避免内存泄漏
+onUnmounted(() => {
+  const containerElement = mapBackgroundContainerRef.value;
+  if (containerElement) {
+    containerElement.removeEventListener('mousedown', handleMouseDown);
+  }
+  window.removeEventListener('mousemove', handleMouseMove);
+  window.removeEventListener('mouseup', handleMouseUp);
+  window.removeEventListener('resize', () => myChart && myChart.resize());
+  if (myChart) {
+    myChart.dispose(); // 销毁 ECharts实例
+  }
 })
 </script>
 
@@ -181,15 +285,16 @@ onMounted(() => {
 .map-background-container {
   width: 100%;
   height: 100vh; /* 确保容器占满视口高度 */
-  background-image: url('/images/map2.jpg'); /* 你的卫星图路径 */
+  background-image: url('/images/map21.jpg'); /* 你的卫星图路径 */
   background-size: cover; /* 确保背景图覆盖整个容器，可能裁剪 */
-  /* 或者使用 contain，确保背景图完整显示，可能留白 */
-  /* background-size: contain; */
-  /* 或者固定尺寸，可能拉伸 */
-  /* background-size: 100% 100%; */
   background-position: center; /* 背景图居中 */
   background-repeat: no-repeat; /* 不重复 */
   position: relative; /* 确保子元素可以相对于它定位 */
+  overflow: hidden; /* 关键：隐藏超出容器的内容，防止出现滚动条 */
+  /* transform 的过渡效果在这里可以保留，让平移更平滑 */
+  transition: transform 0.05s ease-out; /* 稍微加快过渡，平移手感更好 */
+  will-change: transform;
+  /* 鼠标样式通过 computed 属性动态设置 */
 }
 
 /* ECharts 容器 */
@@ -202,4 +307,3 @@ onMounted(() => {
   left: 0;
 }
 </style>
-

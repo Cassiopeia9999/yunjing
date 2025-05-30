@@ -107,11 +107,6 @@ const menuItems = [
     link: '/inner/featuredemo'
   },
   {
-    name: '周期管理',
-    icon: 'ChromeFilled',
-    link: '/inner/period'
-  },
-  {
     name: '测试页面',
     icon: 'ChromeFilled',
     link: '/inner/test'

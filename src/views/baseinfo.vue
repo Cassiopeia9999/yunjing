@@ -94,11 +94,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { fetchTableData } from '@/api/querydata.js'
-import { UNIT_FORM_ID, DEVICE_FORM_ID, POINT_FORM_ID } from '@/api/form_constant.js'
-import { Document } from '@element-plus/icons-vue'
+import {ref, onMounted} from 'vue'
+import {useRoute} from 'vue-router'
+import {fetchTableData} from '@/api/querydata.js'
+import {UNIT_FORM_ID, DEVICE_FORM_ID, POINT_FORM_ID} from '@/api/form_constant.js'
+import {Document} from '@element-plus/icons-vue'
 
 // 基础信息
 const route = useRoute()
@@ -162,7 +162,7 @@ const fetchPointList = async () => {
 }
 
 // 高亮当前选中设备行
-const getDeviceRowClass = ({ row }) => {
+const getDeviceRowClass = ({row}) => {
   return row.device_name === selectedDevice.value ? 'selected-device-row' : ''
 }
 
