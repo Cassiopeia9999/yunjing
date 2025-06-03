@@ -115,7 +115,7 @@
     </div>
 
     <!-- 设备数据展示表格 -->
-    <div class="mb-8 bg-white rounded-lg hover:shadow-lg overflow-hidden ">
+    <div class="mb-8 bg-white rounded-lg hover:shadow-lg  overflow-hidden ">
       <div class="px-6 py-4 bg-primary text-black flex justify-between items-center ">
         <h2 class="text-xl font-semibold">设备数据展示</h2>
         <div class="flex space-x-2">
