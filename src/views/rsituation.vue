@@ -5,7 +5,7 @@
 
       <div class="grid grid-cols-5 gap-4">
         <!-- 故障设备 -->
-        <div class="bg-gray-50 p-2  rounded-lg shadow-sm border border-gray-200" style="height: 32px;">
+        <div class="bg-gray-50 p-2  rounded-lg hover:shadow-md border border-gray-200" style="height: 32px;">
           <div class="flex justify-between items-center ">
             <div class="text-xs font-medium text-gray-500 leading-tight">故障设备</div>
             <div class="text-xs font-bold text-gray-800">
@@ -15,7 +15,7 @@
         </div>
 
         <!-- 故障发生时间 -->
-        <div class="bg-gray-50 p-2 rounded-lg shadow-sm border border-gray-200" style="height: 32px;">
+        <div class="bg-gray-50 p-2 rounded-lg hover:shadow-md border border-gray-200" style="height: 32px;">
           <div class="flex justify-between items-center">
             <div class="text-xs font-medium text-gray-500">故障发生时间</div>
             <div class="text-xs font-bold text-gray-800">
@@ -25,7 +25,7 @@
         </div>
 
         <!-- 故障信息1 -->
-        <div class="bg-gray-50 p-2 rounded-lg shadow-sm border border-gray-200" style="height: 32px;">
+        <div class="bg-gray-50 p-2 rounded-lg hover:shadow-md border border-gray-200" style="height: 32px;">
           <div class="flex justify-between items-center">
             <div class="text-xs font-medium text-gray-500">故障信息1</div>
             <div class="text-xs font-bold text-gray-800">
@@ -35,7 +35,7 @@
         </div>
 
         <!-- 故障信息2 -->
-        <div class="bg-gray-50 p-2 rounded-lg shadow-sm border border-gray-200" style="height: 32px;">
+        <div class="bg-gray-50 p-2 rounded-lg hover:shadow-md border border-gray-200" style="height: 32px;">
           <div class="flex justify-between items-center">
             <div class="text-xs font-medium text-gray-500">故障信息2</div>
             <div class="text-xs font-bold text-gray-800">
@@ -45,7 +45,7 @@
         </div>
 
         <!-- 故障信息3 -->
-        <div class="bg-gray-50 p-2 rounded-lg shadow-sm border border-gray-200" style="height: 32px;">
+        <div class="bg-gray-50 p-2 rounded-lg hover:shadow-md border border-gray-200" style="height: 32px;">
           <div class="flex justify-between items-center">
             <div class="text-xs font-medium text-gray-500">故障信息3</div>
             <div class="text-xs font-bold text-gray-800">
@@ -56,7 +56,7 @@
       </div>
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-3">
-      <div class="bg-white p-4 rounded-lg shadow-sm">
+      <div class="bg-white p-4 rounded-lg shadow-sm hover:shadow-md ">
         <!-- 标题区域 -->
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-black font-semibold">实时数据</h3>
@@ -98,7 +98,7 @@
       </div>
 
       <!-- 右下角ECharts组件 -->
-      <div class="lg:col-span-2 bg-white rounded-lg shadow-lg overflow-hidden">
+      <div class="lg:col-span-2 bg-white rounded-lg hover:shadow-lg overflow-hidden">
         <div class="px-6 py-4 bg-primary text-white flex justify-between items-center">
           <h3 class="font-semibold">数据分析</h3>
           <div class="flex space-x-2">
@@ -115,8 +115,8 @@
     </div>
 
     <!-- 设备数据展示表格 -->
-    <div class="mb-8 bg-white rounded-lg shadow-lg overflow-hidden">
-      <div class="px-6 py-4 bg-primary text-black flex justify-between items-center">
+    <div class="mb-8 bg-white rounded-lg hover:shadow-lg overflow-hidden ">
+      <div class="px-6 py-4 bg-primary text-black flex justify-between items-center ">
         <h2 class="text-xl font-semibold">设备数据展示</h2>
         <div class="flex space-x-2">
           <button class="bg-white text-primary px-3 py-1 rounded text-sm hover:bg-gray-100 transition-colors">
