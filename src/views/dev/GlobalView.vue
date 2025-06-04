@@ -186,7 +186,7 @@ onMounted(() => {
                   zoom: 1.355, // ECharts 内部地图的缩放级别。
                   // 这个值与外部的 `initialScale` 是独立的，但会共同影响最终视觉效果。
                   // 如果外部 `initialScale` 增大了，你可能需要适当减小 `geo.zoom` 来避免过度放大。
-                  center: [104.5, 35.7], // 初始中心点
+                  center: [104.4, 35.7], // 初始中心点
 
                   label: {
                     show: true,

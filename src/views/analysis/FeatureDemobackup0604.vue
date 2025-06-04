@@ -21,7 +21,24 @@
           </div>
 
           <div v-show="showFilter" class="mt-4 space-y-4">
-            <PointSelector @data-ready="handleSelectedPoints" />
+            <PointSelector @points-selected="handleSelectedPoints" />
+
+            <el-select
+                v-if="featureTypeOptions.length > 0"
+                v-model="selectedFeatureType"
+                filterable
+                clearable
+                placeholder="请选择特征类型"
+                class="w-full"
+                @change="loadFeatureData"
+            >
+              <el-option
+                  v-for="item in featureTypeOptions"
+                  :key="item.id"
+                  :label="item.feature_alias || item.name"
+                  :value="item.id"
+              />
+            </el-select>
           </div>
         </el-card>
       </div>
@@ -60,7 +77,7 @@
 <script setup>
 import {ref, onMounted, watch, onUnmounted} from 'vue'
 import * as echarts from 'echarts'
-import PointSelector from '@/components/common/Selector.vue'
+import PointSelector from '@/components/common/PointSelector.vue'
 import {fetchTableData} from '@/api/querydata.js'
 import {FEATURE_TYPE_FORM_ID, FEATURE_DATA_FORM_ID} from '@/api/form_constant.js'
 
@@ -169,23 +186,25 @@ function handleSelectedPoints(points) {
 // 加载特征数据并渲染图表
 async function loadFeatureData() {
   if (selectedPoints.value.length === 0 || !selectedFeatureType.value) return
-  // const pointIds = selectedPoints.value.map((p) => p.id)
-  // const queryParams = [
-  //   {
-  //     key: 'feature_type',
-  //     value: selectedFeatureType.value,
-  //     queryType: 1
-  //   },
-  //   {
-  //     key: 'point_id',
-  //     value: pointIds,
-  //     queryType: null
-  //   }
-  // ]
+
+  const pointIds = selectedPoints.value.map((p) => p.id)
+
+  const queryParams = [
+    {
+      key: 'feature_type',
+      value: selectedFeatureType.value,
+      queryType: 1
+    },
+    {
+      key: 'point_id',
+      value: pointIds,
+      queryType: null
+    }
+  ]
 
   try {
-    // const res = await fetchTableData(1, 1000, FEATURE_DATA_FORM_ID, queryParams)
-    const data = selectedPoints.value
+    const res = await fetchTableData(1, 1000, FEATURE_DATA_FORM_ID, queryParams)
+    const data = res.data.list || []
 
     if (data.length === 0) {
       chart.setOption({
@@ -206,7 +225,7 @@ async function loadFeatureData() {
     // 每个测点一条线
     const series = selectedPoints.value.map((point) => {
       const pointData = data
-          .filter((d) => d.parent_device.value === point.parent_device.value)
+          .filter((d) => d.point_id.value === point.id)
           .sort((a, b) => a.cur_timestamp.localeCompare(b.cur_timestamp))
 
       return {
@@ -227,9 +246,9 @@ async function loadFeatureData() {
     // 创建包含数据的完整配置
     const completeOption = JSON.parse(JSON.stringify(initialOption)) // 从初始配置复制
     completeOption.title.text = `${featureTypeOptions.value.find(t => t.id === selectedFeatureType.value)?.name || '特征'}趋势图`
-    completeOption.legend.data = selectedPoints.value.map((point) => point.feature_alia_name)
+    completeOption.legend.data = selectedPoints.value.map((point) => point.point_name)
     completeOption.xAxis.data = timestamps
-    completeOption.series = series[0]
+    completeOption.series = series
 
     // 使用 notMerge 参数确保完全替换现有配置
     chart.setOption(completeOption, true)
