@@ -1,10 +1,10 @@
 <template>
-  <div class="p-6">
+  <div class="p-2">
     <!-- 主容器：左侧固定宽度，右侧flex-1 -->
-    <div class="flex flex-col lg:flex-row gap-6">
+    <div class="flex flex-col lg:flex-row gap-3 p-1">
       <!-- 左侧数据选择区域 - 始终显示，固定宽度 -->
       <div class="lg:w-[300px]">
-        <el-card shadow="never">
+        <el-card shadow="hover" style="border-radius: 14px;">
           <div class="mb-6 text-center">
             <img
                 src="/images/R-C.jpg"
@@ -28,7 +28,7 @@
 
       <!-- 右侧图表展示区域 - 始终占满剩余空间 -->
       <div class="min-w-0 flex-1 transition-all duration-300">
-        <el-card shadow="never" class="h-full flex flex-col">
+        <el-card shadow="hover" class="h-full flex flex-col" style="border-radius: 25px;">
           <div class="flex justify-between items-center mb-4">
             <h3 class="font-semibold">特征趋势图</h3>
             <el-button
