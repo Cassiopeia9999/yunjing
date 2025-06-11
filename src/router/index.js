@@ -12,6 +12,7 @@ import period from "@/views/period.vue"
 import rsituation from "@/views/rsituation.vue"
 import DiagnosisWebSocketTest from "@/views/monitor/DiagnosisWebSocketTest.vue";
 import test from "@/views/test.vue"
+import {getToken} from "@/utils/auth.js";
 const routes = [
     {
         path: '/',
@@ -103,8 +104,8 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    if (to.meta.requiresAuth && !isLoggedIn) {
+    const token = getToken();
+    if (to.meta.requiresAuth && !token) {
         next({ path: '/login' });
     } else {
         next();
