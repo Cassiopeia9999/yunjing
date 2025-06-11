@@ -2,64 +2,29 @@
   <div class="container mx-auto px-1 py-1">
     <div class="bg-white text-white p-2 mb-3">
       <h3 class="text-xm font-bold mb-2 text-black">故障情况</h3>
-
-      <div class="grid grid-cols-5 gap-4">
-        <!-- 故障设备 -->
-        <div class="bg-gray-50 p-2  rounded-lg hover:shadow-md border border-gray-200" style="height: 32px;">
-          <div class="flex justify-between items-center ">
-            <div class="text-xs font-medium text-gray-500 leading-tight">故障设备</div>
-            <div class="text-xs font-bold text-gray-800">
-              DEV-003
-            </div>
-          </div>
+      <div v-if="diagnosis" class="bg-white border border-gray-200 rounded-lg mb-4 p-4 shadow-sm">
+        <!-- 第一行：字段列展示 -->
+        <div class="grid grid-cols-6 gap-4 text-sm text-gray-700 mb-2">
+          <div><span class="text-gray-500">故障设备：</span>{{ diagnosis.device }}</div>
+          <div><span class="text-gray-500">诊断时间：</span>{{ diagnosis.diagnose_time }}</div>
+          <div><span class="text-gray-500">故障类型：</span>{{ diagnosis.fault_type }}</div>
+          <div><span class="text-gray-500">置信度：</span>{{ diagnosis.confidence }}</div>
+          <div><span class="text-gray-500">状态甄别：</span>{{ diagnosis.eva_status }}</div>
+          <div><span class="text-gray-500">故障等级：</span>{{ diagnosis.fault_level }}</div>
         </div>
 
-        <!-- 故障发生时间 -->
-        <div class="bg-gray-50 p-2 rounded-lg hover:shadow-md border border-gray-200" style="height: 32px;">
-          <div class="flex justify-between items-center">
-            <div class="text-xs font-medium text-gray-500">故障发生时间</div>
-            <div class="text-xs font-bold text-gray-800">
-              2025-05-26 17:13:00
-            </div>
-          </div>
-        </div>
-
-        <!-- 故障信息1 -->
-        <div class="bg-gray-50 p-2 rounded-lg hover:shadow-md border border-gray-200" style="height: 32px;">
-          <div class="flex justify-between items-center">
-            <div class="text-xs font-medium text-gray-500">故障信息1</div>
-            <div class="text-xs font-bold text-gray-800">
-              电机温度异常
-            </div>
-          </div>
-        </div>
-
-        <!-- 故障信息2 -->
-        <div class="bg-gray-50 p-2 rounded-lg hover:shadow-md border border-gray-200" style="height: 32px;">
-          <div class="flex justify-between items-center">
-            <div class="text-xs font-medium text-gray-500">故障信息2</div>
-            <div class="text-xs font-bold text-gray-800">
-              振动幅度超标
-            </div>
-          </div>
-        </div>
-
-        <!-- 故障信息3 -->
-        <div class="bg-gray-50 p-2 rounded-lg hover:shadow-md border border-gray-200" style="height: 32px;">
-          <div class="flex justify-between items-center">
-            <div class="text-xs font-medium text-gray-500">故障信息3</div>
-            <div class="text-xs font-bold text-gray-800">
-              转速波动过大
-            </div>
-          </div>
+        <!-- 第二行：详情信息 -->
+        <div class="bg-gray-50 text-gray-800 text-sm p-3 rounded-md border border-dashed border-gray-300 whitespace-pre-line">
+          <span class="text-gray-500">详情：</span>{{ diagnosis.description || '无' }}
         </div>
       </div>
+
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-3">
       <div class="bg-white p-4 rounded-lg shadow-sm hover:shadow-md ">
         <!-- 标题区域 -->
         <div class="flex justify-between items-center mb-4">
-          <h3 class="text-black font-semibold">实时数据</h3>
+          <h3 class="text-black font-semibold">{{ currentDeviceName }} 实时数据</h3>
           <div class="text-xs text-gray-500">
             更新于: {{ latestUpdateTime }}
           </div>
@@ -300,12 +265,9 @@ import { useRouter } from 'vue-router';
 
 // 实时特征数据
 const featureBlocks = reactive([])
-const latestUpdateTime = computed(() => {
-  if (featureBlocks.length > 0 && featureBlocks[0].fault_state) {
-    return featureBlocks[0].fault_state.occurred_at || '未知时间'
-  }
-  return '无更新数据'
-})
+
+const currentDeviceName = ref('')        // 实时设备名称
+const latestUpdateTime = ref('无')       // 实时更新时间（从 WebSocket 中取）
 
 // WebSocket 地址自动构建
 const baseApi = import.meta.env.VITE_APP_BASE_API
@@ -335,6 +297,21 @@ const fetchDeviceData = async () => {
     console.error('设备数据加载失败:', error)
   }
 }
+const diagnosis = reactive({
+  device: '',
+  diagnose_time: '',
+  fault_type: '',
+  fault_code: '',
+  fault_level: '',
+  description: '',
+  confidence: '',
+  eva_status: '',
+  creator: '',
+  updater: '',
+  id: null
+})
+
+
 
 // 计算总页数
 const totalPages = computed(() => {
@@ -356,6 +333,16 @@ const nextPage = () => {
   }
 }
 
+function formatTime(timeStr) {
+  if (!timeStr) return '无'
+  const date = new Date(timeStr)
+  return date.toLocaleString('zh-CN', {
+    hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  })
+}
+
 // 连接WebSocket
 const connectWebSocket = () => {
   socket = new WebSocket(wsUrl)
@@ -365,13 +352,30 @@ const connectWebSocket = () => {
   socket.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data)
-      if (Array.isArray(data.features)) {
-        featureBlocks.splice(0, featureBlocks.length, ...data.features)
+
+      switch (data.type) {
+        case 'FEATURE_DATA':
+          if (Array.isArray(data.features)) {
+            featureBlocks.splice(0, featureBlocks.length, ...data.features)
+            // ✅ 设置设备名和更新时间
+            currentDeviceName.value = data.device_name || '未知设备'
+            latestUpdateTime.value = formatTime(data.send_time)
+            fetchDeviceData()
+          }
+          break
+
+        case 'FAULT_STATE':
+          if (data.fault_state) {
+            Object.assign(diagnosis, data.fault_state)
+          }
+          break
+
+        default:
+          console.warn('⚠️ 未知消息类型:', data.type)
       }
-      // 每次WebSocket更新时刷新设备数据
-      fetchDeviceData()
+
     } catch (err) {
-      console.error('接收 WebSocket 消息出错:', err)
+      console.error('❌ WebSocket 消息解析失败:', err)
     }
   }
   socket.onerror = (err) => {

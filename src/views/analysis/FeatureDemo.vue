@@ -1,264 +1,258 @@
 <template>
-  <div class="p-2">
-    <!-- 主容器：左侧固定宽度，右侧flex-1 -->
-    <div class="flex flex-col lg:flex-row gap-3 p-1">
-      <!-- 左侧数据选择区域 - 始终显示，固定宽度 -->
-      <div class="lg:w-[300px]">
-        <el-card shadow="hover" style="border-radius: 14px;">
-          <div class="mb-6 text-center">
-            <img
-                src="/images/R-C.jpg"
-                alt="数据选择图标"
-                class="w-full max-w-lg mx-auto border rounded-lg border-gray-300 shadow-sm"
+  <div class="p-2 h-full">
+    <div class="flex h-full gap-3">
+      <!-- 左侧 -->
+      <div class="lg:w-[300px] h-full overflow-auto">
+        <el-card shadow="hover" class="mb-3">
+          <img src="/images/R-C.jpg" alt="图标" class="w-full rounded" />
+        </el-card>
+        <div class="flex justify-between items-center px-2">
+          <span class="text-lg font-semibold">数据选择</span>
+          <el-button @click="toggleFilter" size="small">{{ showFilter ? '收起' : '展开' }}</el-button>
+        </div>
+        <PointSelector :showFeatureSelector="false" :cacheKey="'featureDemo'"  @data-ready="handleSelectedPoints" />
+        <el-checkbox-group v-model="selectedFeatureNames" class="flex flex-wrap gap-2 mt-4 px-2">
+          <el-checkbox v-for="name in availableFeatureNames" :key="name" :label="name">{{ name }}</el-checkbox>
+        </el-checkbox-group>
+      </div>
+      <!-- 右侧 -->
+      <div class="flex-1 h-full flex flex-col overflow-hidden">
+        <!-- 固定顶部（时间过滤区域 + 设置按钮） -->
+        <div class="bg-white z-10 shadow-sm px-2 pb-2">
+          <!-- 时间过滤面板 -->
+          <div class="mb-2 flex items-center gap-4">
+            <!-- 周期选择 -->
+            <el-select
+                v-model="selectedPeriodName"
+                placeholder="请选择周期"
+                style="width: 160px;"
+                clearable
+                @change="onPeriodChange"
             >
+              <el-option
+                  v-for="item in periodOptions"
+                  :key="item.period_name"
+                  :label="item.period_name"
+                  :value="item.period_name"
+              />
+            </el-select>
+
+
+            <!-- 时间范围选择 -->
+            <el-date-picker
+                v-model="timeRange"
+                type="datetimerange"
+                range-separator="至"
+                start-placeholder="起始时间"
+                end-placeholder="结束时间"
+                style="width: 300px;"
+            />
+
+            <!-- 查询按钮 -->
+            <el-button type="primary" size="small" @click="refetchAllSelectedData">查询</el-button>
           </div>
 
           <div class="flex justify-between items-center">
-            <span class="text-lg font-semibold">数据选择</span>
-            <el-button @click="toggleFilter" type="primary" size="small">
-              {{ showFilter ? '收起' : '展开' }}
-            </el-button>
-          </div>
-
-          <div v-show="showFilter" class="mt-4 space-y-4">
-            <PointSelector @data-ready="handleSelectedPoints" />
-          </div>
-        </el-card>
-      </div>
-
-      <!-- 右侧图表展示区域 - 始终占满剩余空间 -->
-      <div class="min-w-0 flex-1 transition-all duration-300">
-        <el-card shadow="hover" class="h-full flex flex-col" style="border-radius: 25px;">
-          <div class="flex justify-between items-center mb-4">
             <h3 class="font-semibold">特征趋势图</h3>
-            <el-button
-                @click="isConfigVisible = !isConfigVisible"
-                icon="el-icon-settings"
-                size="small"
-                type="text"
-            ></el-button>
+            <el-button @click="isConfigVisible = !isConfigVisible" icon="el-icon-setting" size="small" type="text" />
           </div>
-          <!-- 使用flex-1确保图表容器占  满剩余高度 -->
-          <div
-              ref="chartRef"
-              class="min-h-[400px] w-full"
-          />
-          <div v-show="isConfigVisible" class="mt-4 flex items-center space-x-4">
-            <el-switch
-                v-model="showDateOnly"
-                label="只显示日期"
-                size="small"
-            ></el-switch>
-            <el-button size="small" @click="exportChart">导出图表</el-button>
+
+          <!-- 设置面板 -->
+          <div v-show="isConfigVisible" class="mt-2 flex items-center gap-4">
+            <el-switch v-model="showDateOnly" label="只显示日期" />
+            <el-button size="small" @click="exportAllCharts">导出全部</el-button>
           </div>
-        </el-card>
+        </div>
+
+        <!-- 滚动图表区 -->
+        <div class="flex-1 overflow-y-auto pr-2 mt-2">
+          <div class="space-y-6">
+            <div
+                v-for="name in selectedFeatureNames"
+                :key="name"
+                class="border p-2 rounded bg-white shadow-sm"
+            >
+              <div class="flex justify-between items-center mb-2">
+                <h4 class="font-semibold">{{ name }}</h4>
+                <el-button size="mini" type="primary" plain @click="exportSingleChart(name)">导出</el-button>
+              </div>
+              <div :ref="el => chartRefs[name] = el" class="h-[500px] w-full" />
+            </div>
+          </div>
+        </div>
       </div>
+
     </div>
   </div>
 </template>
 
+
 <script setup>
-import {ref, onMounted, watch, onUnmounted} from 'vue'
-import * as echarts from 'echarts'
-import PointSelector from '@/components/common/Selector.vue'
-import {fetchTableData} from '@/api/querydata.js'
-import {FEATURE_TYPE_FORM_ID, FEATURE_DATA_FORM_ID} from '@/api/form_constant.js'
+    import { ref, reactive, watch, nextTick, onUnmounted } from 'vue'
+    import * as echarts from 'echarts'
+    import { fetchTableData } from '@/api/querydata.js'
+    import {PERIOD_FORM_ID} from '@/api/form_constant.js'
+    import PointSelector from '@/components/common/Selector.vue'
+    import {fetchParsedFeatureData, formatTimestamp} from "@/api/featureService.js";
 
-// 控制左侧筛选区域的展开/收起
-const showFilter = ref(true)
-const toggleFilter = () => (showFilter.value = !showFilter.value)
+    // UI 控制
+    const showFilter = ref(true)
+    const toggleFilter = () => (showFilter.value = !showFilter.value)
+    const isConfigVisible = ref(false)
+    const showDateOnly = ref(false)
 
-// 当前选中的测点与特征类型
-const selectedPoints = ref([])
-const selectedFeatureType = ref(null)
-const featureTypeOptions = ref([])
+    // 特征项和数据
+    const availableFeatureNames = ref([])
+    const selectedFeatureNames = ref([])
+    const featureDataMap = reactive({})
+    const currentDevice = ref(null) // 可选：存储当前选中设备
 
-// 图表引用和初始配置
-const chartRef = ref(null)
-let chart = null
-let initialOption = null // 保存初始配置
+    // 图表 DOM & 实例管理
+    const chartRefs = reactive({})
+    const chartsMap = new Map()
 
-// 新增配置状态
-const showDateOnly = ref(false)
-const isConfigVisible = ref(false)
+    // 接收设备变更后的数据
+    function handleSelectedPoints({ device, features }) {
+      const unique = [...new Set(features.map(d => d.feature_name))]
+      availableFeatureNames.value = unique
+      selectedFeatureNames.value = unique.slice(0, 1)
 
-// 初始化图表
-onMounted(() => {
-  chart = echarts.init(chartRef.value)
-
-  // 设置基础图表配置（不含数据）
-  const baseOption = {
-    title: {
-      text: '',
-      left: 'center'
-    },
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: {
-        type: 'cross',
-        animation: false,
-        label: {
-          backgroundColor: '#505765'
-        }
-      }
-    },
-    legend: {
-      type: 'scroll',
-      orient: 'horizontal',
-      bottom: '0%',
-      data: []
-    },
-    xAxis: {
-      type: 'category',
-      boundaryGap: false,
-      data: []
-    },
-    yAxis: {
-      type: 'value',
-      axisLabel: {formatter: '{value}'}
-    },
-    series: [],
-    dataZoom: [
-      {
-        show: true,
-        realtime: true,
-        start: 70,
-        end: 100
-      },
-      {
-        type: 'inside',
-        realtime: true,
-        start: 70,
-        end: 100
-      }
-    ],
-    toolbox: {
-      feature: {
-        dataZoom: {
-          yAxisIndex: 'none'
-        },
-        restore: {},
-        saveAsImage: {}
-      }
-    }
-  }
-
-  // 设置基础配置并保存为初始配置
-  chart.setOption(baseOption)
-  initialOption = JSON.parse(JSON.stringify(baseOption)) // 深拷贝初始配置
-
-  // 加载特征类型下拉选项
-  fetchTableData(1, 1000, FEATURE_TYPE_FORM_ID, {})
-      .then((res) => {
-        featureTypeOptions.value = res.data.list || []
-        if (featureTypeOptions.value.length > 0) {
-          selectedFeatureType.value = featureTypeOptions.value[0].id
-        }
-      })
-      .catch((error) => {
-        console.error('加载特征类型选项失败:', error)
-      })
-})
-
-// 当测点发生变化时触发
-function handleSelectedPoints(points) {
-  selectedPoints.value = points
-  loadFeatureData()
-}
-
-// 加载特征数据并渲染图表
-async function loadFeatureData() {
-  if (selectedPoints.value.length === 0 || !selectedFeatureType.value) return
-  // const pointIds = selectedPoints.value.map((p) => p.id)
-  // const queryParams = [
-  //   {
-  //     key: 'feature_type',
-  //     value: selectedFeatureType.value,
-  //     queryType: 1
-  //   },
-  //   {
-  //     key: 'point_id',
-  //     value: pointIds,
-  //     queryType: null
-  //   }
-  // ]
-
-  try {
-    // const res = await fetchTableData(1, 1000, FEATURE_DATA_FORM_ID, queryParams)
-    const data = selectedPoints.value
-
-    if (data.length === 0) {
-      chart.setOption({
-        title: {
-          text: '暂无数据',
-          left: 'center'
-        },
-        series: []
-      })
-      return
+      // 如果还需存储当前设备信息，可加上：
+      currentDevice.value = device
     }
 
-    // 提取所有时间戳并排序
-    let timestamps = [...new Set(data.map((d) => d.cur_timestamp))].sort()
-    // 根据配置处理时间格式
-    timestamps = timestamps.map(ts => showDateOnly.value ? ts.split(' ')[0] : ts)
+    const periodOptions = ref([])
 
-    // 每个测点一条线
-    const series = selectedPoints.value.map((point) => {
-      const pointData = data
-          .filter((d) => d.parent_device.value === point.parent_device.value)
-          .sort((a, b) => a.cur_timestamp.localeCompare(b.cur_timestamp))
+    // 时间范围
+    const timeRange = ref([]) // [startTime, endTime]
 
-      return {
-        name: point.point_name,
-        type: 'line',
-        smooth: true,
-        showSymbol: false,
-        emphasis: {
-          focus: 'series'
-        },
-        data: timestamps.map((ts) => {
-          const found = pointData.find((d) => d.cur_timestamp === ts)
-          return found ? found.feature_value : null
+    const selectedPeriodName = ref(null) // 绑定周期名
+    const selectedPeriod = ref(null)     // 存储完整周期对象
+
+    function onPeriodChange(name) {
+      selectedPeriod.value = periodOptions.value.find(p => p.period_name === name)
+      if (selectedPeriod.value?.start_time && selectedPeriod.value?.end_time) {
+        timeRange.value = [
+          new Date(selectedPeriod.value.start_time),
+          new Date(selectedPeriod.value.end_time)
+        ]
+      }
+    }
+
+    // 初始化周期数据
+    fetchTableData(1, 1000, PERIOD_FORM_ID, {})
+        .then(res => {
+          const list = res.data.list || []
+          periodOptions.value = list
+
+          if (list.length > 0) {
+            // 默认选择最后一个周期（比如最新周期）
+            const last = list[list.length - 1]
+            selectedPeriodName.value = last.period_name
+            onPeriodChange(last.period_name)
+          }
         })
+        .catch(err => {
+          console.error('加载周期数据失败:', err)
+        })
+
+    watch(selectedFeatureNames, async () => {
+      await nextTick()
+
+      // 销毁未选中图表
+      for (const [name, chart] of chartsMap.entries()) {
+        if (!selectedFeatureNames.value.includes(name)) {
+          chart.dispose()
+          chartsMap.delete(name)
+          delete featureDataMap[name]
+        }
+      }
+
+      // 加载选中项（调用 Arrow 数据接口）
+      for (const name of selectedFeatureNames.value) {
+        await fetchSingleFeatureData(name)
       }
     })
 
-    // 创建包含数据的完整配置
-    const completeOption = JSON.parse(JSON.stringify(initialOption)) // 从初始配置复制
-    completeOption.title.text = `${featureTypeOptions.value.find(t => t.id === selectedFeatureType.value)?.name || '特征'}趋势图`
-    completeOption.legend.data = selectedPoints.value.map((point) => point.feature_alia_name)
-    completeOption.xAxis.data = timestamps
-    completeOption.series = series[0]
 
-    // 使用 notMerge 参数确保完全替换现有配置
-    chart.setOption(completeOption, true)
-  } catch (error) {
-    console.error('加载特征数据失败:', error)
-  }
-}
 
-// 监听 showDateOnly 变化，重新加载数据
-watch(showDateOnly, () => {
-  loadFeatureData()
-})
+    function refetchAllSelectedData() {
+      for (const name of selectedFeatureNames.value) {
+        fetchSingleFeatureData(name)
+      }
+    }
 
-// 导出图表
-function exportChart() {
-  chart.downloadImage({
-    type: 'png',
-    pixelRatio: 2,
-    backgroundColor: '#fff'
-  })
-}
+    async function fetchSingleFeatureData(featureName) {
+      if (!currentDevice.value) return
+      const [start, end] = timeRange.value || []
+      if (!start || !end) return
 
-// 组件销毁时销毁图表实例
-onUnmounted(() => {
-  if (chart) {
-    chart.dispose()
-  }
-})
+      try {
+        const startStr = new Date(start).toISOString()
+        const endStr = new Date(end).toISOString()
+
+        const deviceName = currentDevice.value.device_name // 确保传递正确字段
+        const data = await fetchParsedFeatureData(deviceName, featureName, startStr, endStr)
+        featureDataMap[featureName] = data
+        renderChart(featureName)
+      } catch (err) {
+        console.error(`❌ 加载特征 ${featureName} 的数据失败`, err)
+      }
+    }
+
+
+
+
+    function renderChart(name) {
+      const el = chartRefs[name]
+      if (!el) return
+
+      let chart = chartsMap.get(name)
+      if (!chart) {
+        chart = echarts.init(el)
+        chartsMap.set(name, chart)
+      }
+
+      const data = (featureDataMap[name] || []).slice()
+
+      // ✅ 如果 cur_timestamp 是毫秒数（number），就用数字排序
+      data.sort((a, b) => a.cur_timestamp - b.cur_timestamp)
+
+      let timestamps = data.map(d =>
+          showDateOnly.value
+              ? formatTimestamp(d.cur_timestamp).split(' ')[0]
+              : formatTimestamp(d.cur_timestamp)
+      )
+      const values = data.map(d => d.feature_value)
+
+      chart.setOption({
+        title: { text: name, left: 'center' },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+        xAxis: { type: 'category', data: timestamps },
+        yAxis: { type: 'value' },
+        grid: { left: 40, right: 20, top: 40, bottom: 40 },
+        series: [{ type: 'line', data: values, name, smooth: true }]
+      })
+    }
+
+
+    // 导出图表
+    function exportSingleChart(name) {
+      const chart = chartsMap.get(name)
+      chart?.downloadImage?.({ type: 'png', pixelRatio: 2, backgroundColor: '#fff' })
+    }
+    function exportAllCharts() {
+      for (const name of selectedFeatureNames.value) exportSingleChart(name)
+    }
+
+    // 清理图表实例
+    onUnmounted(() => {
+      for (const chart of chartsMap.values()) chart.dispose()
+      chartsMap.clear()
+    })
 </script>
+
+
 
 <style scoped>
 /* 移除自定义CSS，使用Tailwind类替代 */
