@@ -112,6 +112,11 @@ const menuItems = [
     link: '/inner/test'
   },
   {
+    name: '装置页面',
+    icon: 'ChromeFilled',
+    link: '/inner/system'
+  },
+  {
     name: '数据后台（新窗口）',
     icon: 'Setting',
     link: '/index/workbench',

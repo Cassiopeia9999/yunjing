@@ -12,6 +12,8 @@ import period from "@/views/period.vue"
 import rsituation from "@/views/rsituation.vue"
 import DiagnosisWebSocketTest from "@/views/monitor/DiagnosisWebSocketTest.vue";
 import test from "@/views/test.vue"
+import system from "@/views/system.vue"
+import device from "@/views/device.vue"
 import {getToken} from "@/utils/auth.js";
 const routes = [
     {
@@ -91,6 +93,18 @@ const routes = [
                 path: 'test',
                 name: 'test',
                 component: test,
+                meta: { requiresAuth: true },
+            },
+            {
+                path: 'system',
+                name: 'system',
+                component: system,
+                meta: { requiresAuth: true },
+            },
+            {
+                path: 'device',
+                name: 'device',
+                component: device,
                 meta: { requiresAuth: true },
             }
         ]
