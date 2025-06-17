@@ -1,6 +1,14 @@
 <template>
   <div class="container">
+    <!-- 左上角返回按钮 -->
+    <div class="back-button-container">
+      <button class="back-button" @click="goBack">
+        <i class="fa fa-arrow-left "></i>返回
+      </button>
+    </div>
     <h1 class="title">设备健康监控</h1>
+
+
 
     <!-- 设备状态卡片区域（已恢复） -->
     <div class="device-cards-container" v-if="devices.length > 0">
@@ -93,6 +101,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router' // 引入路由钩子
 
 // 顶部四个方块的设备数据
 const devices = ref([
@@ -142,6 +151,9 @@ const healthDevices = ref([
 const searchQuery = ref('')
 const currentPage = ref(1)
 const itemsPerPage = ref(5)
+
+// 获取路由实例
+const router = useRouter()
 
 // 计算属性
 const filteredDevices = computed(() => {
@@ -221,6 +233,11 @@ const viewDeviceDetail = (deviceId: string) => {
   console.log(`查看设备 ${deviceId} 详情`)
   // 实际使用时可打开详情弹窗或跳转详情页
 }
+
+// 返回上一页
+const goBack = () => {
+  router.push({ name: 'system' })
+}
 </script>
 
 <style scoped>
@@ -242,6 +259,31 @@ const viewDeviceDetail = (deviceId: string) => {
   z-index: 1;
 }
 
+/* 新增：返回按钮容器样式 */
+.back-button-container {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 3; /* 确保按钮在最上层 */
+}
+
+/* 新增：返回按钮样式（参考现有维修按钮样式） */
+.back-button {
+  padding: 5px 8px;
+  background: #607D8B;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  transition: background 0.3s;
+}
+.back-button:hover {
+  background: #455A64;
+}
+
 /* 标题 */
 .title {
   position: relative;
@@ -249,6 +291,7 @@ const viewDeviceDetail = (deviceId: string) => {
   font-size: 2.5rem;
   color: #333;
   margin-bottom: 20px;
+  margin-top: 40px; /* 调整标题上边距，避免与返回按钮重叠 */
 }
 
 /* 设备状态卡片区域 */
