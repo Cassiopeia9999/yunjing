@@ -12,7 +12,7 @@
 
     <!-- 设备状态卡片区域（已恢复） -->
     <div class="device-cards-container" v-if="devices.length > 0">
-      <div class="device-card" v-for="device in devices" :key="device.id" @click="toggleDeviceSelection(device.name)" :class="{ 'selected-card': selectedDevicename === device.name }">
+      <div class="device-card" v-for="device in devices" :key="device.name" @click="toggleDeviceSelection(device.name)" :class="{ 'selected-card': selectedDevicename === device.name }">
         <div class="card-header" :style="{ backgroundColor: getStatusColor(device.status) }">
           <h3 class="device-name">{{ device.name }}</h3>
         </div>
@@ -211,7 +211,7 @@ const navigateToMaintenance = () => {
   router.push({
     name: 'repair',
     query:{
-      devicename:devicename.value
+      devicename:selectedDevicename.value
     }
 
   })
