@@ -1,15 +1,20 @@
 <template>
-  <div class="container">
+  <div class="container" v-if="isload">
+    <div class="back-button-container">
+      <button class="back-button" @click="goBack">
+        <i class="fa fa-arrow-left "></i>全局地图
+      </button>
+    </div>
     <!-- 标题 -->
-    <h1 class="title">装置监控中心</h1>
+    <h1 class="title">{{baseName}}基地</h1>
 
     <!-- 设备卡片区域 -->
     <div class="device-cards-container" v-if="devices.length">
       <div
           class="device-card"
           v-for="device in devices"
-          :key="device.id"
-          @click="goToDeviceDetail(device.id)"
+          :key="device.name"
+          @click="goToDeviceDetail(device.name)"
       >
         <div class="card-header" :style="{ backgroundColor: getStatusColor(device.status) }">
           <h3 class="device-name">{{ device.name }}</h3>
@@ -20,15 +25,18 @@
             <span class="info-value" :style="{ color: getStatusColor(device.status) }">{{ device.status }}</span>
           </p>
           <p class="device-info">
-            <span class="info-label">下次维修:</span>
-            <span class="info-value">{{ formatDate(device.nextMaintenance) }}</span>
+            <span class="info-label">剩余寿命:</span>
+            <span class="info-value">{{device.nextMaintenance }}天</span>
           </p>
           <p class="device-info">
-            <span class="info-label">数据更新:</span>
-            <span class="info-value">{{ formatDate(device.lastUpdate) }}</span>
+            <span class="info-label">置信度:</span>
+            <span class="info-value">{{ device.conf }}%</span>
           </p>
         </div>
       </div>
+    </div>
+    <div v-else class="text-black text-2xl m-10">
+      暂无设备数据
     </div>
 
     <!-- 基地信息 + 任务按钮区域 -->
@@ -36,19 +44,19 @@
       <!-- 基地名称卡片 -->
       <div class="base-card">
         <div class="base-card-header">基地名称</div>
-        <div class="base-card-body">{{ baseInfo.name }}</div>
+        <div class="base-card-body">{{ baseName }}</div>
       </div>
 
       <!-- 基地经纬度卡片 -->
       <div class="base-card">
         <div class="base-card-header">基地经纬度</div>
-        <div class="base-card-body">{{ baseInfo.latitude }}, {{ baseInfo.longitude }}</div>
+        <div class="base-card-body">{{ latitude }}, {{ longitude }}</div>
       </div>
 
       <!-- 空闲装置卡片 -->
       <div class="base-card">
-        <div class="base-card-header">空闲装置数量</div>
-        <div class="base-card-body">{{ baseInfo.availableDevices }}</div>
+        <div class="base-card-header">基地装置数量</div>
+        <div class="base-card-body">{{ systemNames.length }}</div>
       </div>
 
       <!-- 任务评估按钮（核心修复：对齐 + 尺寸） -->
@@ -61,30 +69,33 @@
     <div class="modal-overlay" v-if="isModalOpen">
       <div class="modal-content">
         <h3 class="modal-title">距离评估</h3>
-        <div class="input-group">
-          <label>纬度：</label>
-          <input
-              type="number"
-              step="0.000001"
-              placeholder="例如：39.9042"
-              v-model="inputLat"
-          />
+        <div class="flex">
+          <div class="input-group p-2">
+            <label>纬度：</label>
+            <input
+                type="number"
+                step="0.000001"
+                placeholder="例如：39.9042"
+                v-model="inputLat"
+            />
+          </div>
+          <div class="input-group p-2">
+            <label>经度：</label>
+            <input
+                type="number"
+                step="0.000001"
+                placeholder="例如：116.4074"
+                v-model="inputLon"
+            />
+          </div>
         </div>
-        <div class="input-group">
-          <label>经度：</label>
-          <input
-              type="number"
-              step="0.000001"
-              placeholder="例如：116.4074"
-              v-model="inputLon"
-          />
-        </div>
+
         <div class="btn-group">
           <button class="calc-btn" @click="calculateDistance">评估</button>
           <button class="cancel-btn" @click="closeModal">取消</button>
         </div>
         <p class="result" v-if="distance !== null">
-          距离：{{ distance.toFixed(2) }} 公里
+          距离：{{ distance.toFixed(2) }} 公里，大致耗时：{{(distance/34).toFixed(2)}}h（20节）
         </p>
       </div>
     </div>
@@ -92,16 +103,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router' // 引入路由钩子
+
+import {onMounted, ref} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
+import {fetchTableData} from '@/api/querydata.js'
+import {UNIT_FORM_ID, DEVICE_FORM_ID, POINT_FORM_ID} from '@/api/form_constant.js'
+
 
 // 设备数据（固定状态）
-const devices = ref([
-  { id: 1, name: '装置A', status: '正常运行', nextMaintenance: '2025-07-15', lastUpdate: '2025-06-17 08:30:00' },
-  { id: 2, name: '装置B', status: '维护中', nextMaintenance: '2025-06-20', lastUpdate: '2025-06-17 09:15:00' },
-  { id: 3, name: '装置C', status: '正常运行', nextMaintenance: '2025-08-05', lastUpdate: '2025-06-17 10:00:00' },
-  { id: 4, name: '装置D', status: '故障', nextMaintenance: '2025-06-18', lastUpdate: '2025-06-17 07:45:00' },
-])
+const devices = ref([])
 
 // 基地信息
 const baseInfo = ref({
@@ -117,8 +127,14 @@ const inputLat = ref('')
 const inputLon = ref('')
 const distance = ref<number | null>(null)
 
+const route = useRoute()
+const baseName = ref('')
+const longitude = ref(null)
+const latitude = ref(null)
+const systemNames = ref([])
 // 获取路由实例
 const router = useRouter()
+const isload = ref(false)
 
 // 状态颜色映射
 const getStatusColor = (status: string) => {
@@ -142,14 +158,41 @@ const openAssessmentModal = () => {
 const closeModal = () => (isModalOpen.value = false)
 
 // 距离计算（Haversine公式）
+
+
+// 设备详情跳转
+
+
+onMounted(async () => {
+  baseName.value = route.query.baseName
+  longitude.value = route.query.longitude
+  latitude.value = route.query.latitude
+
+  const res = await fetchTableData(1, 10, UNIT_FORM_ID, {})
+  const data = res.data.list || []
+
+  systemNames.value = data.filter(item =>
+      item.parent_site?.name === baseName.value
+  ).map(item => item.system_name)
+
+  devices.value = data.filter(item =>
+      item.parent_site?.name === baseName.value
+  ).map(item =>({
+    name:item.system_name,
+    status: "正常运行",
+    nextMaintenance:item.remaining_life,
+    conf:item.confidence_level
+  }));
+  isload.value = true
+})
 const calculateDistance = () => {
   const lat = parseFloat(inputLat.value)
   const lon = parseFloat(inputLon.value)
   if (isNaN(lat) || isNaN(lon)) return alert('请输入有效的经纬度！')
   if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return alert('经纬度超出范围！')
 
-  const baseLat = parseFloat(baseInfo.value.latitude)
-  const baseLon = parseFloat(baseInfo.value.longitude)
+  const baseLat = parseFloat(latitude.value)
+  const baseLon = parseFloat(longitude.value)
   const R = 6371 // 地球半径（公里）
   const dLat = (lat - baseLat) * (Math.PI / 180)
   const dLon = (lon - baseLon) * (Math.PI / 180)
@@ -159,16 +202,25 @@ const calculateDistance = () => {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   distance.value = R * c
 }
-
-// 设备详情跳转
-const goToDeviceDetail = (deviceId: number) => {
+const goToDeviceDetail = (devicename: string) => {
   // 携带设备ID参数跳转到设备详情页
   router.push({
     name: 'device',
-    params: { id: deviceId } // 假设路由配置中使用了参数，如path: '/device/:id'
+    query:{
+      baseName:baseName.value,
+      longitude:longitude.value,
+      latitude:latitude.value,
+      devicename:devicename
+    }
+
   })
   // 或者如果路由不需要参数：
   // router.push({ name: 'device' })
+}
+const goBack = () => {
+  router.push({
+    name: 'GlobalView',
+})
 }
 </script>
 
@@ -358,5 +410,27 @@ const goToDeviceDetail = (deviceId: number) => {
   text-align: center;
   color: #2e7d32;
   font-weight: bold;
+}
+
+.back-button-container {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 3; /* 确保按钮在最上层 */
+}
+.back-button {
+  padding: 5px 8px;
+  background: #607D8B;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  transition: background 0.3s;
+}
+.back-button:hover {
+  background: #455A64;
 }
 </style>

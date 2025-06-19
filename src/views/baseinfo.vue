@@ -93,7 +93,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup >
 import {ref, onMounted} from 'vue'
 import {useRoute} from 'vue-router'
 import {fetchTableData} from '@/api/querydata.js'

@@ -1,9 +1,9 @@
 <template>
-  <div class="container">
+  <div class="container" v-if="isload">
     <!-- 左上角返回按钮 -->
     <div class="back-button-container">
       <button class="back-button" @click="goBack">
-        <i class="fa fa-arrow-left "></i>返回
+        <i class="fa fa-arrow-left "></i>{{baseName}}基地
       </button>
     </div>
     <h1 class="title">设备健康监控</h1>
@@ -12,7 +12,7 @@
 
     <!-- 设备状态卡片区域（已恢复） -->
     <div class="device-cards-container" v-if="devices.length > 0">
-      <div class="device-card" v-for="device in devices" :key="device.id">
+      <div class="device-card" v-for="device in devices" :key="device.id" @click="toggleDeviceSelection(device.name)" :class="{ 'selected-card': selectedDevicename === device.name }">
         <div class="card-header" :style="{ backgroundColor: getStatusColor(device.status) }">
           <h3 class="device-name">{{ device.name }}</h3>
         </div>
@@ -22,15 +22,22 @@
             <span class="info-value" :style="{ color: getStatusColor(device.status) }">{{ device.status }}</span>
           </p>
           <p class="device-info">
-            <span class="info-label">下次维修:</span>
-            <span class="info-value">{{ formatDate(device.nextMaintenance) }}</span>
+            <span class="info-label">剩余寿命:</span>
+            <span class="info-value">{{ device.nextMaintenance }}天</span>
           </p>
           <p class="device-info">
-            <span class="info-label">数据更新:</span>
-            <span class="info-value">{{ formatDate(device.lastUpdate) }}</span>
+            <span class="info-label">置信度:</span>
+            <span class="info-value">{{ device.conf }}%</span>
+          </p>
+          <p class="device-info">
+            <span class="info-label">健康度:</span>
+            <span class="info-value">{{ device.healthlv }}%</span>
           </p>
         </div>
       </div>
+    </div>
+    <div v-else class="text-black text-2xl m-10">
+      暂无设备数据
     </div>
 
     <!-- 表格控制区 -->
@@ -49,7 +56,7 @@
 
       <!-- 维修按钮 -->
       <button class="maintenance-btn" @click="navigateToMaintenance">
-        <i class="fa fa-wrench mr-2"></i>维修管理
+        <i class="fa fa-wrench"></i>维修管理
       </button>
     </div>
 
@@ -100,41 +107,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router' // 引入路由钩子
-
+import {ref, computed, onMounted} from 'vue'
+import {useRoute, useRouter} from 'vue-router' // 引入路由钩子
+import {fetchTableData} from '@/api/querydata.js'
+import {UNIT_FORM_ID, DEVICE_FORM_ID, POINT_FORM_ID} from '@/api/form_constant.js'
 // 顶部四个方块的设备数据
-const devices = ref([
-  {
-    id: 1,
-    name: '设备A',
-    status: '正常运行',
-    nextMaintenance: '2025-07-15',
-    lastUpdate: '2025-06-17 08:30:00'
-  },
-  {
-    id: 2,
-    name: '设备B',
-    status: '维护中',
-    nextMaintenance: '2025-06-20',
-    lastUpdate: '2025-06-17 09:15:00'
-  },
-  {
-    id: 3,
-    name: '设备C',
-    status: '正常运行',
-    nextMaintenance: '2025-08-05',
-    lastUpdate: '2025-06-17 10:00:00'
-  },
-  {
-    id: 4,
-    name: '设备D',
-    status: '故障',
-    nextMaintenance: '2025-06-18',
-    lastUpdate: '2025-06-17 07:45:00'
-  }
-])
 
+const route = useRoute()
+const baseName = ref('')
+const longitude = ref(null)
+const latitude = ref(null)
+const devicename = ref(null)
+const devices = ref([])
+const isload = ref(false)
+const selectedDevicename = ref(null)
 // 表格中的设备健康数据
 const healthDevices = ref([
   { id: 'D001', name: '主控制器A', healthStatus: '正常', runningHours: 1245, lastMaintenance: '2025-05-10', nextMaintenance: '2025-08-10' },
@@ -222,10 +208,13 @@ const filterDevices = () => {
 // 导航接口
 const navigateToMaintenance = () => {
   // 这里是跳转接口，实际使用时由外部实现
-  console.log('跳转到维修管理页面')
-  if (typeof window !== 'undefined' && typeof window.$router !== 'undefined') {
-    window.$router.push('/maintenance') // 示例：使用Vue Router
-  }
+  router.push({
+    name: 'repair',
+    query:{
+      devicename:devicename.value
+    }
+
+  })
 }
 
 // 查看设备详情
@@ -234,9 +223,46 @@ const viewDeviceDetail = (deviceId: string) => {
   // 实际使用时可打开详情弹窗或跳转详情页
 }
 
+onMounted(async () => {
+  baseName.value = route.query.baseName
+  longitude.value = route.query.longitude
+  latitude.value = route.query.latitude
+  devicename.value = route.query.devicename
+
+  const res = await fetchTableData(1, 10, DEVICE_FORM_ID, {})
+  const data = res.data.list || []
+
+  devices.value = data.filter(item =>
+      item.parent_system?.name === devicename.value
+  ).map(item =>({
+    name:item.device_name,
+    status: "正常运行",
+    nextMaintenance:item.remaining_life,
+    conf:item.confidence_level,
+    healthlv:item.health_level
+  }));
+
+  isload.value = true
+})
+
+const toggleDeviceSelection = (devicename: string) => {
+  if (selectedDevicename.value === devicename) {
+    selectedDevicename.value = null // 如果点击的是当前已选中的设备，则取消选中
+  } else {
+    selectedDevicename.value = devicename // 否则，选中新设备
+  }
+  console.log('当前选中设备name:', selectedDevicename.value); // 可以在控制台查看选中状态
+}
+
 // 返回上一页
 const goBack = () => {
-  router.push({ name: 'system' })
+  router.push({
+    name: 'system',
+    query:{
+      baseName:baseName.value,
+      longitude:longitude.value,
+      latitude:latitude.value,
+    }})
 }
 </script>
 
@@ -509,5 +535,11 @@ const goBack = () => {
 .pagination span {
   font-size: 1rem;
   color: #333;
+}
+.device-card.selected-card {
+  border-color: #007bff; /* 蓝色边框 */
+  box-shadow: 0 0 15px rgba(0, 123, 255, 0.6); /* 蓝色发光效果 */
+  transform: translateY(-5px) scale(1.02); /* 轻微上浮和放大 */
+  background-color: #e6f2ff; /* 稍微浅一点的背景色 */
 }
 </style>

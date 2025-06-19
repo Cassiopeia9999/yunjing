@@ -14,6 +14,7 @@ import DiagnosisWebSocketTest from "@/views/monitor/DiagnosisWebSocketTest.vue";
 import test from "@/views/test.vue"
 import system from "@/views/system.vue"
 import device from "@/views/device.vue"
+import repair from "@/views/repair.vue"
 import {getToken} from "@/utils/auth.js";
 const routes = [
     {
@@ -105,6 +106,12 @@ const routes = [
                 path: 'device',
                 name: 'device',
                 component: device,
+                meta: { requiresAuth: true },
+            },
+            {
+                path: 'repair',
+                name: 'repair',
+                component: repair,
                 meta: { requiresAuth: true },
             }
         ]
