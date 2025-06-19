@@ -110,7 +110,7 @@
 import {ref, computed, onMounted} from 'vue'
 import {useRoute, useRouter} from 'vue-router' // 引入路由钩子
 import {fetchTableData} from '@/api/querydata.js'
-import {UNIT_FORM_ID, DEVICE_FORM_ID, POINT_FORM_ID} from '@/api/form_constant.js'
+import {UNIT_FORM_ID, DEVICE_FORM_ID, POINT_FORM_ID} from '@/api/constant/form_constant.js'
 // 顶部四个方块的设备数据
 
 const route = useRoute()

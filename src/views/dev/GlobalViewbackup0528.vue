@@ -6,7 +6,7 @@
 import { ref, onMounted } from 'vue'
 import * as echarts from 'echarts'
 import { fetchTableData } from '@/api/querydata.js'
-import { BASE_FORM_ID } from "@/api/form_constant.js";
+import { BASE_FORM_ID } from "@/api/constant/form_constant.js";
 import { useRouter } from 'vue-router';
 
 const mapContainer = ref(null)

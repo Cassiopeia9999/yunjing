@@ -49,7 +49,7 @@ import {onMounted, ref} from 'vue'
           UNIT_FORM_ID, // 修复：正确使用UNIT_FORM_ID
           DEVICE_FORM_ID,
           FEATURE_DATA_FORM_ID
-        } from '@/api/form_constant.js'
+        } from '@/api/constant/form_constant.js'
 
         const emit = defineEmits(['data-ready']);
         const props = defineProps({

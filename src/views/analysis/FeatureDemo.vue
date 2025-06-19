@@ -50,6 +50,7 @@
 
             <!-- 查询按钮 -->
             <el-button type="primary" size="small" @click="refetchAllSelectedData">查询</el-button>
+            <el-button size="small" type="primary" @click="openForecastDialog(name)">预测</el-button>
           </div>
 
           <div class="flex justify-between items-center">
@@ -83,6 +84,14 @@
       </div>
 
     </div>
+
+    <FeatureForecastDialog
+        v-model="forecastDialogVisible"
+        :featureDataMap="featureDataMap"
+        :deviceName="currentDevice?.device_name"
+        @complete="handleForecastResult"
+    />
+
   </div>
 </template>
 
@@ -91,9 +100,10 @@
     import { ref, reactive, watch, nextTick, onUnmounted } from 'vue'
     import * as echarts from 'echarts'
     import { fetchTableData } from '@/api/querydata.js'
-    import {PERIOD_FORM_ID} from '@/api/form_constant.js'
-    import PointSelector from '@/components/common/Selector.vue'
+    import {PERIOD_FORM_ID} from '@/api/constant/form_constant.js'
+    import PointSelector from '@/buz/common/Selector.vue'
     import {fetchParsedFeatureData, formatTimestamp} from "@/api/featureService.js";
+    import FeatureForecastDialog from "@/buz/feature/FeatureForecastDialog.vue";
 
     // UI 控制
     const showFilter = ref(true)
@@ -116,13 +126,11 @@
       const unique = [...new Set(features.map(d => d.feature_name))]
       availableFeatureNames.value = unique
       selectedFeatureNames.value = unique.slice(0, 1)
-
       // 如果还需存储当前设备信息，可加上：
       currentDevice.value = device
     }
 
     const periodOptions = ref([])
-
     // 时间范围
     const timeRange = ref([]) // [startTime, endTime]
 
@@ -138,6 +146,19 @@
         ]
       }
     }
+
+
+    const forecastDialogVisible = ref(false)
+
+    function openForecastDialog() {
+      forecastDialogVisible.value = true
+    }
+
+
+    function handleForecastResult(result) {
+      console.log('预测完成，结果：', result)
+    }
+
 
     // 初始化周期数据
     fetchTableData(1, 1000, PERIOD_FORM_ID, {})

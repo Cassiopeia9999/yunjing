@@ -37,9 +37,9 @@
               :key="item.id || index"
               class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
           >
-            <div class="text-xs font-medium text-gray-500 mb-2">{{ item.name }}</div>
+            <div class="text-xs font-medium text-gray-500 mb-2">{{ item.feature_alias }}</div>
             <div class="text-xl font-bold text-gray-800">
-              {{ item.value }}{{ item.unit }}
+              {{ item.value }}{{ item.feature_unit }}
             </div>
             <div
                 class="text-xs mt-1"
@@ -260,7 +260,7 @@
 import { onMounted, onBeforeUnmount, reactive, ref, computed } from 'vue'
 import * as echarts from 'echarts'
 import { fetchTableData } from '@/api/querydata.js'
-import { Real_Time_Device_Data } from "@/api/form_constant.js";
+import { Real_Time_Device_Data } from "@/api/constant/form_constant.js";
 import { useRouter } from 'vue-router';
 
 // 实时特征数据

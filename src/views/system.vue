@@ -107,7 +107,7 @@
 import {onMounted, ref} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {fetchTableData} from '@/api/querydata.js'
-import {UNIT_FORM_ID, DEVICE_FORM_ID, POINT_FORM_ID} from '@/api/form_constant.js'
+import {UNIT_FORM_ID, DEVICE_FORM_ID, POINT_FORM_ID} from '@/api/constant/form_constant.js'
 
 
 // 设备数据（固定状态）

@@ -77,9 +77,9 @@
 <script setup>
 import {ref, onMounted, watch, onUnmounted} from 'vue'
 import * as echarts from 'echarts'
-import PointSelector from '@/components/common/PointSelector.vue'
+import PointSelector from '@/buz/common/PointSelector.vue'
 import {fetchTableData} from '@/api/querydata.js'
-import {FEATURE_TYPE_FORM_ID, FEATURE_DATA_FORM_ID} from '@/api/form_constant.js'
+import {FEATURE_TYPE_FORM_ID, FEATURE_DATA_FORM_ID} from '@/api/constant/form_constant.js'
 
 // 控制左侧筛选区域的展开/收起
 const showFilter = ref(true)

@@ -26,7 +26,7 @@ import {
   DEVICE_FORM_ID, // 设备相关的导入
   // PERIOD_FORM_ID, // 周期相关的导入已移除
   // POINT_FORM_ID // 测点相关的导入已移除
-} from '@/api/form_constant.js'
+} from '@/api/constant/form_constant.js'
 
 // 基础绑定
 const selectedBaseId = ref(null)

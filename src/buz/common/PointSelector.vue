@@ -43,7 +43,7 @@ import {
   UNIT_FORM_ID,
   DEVICE_FORM_ID,
   POINT_FORM_ID
-} from '@/api/form_constant.js'
+} from '@/api/constant/form_constant.js'
 
 const emit = defineEmits(['points-selected'])  // 多测点返回
 

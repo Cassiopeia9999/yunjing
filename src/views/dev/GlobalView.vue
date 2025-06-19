@@ -15,7 +15,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import * as echarts from 'echarts'
 import { fetchTableData } from '@/api/querydata.js'
-import { BASE_FORM_ID } from "@/api/form_constant.js";
+import { BASE_FORM_ID } from "@/api/constant/form_constant.js";
 import { useRouter } from 'vue-router';
 
 // 如果需要进行坐标系转换，请安装并导入 coordtransform 库

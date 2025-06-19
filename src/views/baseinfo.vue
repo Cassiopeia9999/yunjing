@@ -97,7 +97,7 @@
 import {ref, onMounted} from 'vue'
 import {useRoute} from 'vue-router'
 import {fetchTableData} from '@/api/querydata.js'
-import {UNIT_FORM_ID, DEVICE_FORM_ID, POINT_FORM_ID} from '@/api/form_constant.js'
+import {UNIT_FORM_ID, DEVICE_FORM_ID, POINT_FORM_ID} from '@/api/constant/form_constant.js'
 import {Document} from '@element-plus/icons-vue'
 
 // 基础信息

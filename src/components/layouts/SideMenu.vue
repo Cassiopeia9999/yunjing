@@ -46,7 +46,7 @@ const toggleMenu = () => {
 
 import { useRouter } from 'vue-router'
 import { getToken, getTenantId } from '@/utils/auth'
-import {FORM_ID_PRODUCTION_7784, FORM_ID_PRODUCTION_7800} from "@/api/form_constant.js";
+import {FORM_ID_PRODUCTION_7784, FORM_ID_PRODUCTION_7800} from "@/api/constant/form_constant.js";
 
 const router = useRouter()
 const BASE_EXTERNAL_URL = import.meta.env.VITE_LOWCODE_BASE_URL || 'https://dev.xlingdata.com'
