@@ -107,9 +107,9 @@ const menuItems = [
     link: '/inner/featuredemo'
   },
   {
-    name: '测试页面',
+    name: '接口测试',
     icon: 'ChromeFilled',
-    link: '/inner/test'
+    link: '/inner/py_interface_test'
   },
   {
     name: '数据后台（新窗口）',
