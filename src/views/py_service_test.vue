@@ -115,6 +115,18 @@ function handleInputChange(key) {
     // 非法 JSON，暂不覆盖
   }
 }
+function parseResultSafely(result) {
+  if (result == null) return null
+  if (typeof result === 'object') return result // 已是对象，直接返回
+  if (typeof result === 'string') {
+    try {
+      return JSON.parse(result)
+    } catch (e) {
+      return result // 无法解析的字符串，按文本显示
+    }
+  }
+  return result // 其他类型（number, boolean），直接返回
+}
 
 onMounted(async () => {
   await commonServiceClient.init()
@@ -134,7 +146,7 @@ onMounted(async () => {
     serviceList.value.push({
       ...service,
       input: defaultInput,
-      result: null,
+      result: parseResultSafely(service.result),
       success: null
     })
   }

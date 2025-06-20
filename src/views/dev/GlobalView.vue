@@ -244,7 +244,7 @@ onMounted(() => {
 
                   // 跳转到 'baseinfo' 页面，携带 baseName、longitude 和 latitude 参数
                   router.push({
-                    name: 'baseinfo',
+                    name: 'system',
                     query: {baseName, longitude, latitude}
                   })
                 }
