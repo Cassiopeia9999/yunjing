@@ -187,9 +187,9 @@ function handleConfirm() {
 
   commonServiceClient.featureTrendForecast(payload)
       .then(res => {
-        predictedPoints.value = res.data || []
+        predictedPoints.value = res.data.result || []
         renderChart()
-        emit('complete', res.data)
+        emit('complete', res.result)
       })
       .catch(err => {
         console.error('预测失败:', err)

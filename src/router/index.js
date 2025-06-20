@@ -11,7 +11,7 @@ import baseinfo from "@/views/baseinfo.vue";
 import period from "@/views/period.vue"
 import rsituation from "@/views/rsituation.vue"
 import DiagnosisWebSocketTest from "@/views/monitor/DiagnosisWebSocketTest.vue";
-import test from "@/views/test.vue"
+import PyServiceTest from "@/views/py_service_test.vue"
 import system from "@/views/system.vue"
 import device from "@/views/device.vue"
 import repair from "@/views/repair.vue"
@@ -91,9 +91,9 @@ const routes = [
                 meta: { requiresAuth: true },
             },
             {
-                path: 'test',
-                name: 'test',
-                component: test,
+                path: 'py_interface_test',
+                name: 'py_interface_test',
+                component: PyServiceTest,
                 meta: { requiresAuth: true },
             },
             {
