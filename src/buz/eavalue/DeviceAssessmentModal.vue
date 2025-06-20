@@ -25,7 +25,7 @@
         <div class="mb-3">
           <label class="block text-sm font-medium text-gray-700 mb-1">选择装置</label>
           <el-select
-              v-model="selectedDevice"
+              v-model="selectedDeviceName"
               placeholder="请选择装置"
               class="w-full"
               @change="onDeviceChange"
@@ -34,7 +34,7 @@
                 v-for="device in devices"
                 :key="device.name"
                 :label="`${device.name} (${device.status})`"
-                :value="device"
+                :value="device.name"
             />
           </el-select>
         </div>
@@ -43,10 +43,14 @@
         <div v-if="selectedDevice" class="pt-2">
           <span class="text-sm text-gray-500">航行速度:</span>
           <span
-              class="ml-1 font-medium"
+              class="ml-1 font-medium text-black"
               :class="{'text-red-500': !isDeviceReachable}"
           >
-            {{ selectedDevice.sailing_speed !== null ? selectedDevice.sailing_speed + ' 节' : '不可用' }}
+            {{
+              selectedDevice && selectedDevice.sailing_speed !== null
+                  ? selectedDevice.sailing_speed + ' 节'
+                  : '不可用'
+            }}
           </span>
         </div>
       </div>
@@ -106,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, defineEmits, computed } from 'vue'
+import { ref, defineProps, defineEmits, computed, onMounted } from 'vue'
 import { ElSelect, ElOption, ElInput, ElButton } from 'element-plus'
 
 // 定义组件接收的属性
@@ -132,8 +136,15 @@ const emits = defineEmits(['close', 'calculate-result'])
 const isModalOpen = ref(true)
 const inputLat = ref('')
 const inputLon = ref('')
-const selectedDevice = ref(null)
+const selectedDeviceName = ref<string | null>(null) // 使用名称作为选择状态
 const result = ref('')
+
+// 计算属性：根据名称获取完整装置对象
+const selectedDevice = computed(() => {
+  return selectedDeviceName.value
+      ? props.devices.find(device => device.name === selectedDeviceName.value) || null
+      : null
+})
 
 // 计算装置是否可达
 const isDeviceReachable = computed(() => {
@@ -143,9 +154,19 @@ const isDeviceReachable = computed(() => {
 })
 
 // 装置选择变更时的处理
-const onDeviceChange = (device: any) => {
-  selectedDevice.value = device
+const onDeviceChange = (deviceName: string) => {
+  selectedDeviceName.value = deviceName
+  console.log('选中的装置名称:', deviceName)
+  console.log('选中的装置对象:', selectedDevice.value)
 }
+
+// 组件初始化时设置默认值
+onMounted(() => {
+  if (props.devices.length > 0) {
+    // 设置第一个装置为默认值
+    selectedDeviceName.value = props.devices[0].name
+  }
+})
 
 // 关闭弹窗
 const closeModal = () => {
@@ -198,7 +219,9 @@ const calculateDistance = () => {
 
   // 计算时间
   let time = '不可达'
-  const sailingSpeed = device.sailing_speed || 0 // 假设装置数据中有sailing_speed字段
+  const sailingSpeed = device.sailing_speed !== undefined
+      ? device.sailing_speed
+      : 0 // 确保有默认值
 
   if (sailingSpeed > 0) {
     // 速度单位假设为节(kn)，1节=1.852公里/小时

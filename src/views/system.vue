@@ -21,7 +21,7 @@
         </div>
         <div class="card-body">
           <p class="device-info">
-            <span class="info-label">工作状态:</span>
+            <span class="info-label">运行状态:</span>
             <span class="info-value" :style="{ color: getStatusColor(device.status) }">{{ device.status }}</span>
           </p>
           <p class="device-info">
@@ -130,9 +130,9 @@ const closeAssessmentModal = () => {
 // 状态颜色映射
 const getStatusColor = (status: string) => {
   return {
-    '正常运行': '#4CAF50',
-    '维护中': '#FFC107',
-    '故障': '#F44336',
+    '在运': '#4CAF50',
+    '建设中': '#FFC107',
+    '停运': '#F44336',
   }[status] || '#9E9E9E'
 }
 
@@ -165,9 +165,10 @@ onMounted(async () => {
       item.parent_site?.name === baseName.value
   ).map(item =>({
     name:item.system_name,
-    status: "正常运行",
+    status: item.system_status,
     nextMaintenance:item.remaining_life,
-    conf:item.confidence_level
+    conf:item.confidence_level,
+    sailing_speed:item.sailing_speed
 
   }));
   isload.value = true
