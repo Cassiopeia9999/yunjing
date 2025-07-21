@@ -34,8 +34,8 @@ const initialScale = ref(1.2); // 固定的初始缩放比率 (例如 1.2 表示
 // 这些值表示地图可以从其中心点向任意方向平移的最大距离（以未缩放的像素为单位）。
 // 你需要根据你的背景图大小和 initialScale 进行调整，以确保地图不会移出合理范围。
 // 示例值，请根据实际效果调整：
-const manualPanLimitX = ref(50); // 允许水平方向从中心平移的最大距离 (未缩放像素)
-const manualPanLimitY = ref(40); // 允许垂直方向从中心平移的最大距离 (未缩放像素)
+const manualPanLimitX = ref(40); // 允许水平方向从中心平移的最大距离 (未缩放像素)
+const manualPanLimitY = ref(6); // 允许垂直方向从中心平移的最大距离 (未缩放像素)
 
 
 // 平移状态 (这些值会通过拖拽动态改变)
@@ -284,7 +284,7 @@ onUnmounted(() => {
 /* 父容器，用于放置背景卫星图 */
 .map-background-container {
   width: 100%;
-  height: 100vh; /* 确保容器占满视口高度 */
+  height: 82vh; /* 确保容器占满视口高度 */
   background-image: url('/images/map21.jpg'); /* 你的卫星图路径 */
   background-size: cover; /* 确保背景图覆盖整个容器，可能裁剪 */
   background-position: center; /* 背景图居中 */
@@ -292,7 +292,7 @@ onUnmounted(() => {
   position: relative; /* 确保子元素可以相对于它定位 */
   overflow: hidden; /* 关键：隐藏超出容器的内容，防止出现滚动条 */
   /* transform 的过渡效果在这里可以保留，让平移更平滑 */
-  transition: transform 0.05s ease-out; /* 稍微加快过渡，平移手感更好 */
+  transition: transform 0.01s ease-out; /* 稍微加快过渡，平移手感更好 */
   will-change: transform;
   /* 鼠标样式通过 computed 属性动态设置 */
 }

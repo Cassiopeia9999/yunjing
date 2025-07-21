@@ -21,7 +21,7 @@
         </div>
         <div class="card-body">
           <p class="device-info">
-            <span class="info-label">工作状态:</span>
+            <span class="info-label">运行状态:</span>
             <span class="info-value" :style="{ color: getStatusColor(device.status) }">{{ device.status }}</span>
           </p>
           <p class="device-info">
@@ -66,39 +66,14 @@
     </div>
 
     <!-- 弹窗（核心修复：输入框显示 + 按钮样式） -->
-    <div class="modal-overlay" v-if="isModalOpen">
-      <div class="modal-content">
-        <h3 class="modal-title">距离评估</h3>
-        <div class="flex">
-          <div class="input-group p-2">
-            <label>纬度：</label>
-            <input
-                type="number"
-                step="0.000001"
-                placeholder="例如：39.9042"
-                v-model="inputLat"
-            />
-          </div>
-          <div class="input-group p-2">
-            <label>经度：</label>
-            <input
-                type="number"
-                step="0.000001"
-                placeholder="例如：116.4074"
-                v-model="inputLon"
-            />
-          </div>
-        </div>
-
-        <div class="btn-group">
-          <button class="calc-btn" @click="calculateDistance">评估</button>
-          <button class="cancel-btn" @click="closeModal">取消</button>
-        </div>
-        <p class="result" v-if="distance !== null">
-          距离：{{ distance.toFixed(2) }} 公里，大致耗时：{{(distance/34).toFixed(2)}}h（20节）
-        </p>
-      </div>
-    </div>
+    <DeviceAssessmentModal
+        v-if="showAssessmentModal"
+        :devices="devices"
+        :baseLat="latitude"
+        :baseLon="longitude"
+        @close="closeAssessmentModal"
+        @calculate-result="handleCalculationResult"
+    />
   </div>
 </template>
 
@@ -108,6 +83,10 @@ import {onMounted, ref} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {fetchTableData} from '@/api/querydata.js'
 import {UNIT_FORM_ID, DEVICE_FORM_ID, POINT_FORM_ID} from '@/api/constant/form_constant.js'
+import DeviceAssessmentModal from "@/buz/eavalue/DeviceAssessmentModal.vue";
+
+
+
 
 
 // 设备数据（固定状态）
@@ -135,13 +114,25 @@ const systemNames = ref([])
 // 获取路由实例
 const router = useRouter()
 const isload = ref(false)
+// 状态定义
+const showAssessmentModal = ref(false)
 
+// 打开弹窗
+const openAssessmentModal = () => {
+  showAssessmentModal.value = true
+  assessmentResult.value = ''
+}
+
+// 关闭弹窗（通过子组件事件触发）
+const closeAssessmentModal = () => {
+  showAssessmentModal.value = false
+}
 // 状态颜色映射
 const getStatusColor = (status: string) => {
   return {
-    '正常运行': '#4CAF50',
-    '维护中': '#FFC107',
-    '故障': '#F44336',
+    '在运': '#4CAF50',
+    '建设中': '#FFC107',
+    '停运': '#F44336',
   }[status] || '#9E9E9E'
 }
 
@@ -149,12 +140,7 @@ const getStatusColor = (status: string) => {
 const formatDate = (dateStr: string) => dateStr.replace(' ', 'T')
 
 // 弹窗控制
-const openAssessmentModal = () => {
-  isModalOpen.value = true
-  inputLat.value = ''
-  inputLon.value = ''
-  distance.value = null
-}
+
 const closeModal = () => (isModalOpen.value = false)
 
 // 距离计算（Haversine公式）
@@ -179,9 +165,11 @@ onMounted(async () => {
       item.parent_site?.name === baseName.value
   ).map(item =>({
     name:item.system_name,
-    status: "正常运行",
+    status: item.system_status,
     nextMaintenance:item.remaining_life,
-    conf:item.confidence_level
+    conf:item.confidence_level,
+    sailing_speed:item.sailing_speed
+
   }));
   isload.value = true
 })

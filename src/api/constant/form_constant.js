@@ -10,3 +10,4 @@ export const PERIOD_FORM_ID = 39
 export const Equipment_Characteristic_Data = 44
 export const Real_Time_Device_Data = 42
 export const SERVICE_CONFIG_FORM_ID = 52
+export const FAULT_CONFIG_FORM_ID = 29

@@ -46,7 +46,7 @@
         <input
             type="text"
             v-model="searchQuery"
-            placeholder="搜索设备..."
+            placeholder="搜索其他设备..."
             @keyup.enter="filterDevices"
         >
         <button @click="filterDevices">
