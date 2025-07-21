@@ -49,7 +49,7 @@ import { getToken, getTenantId } from '@/utils/auth'
 import {FAULT_CONFIG_FORM_ID, FORM_ID_PRODUCTION_7784, FORM_ID_PRODUCTION_7800} from "@/api/constant/form_constant.js";
 
 const router = useRouter()
-const BASE_EXTERNAL_URL = import.meta.env.VITE_LOWCODE_BASE_URL || 'https://dev.xlingdata.com'
+const BASE_EXTERNAL_URL = import.meta.env.VITE_APP_BASE_API || 'https://dev.xlingdata.com'
 
 const buildLowcodeUrl = (formId) => `/lowcode/dynamicInfo/index/${formId}`;
 
