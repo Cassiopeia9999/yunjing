@@ -1,41 +1,67 @@
 <template>
-  <div class="relative h-screen w-full">
-    <!-- 菜单栏（fixed 占位） -->
+  <div
+      class="relative h-screen w-full
+           bg-white text-neutral-900
+           dark:bg-neutral-950 dark:text-neutral-100
+           transition-colors"
+  >
+    <!-- 左侧菜单（fixed） -->
     <SideMenu
         v-if="isMenuVisible"
         class="fixed top-0 left-0 h-full w-[286px] z-50"
         @toggle-menu="toggleMenu"
     />
 
-    <!-- 主内容区域（动态 margin）-->
-    <div :class="['flex flex-col h-full transition-all duration-300', isMenuVisible ? 'ml-[286px]' : 'ml-0']">
+    <!-- 主内容（随菜单展开收起动态让出空间） -->
+    <div
+        :class="[
+        'flex flex-col h-full transition-all duration-300',
+        isMenuVisible ? 'ml-[286px]' : 'ml-0'
+      ]"
+    >
       <TopBar @toggle-menu="toggleMenu" />
-      <main class="flex-1 p-1 overflow-auto">
+
+      <main
+          class="flex-1 p-1 overflow-auto
+               bg-neutral-50 dark:bg-neutral-900
+               transition-colors"
+      >
         <router-view />
       </main>
     </div>
   </div>
 </template>
 
-
 <script setup>
-import { ref } from 'vue';
-import TopBar from '@/components/layouts/TopBar.vue';  // 顶部信息栏组件
-import SideMenu from '@/components/layouts/SideMenu.vue';  // 左侧菜单组件
+import { ref } from 'vue'
+import TopBar from '@/components/layouts/TopBar.vue'
+import SideMenu from '@/components/layouts/SideMenu.vue'
 
-// 控制菜单显示与隐藏
-const isMenuVisible = ref(true);
+/**
+ * 菜单展开/收起状态（保留 & 支持持久化）
+ * - 初始值：从 localStorage 读取（默认展开）
+ * - 切换时：写回 localStorage
+ */
+const KEY = 'menu-visible'
+const isMenuVisible = ref(localStorage.getItem(KEY) !== '0')
 
-// 切换菜单显示与隐藏
 const toggleMenu = () => {
-  isMenuVisible.value = !isMenuVisible.value;
-};
+  isMenuVisible.value = !isMenuVisible.value
+  localStorage.setItem(KEY, isMenuVisible.value ? '1' : '0')
+}
 </script>
 
 <style scoped>
-/* 确保布局的容器充满整个视口 */
-#app {
-  display: flex;
-  height: 100vh;
+/* 可选：滚动条在深色模式下更柔和（按需保留） */
+:deep(::-webkit-scrollbar) {
+  height: 8px;
+  width: 8px;
+}
+:deep(::-webkit-scrollbar-thumb) {
+  background: rgba(120, 120, 120, 0.4);
+  border-radius: 4px;
+}
+:deep(html.dark) ::-webkit-scrollbar-thumb {
+  background: rgba(160, 160, 160, 0.3);
 }
 </style>
