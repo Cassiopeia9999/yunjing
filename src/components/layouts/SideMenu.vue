@@ -110,13 +110,13 @@ const menuItems = [
   { name: '工作台',   icon: 'Odometer',     link: '/inner/dashboard' },
 
   // 全局态势（地图/态势）
-  { name: '全局态势', icon: 'MapLocation',  link: '/inner/globalview' },
+  // { name: '全局态势', icon: 'MapLocation',  link: '/inner/globalview' },
 
   // 管理视图（基地 / 装置 / 设备 / 维修）
   { name: '基地视图', icon: 'OfficeBuilding', link: '/inner/manage/baseview' },
   { name: '装置视图', icon: 'Cpu',            link: '/inner/manage/sysview' },
   { name: '设备视图', icon: 'Monitor',        link: '/inner/manage/devview' },
-  { name: '维修决策', icon: 'Tools',          link: '/inner/manage/maintain' },
+  { name: '维修决策', icon: 'Tools',          link: '/inner/manage/decision' },
 
   // 实时与监控
   { name: '实时情况',     icon: 'Timer',        link: '/inner/rsituation' },

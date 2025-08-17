@@ -25,6 +25,7 @@ const BaseView   = () => import('@/views/manage/BaseView.vue')
 const SysView    = () => import('@/views/manage/SysView.vue')
 const DevView    = () => import('@/views/manage/DevView.vue')
 const Maintain   = () => import('@/views/manage/Maintain.vue')
+const DecisionView   = () => import('@/views/manage/DecisionView.vue')
 
 const routes = [
     {
@@ -58,6 +59,7 @@ const routes = [
             { path: 'manage/baseview',  name: 'ManageBaseView',  component: BaseView,  meta: { requiresAuth: true } },
             { path: 'manage/sysview',   name: 'ManageSysView',   component: SysView,   meta: { requiresAuth: true } },
             { path: 'manage/devview',   name: 'ManageDevView',   component: DevView,   meta: { requiresAuth: true } },
+            { path: 'manage/decision',   name: 'DecisionView',   component: DecisionView,   meta: { requiresAuth: true } },
             { path: 'manage/maintain',  name: 'ManageMaintain',  component: Maintain,  meta: { requiresAuth: true } }
         ]
     }

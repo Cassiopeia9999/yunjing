@@ -4,34 +4,33 @@
   </div>
 </template>
 
-<script setup>
-</script>
+<script setup></script>
 
+<!-- ✅ 这是全局样式：不要加 scoped -->
+<style>
+html, body, #app {
+  height: 100%;
+  overflow: hidden; /* 关键：禁止最外层出现滚动条 */
+}
+</style>
+
+<!-- ✅ 组件私有样式：可以 scoped -->
 <style scoped>
-/* 基本样式 */
 #app {
   font-family: Arial, sans-serif;
   background-color: #f5f5f5;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  margin: 0;  /* 去除外部间距 */
-  padding: 0; /* 去除内边距 */
+  height: 100%;     /* ← 替换原来的 min-height:100vh */
+  margin: 0;
+  padding: 0;
 }
 
-/* 设置最大宽度并居中对齐 */
+/* 可保留，但不要再给 #app 设 margin: 0 auto 这类会影响宽度计算的属性 */
 @media (min-width: 1024px) {
-  #app {
-    margin: 0 auto;  /* 居中显示 */
-    padding: 0 ;  /* 增加内边距 */
-  }
+  #app { padding: 0; }
 }
-/* 在移动端适配 */
 @media (max-width: 1024px) {
-  #app {
-    background-color: #f5f5f5;
-
-    padding: 0px;  /* 在移动端减小内边距 */
-  }
+  #app { background-color: #f5f5f5; padding: 0; }
 }
 </style>

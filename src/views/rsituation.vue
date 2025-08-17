@@ -1,260 +1,227 @@
 <template>
-  <div class="container mx-auto px-1 py-1">
-    <div class="bg-white text-white p-2 mb-3">
-      <h3 class="text-xm font-bold mb-2 text-black">故障情况</h3>
-      <div v-if="diagnosis" class="bg-white border border-gray-200 rounded-lg mb-4 p-4 shadow-sm">
-        <!-- 第一行：字段列展示 -->
-        <div class="grid grid-cols-6 gap-4 text-sm text-gray-700 mb-2">
-          <div><span class="text-gray-500">故障设备：</span>{{ diagnosis.device }}</div>
-          <div><span class="text-gray-500">诊断时间：</span>{{ diagnosis.diagnose_time }}</div>
-          <div><span class="text-gray-500">故障类型：</span>{{ diagnosis.fault_type }}</div>
-          <div><span class="text-gray-500">置信度：</span>{{ diagnosis.confidence }}</div>
-          <div><span class="text-gray-500">状态甄别：</span>{{ diagnosis.eva_status }}</div>
-          <div><span class="text-gray-500">故障等级：</span>{{ diagnosis.fault_level }}</div>
+  <div class="flex flex-col h-full overflow-hidden bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100">
+    <!-- 顶部：故障情况（固定区） -->
+    <section class="shrink-0 p-2">
+      <div class="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-base font-semibold">故障情况</h3>
+          <div class="text-xs text-neutral-500">实时</div>
         </div>
 
-        <!-- 第二行：详情信息 -->
-        <div class="bg-gray-50 text-gray-800 text-sm p-3 rounded-md border border-dashed border-gray-300 whitespace-pre-line">
-          <span class="text-gray-500">详情：</span>{{ diagnosis.description || '无' }}
-        </div>
-      </div>
+        <div v-if="diagnosis" class="space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 text-sm">
+            <div class="truncate"><span class="text-neutral-500">故障设备：</span>{{ diagnosis.device }}</div>
+            <div class="truncate"><span class="text-neutral-500">诊断时间：</span>{{ diagnosis.diagnose_time }}</div>
+            <div class="truncate"><span class="text-neutral-500">故障类型：</span>{{ diagnosis.fault_type }}</div>
+            <div class="truncate"><span class="text-neutral-500">置信度：</span>{{ diagnosis.confidence }}</div>
+            <div class="truncate"><span class="text-neutral-500">状态甄别：</span>{{ diagnosis.eva_status }}</div>
+            <div class="truncate"><span class="text-neutral-500">故障等级：</span>{{ diagnosis.fault_level }}</div>
+          </div>
 
-    </div>
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-3">
-      <div class="bg-white p-4 rounded-lg shadow-sm hover:shadow-md ">
-        <!-- 标题区域 -->
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-black font-semibold">{{ currentDeviceName }} 实时数据</h3>
-          <div class="text-xs text-gray-500">
-            更新于: {{ latestUpdateTime }}
+          <div class="bg-neutral-50 dark:bg-neutral-800 text-sm p-3 rounded border border-dashed border-neutral-300 dark:border-neutral-600 whitespace-pre-line">
+            <span class="text-neutral-500">详情：</span>{{ diagnosis.description || '无' }}
           </div>
         </div>
+        <div v-else class="text-sm text-neutral-500">暂无故障信息</div>
+      </div>
+    </section>
 
-        <!-- 数据展示区域 - 使用响应式网格 -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          <div
-              v-for="(item, index) in featureBlocks"
-              :key="item.id || index"
-              class="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
-          >
-            <div class="text-xs font-medium text-gray-500 mb-2">{{ item.feature_alias }}</div>
-            <div class="text-xl font-bold text-gray-800">
-              {{ item.value }}{{ item.feature_unit }}
-            </div>
+    <!-- 内容滚动区 -->
+    <section class="flex-1 min-h-0 overflow-auto p-2">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- 实时数据卡 -->
+        <div class="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm p-4">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-semibold">
+              {{ currentDeviceName || '—' }} 实时数据
+            </h3>
+            <div class="text-xs text-neutral-500">更新于：{{ latestUpdateTime }}</div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             <div
-                class="text-xs mt-1"
-                :class="{
-                  'text-green-500': item.change_rate > 0,
-                  'text-red-500': item.change_rate < 0,
-                  'text-gray-500': item.change_rate === 0
-                }"
+                v-for="(item, index) in featureBlocks"
+                :key="item.id || index"
+                class="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 p-3 hover:shadow transition-shadow"
             >
-              <i
+              <div class="text-[12px] font-medium text-neutral-500 dark:text-neutral-400 mb-1 truncate" :title="item.feature_alias">
+                {{ item.feature_alias }}
+              </div>
+              <div class="text-2xl font-semibold leading-tight">
+                {{ item.value }}<span class="text-sm ml-1 opacity-70">{{ item.feature_unit }}</span>
+              </div>
+              <div
+                  class="inline-flex items-center gap-1 mt-2 text-[12px] font-medium"
                   :class="{
+                  'text-emerald-600': item.change_rate > 0,
+                  'text-rose-600': item.change_rate < 0,
+                  'text-neutral-500': item.change_rate === 0
+                }"
+              >
+                <i
+                    :class="{
                     'fa fa-arrow-up': item.change_rate > 0,
                     'fa fa-arrow-down': item.change_rate < 0,
                     'fa fa-minus': item.change_rate === 0
                   }"
-              ></i>
-              {{ item.change_rate }}%
+                ></i>
+                <span>{{ item.change_rate }}%</span>
+              </div>
             </div>
           </div>
         </div>
+
+        <!-- 右侧：ECharts 图表 -->
+        <div class="lg:col-span-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm overflow-hidden">
+          <div class="px-4 py-3 bg-primary text-white flex items-center justify-between">
+            <h3 class="text-sm font-semibold">数据分析</h3>
+            <div class="flex items-center gap-2">
+              <button class="btn-ghost-white"><i class="fa fa-download mr-1"></i>导出</button>
+              <button class="btn-ghost-white"><i class="fa fa-refresh mr-1"></i>刷新</button>
+            </div>
+          </div>
+          <div class="p-4 h-[400px]" ref="chartContainer"></div>
+        </div>
       </div>
 
-      <!-- 右下角ECharts组件 -->
-      <div class="lg:col-span-2 bg-white rounded-lg hover:shadow-lg overflow-hidden">
-        <div class="px-6 py-4 bg-primary text-white flex justify-between items-center">
-          <h3 class="font-semibold">数据分析</h3>
-          <div class="flex space-x-2">
-            <button class="bg-white/20 text-white px-3 py-1 rounded text-sm hover:bg-white/30 transition-colors">
-              <i class="fa fa-download mr-1"></i>导出
-            </button>
-            <button class="bg-white/20 text-white px-3 py-1 rounded text-sm hover:bg-white/30 transition-colors">
-              <i class="fa fa-refresh mr-1"></i>刷新
-            </button>
+      <!-- 表格 -->
+      <div class="mt-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm overflow-hidden">
+        <div class="px-4 py-3 bg-primary/5 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between">
+          <h2 class="text-base font-semibold">设备数据展示</h2>
+          <div class="flex items-center gap-2">
+            <button class="btn-white" @click="fetchDeviceData"><i class="fa fa-refresh mr-1"></i>刷新</button>
+            <button class="btn-white"><i class="fa fa-filter mr-1"></i>筛选</button>
           </div>
         </div>
-        <div class="p-4 h-[400px]" ref="chartContainer"></div>
-      </div>
-    </div>
 
-    <!-- 设备数据展示表格 -->
-    <div class="mb-8 bg-white rounded-lg hover:shadow-lg  overflow-hidden ">
-      <div class="px-6 py-4 bg-primary text-black flex justify-between items-center ">
-        <h2 class="text-xl font-semibold">设备数据展示</h2>
-        <div class="flex space-x-2">
-          <button class="bg-white text-primary px-3 py-1 rounded text-sm hover:bg-gray-100 transition-colors">
-            <i class="fa fa-refresh mr-1"></i>刷新
-          </button>
-          <button class="bg-white text-primary px-3 py-1 rounded text-sm hover:bg-gray-100 transition-colors">
-            <i class="fa fa-filter mr-1"></i>筛选
-          </button>
+        <div class="overflow-auto">
+          <table class="w-full">
+            <thead class="sticky top-0 z-10">
+            <tr class="bg-neutral-50 dark:bg-neutral-800 text-left text-[12px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+              <th class="px-4 py-3 font-medium">文件名</th>
+              <th class="px-4 py-3 font-medium">文件时间</th>
+              <th class="px-4 py-3 font-medium">工作状态</th>
+              <th class="px-4 py-3 font-medium">解析特征数量</th>
+              <th class="px-4 py-3 font-medium">文件大小</th>
+              <th class="px-4 py-3 font-medium text-right">操作</th>
+            </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-200 dark:divide-neutral-700">
+            <tr
+                v-for="(item, index) in deviceData"
+                :key="index"
+                class="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+            >
+              <td class="px-4 py-3 whitespace-nowrap">
+                <div class="text-sm font-medium truncate" :title="item.file_name">{{ item.file_name }}</div>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                <div class="text-sm">{{ item.collect_time }}</div>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                <span :class="getStatusClass(item.work_situation)">{{ item.work_situation }}</span>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                <div class="text-sm">{{ item.feature_count }}</div>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                <div class="text-sm text-neutral-500">{{ item.file_size }} MB</div>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-right">
+                <button class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm" @click="openDetailDialog(item)">查看详情</button>
+              </td>
+            </tr>
+            </tbody>
+          </table>
         </div>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead>
-          <tr class="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            <th class="px-6 py-3">文件名</th>
-            <th class="px-6 py-3">文件时间</th>
-            <th class="px-6 py-3">工作状态</th>
-            <th class="px-6 py-3">解析特征数量</th>
-            <th class="px-6 py-3">文件大小</th>
-            <th class="px-6 py-3 text-right">操作</th>
-          </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="(item, index) in deviceData" :key="index" class="hover:bg-gray-50 transition-colors">
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm font-medium text-gray-900">{{ item.file_name }}</div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-gray-900">{{ item.collect_time }}</div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span :class="getStatusClass(item.work_situation)">{{ item.work_situation }}</span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-gray-900">{{ item.feature_count }}</div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              {{ item.file_size }} MB
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <button
-                  class="text-indigo-600 hover:text-indigo-900 transition-colors"
-                  @click="openDetailDialog(item)"
-              >查看详情</button>
-            </td>
-          </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="px-6 py-4 bg-gray-50 flex items-center justify-between border-t border-gray-200">
-        <div class="flex-1 flex justify-between sm:hidden">
-          <button
-              @click="prevPage"
-              class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-          >
-            上一页
-          </button>
-          <button
-              @click="nextPage"
-              class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-          >
-            下一页
-          </button>
-        </div>
-        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-          <div>
-            <p class="text-sm text-gray-700">
+
+        <!-- 分页 -->
+        <div class="px-4 py-3 bg-neutral-50 dark:bg-neutral-800 border-t border-neutral-200 dark:border-neutral-700 flex items-center justify-between">
+          <div class="flex-1 flex justify-between sm:hidden">
+            <button @click="prevPage" class="btn-white" :disabled="currentPage === 1">上一页</button>
+            <button @click="nextPage" class="btn-white" :disabled="currentPage >= totalPages">下一页</button>
+          </div>
+          <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <p class="text-sm text-neutral-600 dark:text-neutral-300">
               显示第 <span class="font-medium">{{ (currentPage - 1) * pageSize + 1 }}</span>
               到 <span class="font-medium">{{ Math.min(currentPage * pageSize, totalCount) }}</span>
               条，共 <span class="font-medium">{{ totalCount }}</span> 条记录
             </p>
-          </div>
-          <div>
-            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <button
-                  :disabled="currentPage === 1"
-                  @click="prevPage"
-                  class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-              >
-                <span class="sr-only">上一页</span>
-                <i class="fa fa-chevron-left"></i>
+            <nav class="inline-flex rounded-md shadow-sm isolate">
+              <button class="btn-white rounded-l-md" :disabled="currentPage === 1" @click="prevPage">
+                <span class="sr-only">上一页</span><i class="fa fa-chevron-left"></i>
               </button>
-
-              <!-- 简化的页码显示 -->
               <button
                   v-for="page in Math.min(5, totalPages)"
                   :key="page"
-                  :class="{
-                  'z-10 bg-indigo-50 border-indigo-500 text-indigo-600': page === currentPage,
-                  'bg-white border-gray-300 text-gray-500 hover:bg-gray-50': page !== currentPage
-                }"
                   @click="currentPage = page"
-                  class="relative inline-flex items-center px-4 py-2 border text-sm font-medium"
-              >
-                {{ page }}
-              </button>
-
-              <button
-                  :disabled="currentPage >= totalPages"
-                  @click="nextPage"
-                  class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-              >
-                <span class="sr-only">下一页</span>
-                <i class="fa fa-chevron-right"></i>
+                  :class="[
+                  'px-3 py-1 border text-sm',
+                  page === currentPage
+                    ? 'bg-indigo-50 border-indigo-500 text-indigo-600'
+                    : 'bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800'
+                ]"
+              >{{ page }}</button>
+              <button class="btn-white rounded-r-md" :disabled="currentPage >= totalPages" @click="nextPage">
+                <span class="sr-only">下一页</span><i class="fa fa-chevron-right"></i>
               </button>
             </nav>
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- 详情弹窗 -->
-    <div v-if="dialogVisible" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div class="sm:flex sm:items-start">
-              <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                  {{ selectedItem.file_name }} 详情
-                </h3>
-                <div class="mt-2">
-                  <div class="border-t border-gray-200 py-4">
-                    <div class="grid grid-cols-2 gap-4">
-                      <div>
-                        <p class="text-sm text-gray-500">文件时间</p>
-                        <p class="text-sm font-medium text-gray-900">{{ selectedItem.collect_time }}</p>
-                      </div>
-                      <div>
-                        <p class="text-sm text-gray-500">工作状态</p>
-                        <p class="text-sm font-medium text-gray-900">
-                          <span :class="getStatusClass(selectedItem.work_situation)">{{ selectedItem.work_situation }}</span>
-                        </p>
-                      </div>
-                      <div>
-                        <p class="text-sm text-gray-500">解析特征数量</p>
-                        <p class="text-sm font-medium text-gray-900">{{ selectedItem.feature_count }}</p>
-                      </div>
-                      <div>
-                        <p class="text-sm text-gray-500">文件大小</p>
-                        <p class="text-sm font-medium text-gray-900">{{ selectedItem.file_size }} MB</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="border-t border-gray-200 py-4">
-                    <p class="text-sm text-gray-500 mb-2">文件路径</p>
-                    <p class="text-sm font-medium text-gray-900 truncate">{{ selectedItem.file_path }}</p>
-                  </div>
-                  <div class="border-t border-gray-200 py-4">
-                    <p class="text-sm text-gray-500 mb-2">解析状态</p>
-                    <p class="text-sm font-medium text-gray-900">
-                      <span :class="getParseStatusClass(selectedItem.parse_status)">{{ selectedItem.parse_status }}</span>
-                    </p>
-                  </div>
-                </div>
-              </div>
+    <!-- 详情弹窗（UI 同步） -->
+    <div v-if="dialogVisible" class="fixed inset-0 z-50">
+      <div class="absolute inset-0 bg-black/40"></div>
+      <div class="relative mx-auto w-full max-w-lg mt-20 bg-white dark:bg-neutral-900 rounded-lg shadow-xl overflow-hidden">
+        <div class="px-5 pt-5 pb-3 border-b border-neutral-200 dark:border-neutral-700">
+          <h3 id="modal-title" class="text-lg font-semibold">{{ selectedItem.file_name }} 详情</h3>
+        </div>
+        <div class="p-5 space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-xs text-neutral-500">文件时间</p>
+              <p class="text-sm font-medium">{{ selectedItem.collect_time }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-neutral-500">工作状态</p>
+              <p class="text-sm font-medium">
+                <span :class="getStatusClass(selectedItem.work_situation)">{{ selectedItem.work_situation }}</span>
+              </p>
+            </div>
+            <div>
+              <p class="text-xs text-neutral-500">解析特征数量</p>
+              <p class="text-sm font-medium">{{ selectedItem.feature_count }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-neutral-500">文件大小</p>
+              <p class="text-sm font-medium">{{ selectedItem.file_size }} MB</p>
             </div>
           </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:ml-3 sm:w-auto sm:text-sm" @click="dialogVisible = false">
-              确定
-            </button>
-            <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" @click="dialogVisible = false">
-              取消
-            </button>
+
+          <div class="border-t border-neutral-200 dark:border-neutral-700 pt-4">
+            <p class="text-xs text-neutral-500 mb-1">文件路径</p>
+            <p class="text-sm font-medium truncate">{{ selectedItem.file_path }}</p>
           </div>
+
+          <div class="border-t border-neutral-200 dark:border-neutral-700 pt-4">
+            <p class="text-xs text-neutral-500 mb-1">解析状态</p>
+            <p class="text-sm font-medium">
+              <span :class="getParseStatusClass(selectedItem.parse_status)">{{ selectedItem.parse_status }}</span>
+            </p>
+          </div>
+        </div>
+        <div class="px-5 py-3 bg-neutral-50 dark:bg-neutral-800 flex items-center justify-end gap-2">
+          <button class="btn-primary" @click="dialogVisible = false">确定</button>
+          <button class="btn-white" @click="dialogVisible = false">取消</button>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+
 
 <script setup>
 import { onMounted, onBeforeUnmount, reactive, ref, computed } from 'vue'
@@ -489,27 +456,26 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* 定义主色调 */
-:root {
-  --primary-color: #165DFF;
-}
+:root { --primary-color: #165DFF; }       /* 与全站一致 */
+.bg-primary { background-color: var(--primary-color); }
+.text-primary { color: var(--primary-color); }
 
-.bg-primary {
-  background-color: var(--primary-color);
+/* 统一按钮 */
+.btn-white {
+  @apply inline-flex items-center gap-1 px-3 py-1 border rounded-md text-sm
+  bg-white text-neutral-700 border-neutral-300
+  hover:bg-neutral-50 dark:bg-neutral-900 dark:text-neutral-200
+  dark:border-neutral-700 dark:hover:bg-neutral-800 disabled:opacity-50;
 }
-
-.text-primary {
-  color: var(--primary-color);
+.btn-ghost-white {
+  @apply inline-flex items-center gap-1 px-3 py-1 rounded text-sm
+  bg-white/20 text-white hover:bg-white/30 transition-colors disabled:opacity-50;
 }
-
-/* 自定义过渡动画 */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
+.btn-primary {
+  @apply inline-flex justify-center items-center px-4 py-2 rounded-md text-sm font-medium
+  text-white bg-[color:var(--primary-color)]
+  hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2
+  focus:ring-[color:var(--primary-color)];
 }
 </style>
+

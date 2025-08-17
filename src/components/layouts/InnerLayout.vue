@@ -1,6 +1,6 @@
 <template>
   <div
-      class="relative h-screen w-full
+      class="relative h-full w-full overflow-hidden
            bg-white text-neutral-900
            dark:bg-neutral-950 dark:text-neutral-100
            transition-colors"
@@ -15,14 +15,16 @@
     <!-- 主内容（随菜单展开收起动态让出空间） -->
     <div
         :class="[
-        'flex flex-col h-full transition-all duration-300',
+        // ✅ 关键：允许子项收缩 + 自己不滚动
+        'flex flex-col h-full min-h-0 overflow-hidden transition-all duration-300',
         isMenuVisible ? 'ml-[286px]' : 'ml-0'
       ]"
     >
       <TopBar @toggle-menu="toggleMenu" />
 
+      <!-- ✅ 唯一滚动容器 -->
       <main
-          class="flex-1 p-1 overflow-auto
+          class="flex-1 min-h-0 overflow-auto p-1
                bg-neutral-50 dark:bg-neutral-900
                transition-colors"
       >
@@ -31,6 +33,7 @@
     </div>
   </div>
 </template>
+
 
 <script setup>
 import { ref } from 'vue'

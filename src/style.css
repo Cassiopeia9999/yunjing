@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* 可选：切换时更顺滑 */
-html, body, #app { height: 100%; }
+html, body, #app { height: 100%; overflow: hidden; }
 :root, .dark { transition: background-color .2s ease, color .2s ease; }
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
