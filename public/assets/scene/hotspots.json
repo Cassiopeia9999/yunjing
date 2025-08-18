@@ -1,0 +1,6 @@
+[
+  { "id":"u-1", "name":"装置-1", "x": 240, "y": 180, "status":"Normal",  "icon":"pin"   },
+  { "id":"u-2", "name":"装置-2", "x": 2320, "y": 2260, "status":"Warning", "icon":"pump"  },
+  { "id":"u-3", "name":"装置-3", "x": 1260, "y": 1200, "status":"Fault",   "icon":"fan"   },
+  { "id":"u-4", "name":"装置-4", "x": -1200, "y": -820, "status":"Normal",  "icon":"tower" }
+]

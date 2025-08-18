@@ -1,0 +1,72 @@
+/* 统一加深遮罩，并带轻微磨砂模糊（同时适用于 Dialog / Drawer 的遮罩） */
+:root{
+    /* Element Plus 内置遮罩变量，统一调深一点 */
+    --el-overlay-color:         rgba(15, 23, 42, .55); /* slate-900 / 55% */
+    --el-overlay-color-light:   rgba(15, 23, 42, .45);
+    --el-overlay-color-lighter: rgba(15, 23, 42, .35);
+}
+.dark {
+    /* 深色模式再稍微加深一点 */
+    --el-overlay-color:         rgba(2, 6, 23, .62);   /* slate-950 / 62% */
+    --el-overlay-color-light:   rgba(2, 6, 23, .52);
+    --el-overlay-color-lighter: rgba(2, 6, 23, .42);
+}
+
+/* 遮罩做磨砂（系统支持的环境生效） */
+.el-overlay{
+    backdrop-filter: blur(6px) saturate(108%);
+    -webkit-backdrop-filter: blur(6px) saturate(108%);
+}
+
+/* 让弹窗在遮罩内始终居中，并留一点边距避免贴边 */
+.el-overlay-dialog{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2vh; /* 移动端也安全 */
+}
+
+/* 面板层次：圆角、边框、阴影 */
+.el-dialog{
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, .18);       /* slate-400/18 */
+    box-shadow:
+            0 22px 60px rgba(0, 0, 0, .38),
+            0 6px 18px rgba(0, 0, 0, .22);
+    background: var(--el-bg-color-overlay);           /* 继承主题色 */
+}
+
+/* 头部/尾部更有分隔感 */
+.el-dialog__header{
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+}
+.el-dialog__title{
+    font-weight: 600;
+    font-size: 15px; /* 比默认略大一点，更清晰 */
+}
+.el-dialog__body{ padding: 16px 18px; }
+.el-dialog__footer{
+    padding: 12px 18px;
+    border-top: 1px solid var(--el-border-color-lighter);
+    background: var(--el-fill-color-light);
+}
+
+/* 入场微动效：更有“浮起”层次感 */
+@keyframes fd-pop {
+    from { transform: translateY(6px) scale(.985); opacity: 0; }
+    to   { transform: translateY(0)    scale(1);    opacity: 1; }
+}
+.el-overlay .el-dialog{
+    animation: fd-pop .18s cubic-bezier(.2,.8,.2,1);
+}
+
+/* 解决出现/隐藏对话框时 body 右侧因滚动条产生的跳动 */
+body.el-popup-parent--hidden { padding-right: 0 !important; }
+
+/* 窄屏优化：圆角/内边距略收紧，避免压缩内容区 */
+@media (max-width: 768px){
+    .el-dialog{ border-radius: 10px; }
+    .el-dialog__header, .el-dialog__body, .el-dialog__footer{ padding-left:14px; padding-right:14px; }
+}

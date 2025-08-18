@@ -1,6 +1,8 @@
 // src/main.js
 import { createApp } from 'vue'
 import './style.css'
+import '@/styles/table-override.css'
+import '@/styles/dialog-override.css'
 import App from './App.vue'
 import router from './router'
 import ElementPlus from 'element-plus'

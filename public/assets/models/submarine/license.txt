@@ -1,0 +1,11 @@
+Model Information:
+* title:	K-222 Soviet Submarine
+* source:	https://sketchfab.com/3d-models/k-222-soviet-submarine-07672fc0ad4d4875b1d83c76f178eb27
+* author:	Savy (https://sketchfab.com/SavyTheCreator)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "K-222 Soviet Submarine" (https://sketchfab.com/3d-models/k-222-soviet-submarine-07672fc0ad4d4875b1d83c76f178eb27) by Savy (https://sketchfab.com/SavyTheCreator) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

@@ -1,16 +1,18 @@
 <!-- src/pages/BaseView.vue -->
 <script setup>
 import { onMounted, ref, computed } from 'vue'
-import { getBasePageData } from '@/mock/dataService'
+import { getBasePageData ,getAssessmentUnits  } from '@/mock/dataService'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { ArrowRight } from '@element-plus/icons-vue'
+import DeviceAssessmentModal from '@/buz/eavalue/DeviceAssessmentModal.vue'
 
 const days = ref(7)
 const loading = ref(true)
 const data = ref(null)
 const sortKey = ref('highDevices') // 装置卡排序
 const rankTab = ref('devices')     // 左榜 Tab：devices/diagnoses/rul/lag
-
+const dialogAssess = ref(false)    // 任务评估弹窗
+const assessmentUnits = ref([])
 const highProbText = computed(() => `Pθ=${data.value?.meta?.highProbThreshold || 70}%`)
 const kpis = computed(() => data.value?.kpis || {})
 const baseInfo = computed(() => data.value?.base || {})
@@ -53,6 +55,7 @@ function applyBucketFilter(label){
 async function load(){
   loading.value = true
   data.value = await getBasePageData(1, { days: days.value, highProbThreshold: 70 })
+  assessmentUnits.value = await getAssessmentUnits(1)
   loading.value = false
 }
 onMounted(load)
@@ -76,6 +79,7 @@ onMounted(load)
           更新时间：{{ (baseInfo.time || '').replace('T',' ').slice(0,19) }}
         </div>
         <el-button size="small" @click="load">刷新</el-button>
+        <el-button size="small" type="primary" @click="dialogAssess = true">任务评估</el-button>
         <ThemeToggle/>
       </div>
     </div>
@@ -83,23 +87,23 @@ onMounted(load)
     <!-- KPI 带 -->
     <div class="grid grid-cols-5 gap-3 mb-4">
       <el-card shadow="never" class="dark:bg-neutral-800">
-        <div class="text-xs opacity-60 mb-1">装置 / 设备</div>
+        <div class="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">装置 / 设备</div>
         <div class="text-2xl font-semibold">{{ kpis.unitsCount || 0 }} / {{ kpis.devicesCount || 0 }}</div>
       </el-card>
       <el-card shadow="never" class="dark:bg-neutral-800">
-        <div class="text-xs opacity-60 mb-1">诊断次数（{{days}}天）</div>
+        <div class="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">诊断次数（{{days}}天）</div>
         <div class="text-2xl font-semibold">{{ kpis.diagnosisCount || 0 }}</div>
       </el-card>
       <el-card shadow="never" class="dark:bg-neutral-800">
-        <div class="text-xs opacity-60 mb-1">高概率诊断数</div>
+        <div class="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">高概率诊断数</div>
         <div class="text-2xl font-semibold text-red-500 dark:text-red-400">{{ kpis.highProbCount || 0 }}</div>
       </el-card>
       <el-card shadow="never" class="dark:bg-neutral-800">
-        <div class="text-xs opacity-60 mb-1">高概率设备数</div>
+        <div class="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">高概率设备数</div>
         <div class="text-2xl font-semibold">{{ kpis.highProbDevices || 0 }}</div>
       </el-card>
       <el-card shadow="never" class="dark:bg-neutral-800">
-        <div class="text-xs opacity-60 mb-1">数据新鲜度（中位）</div>
+        <div class="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">数据新鲜度（中位）</div>
         <div class="text-2xl font-semibold">{{ kpis.freshnessHours != null ? (kpis.freshnessHours + 'h') : '—' }}</div>
       </el-card>
     </div>
@@ -178,36 +182,36 @@ onMounted(load)
                   {{ card.unit.system_status }}
                 </el-tag>
               </div>
-              <div class="text-xs opacity-70 mb-2">
+              <div class="text-sm text-neutral-600 dark:text-neutral-300 mb-2">
                 {{ card.unit.system_type }} · {{ card.unit.system_code }}
               </div>
 
               <div class="grid grid-cols-3 gap-2 text-sm">
                 <div>
-                  <div class="opacity-60">诊断数</div>
+                  <div class="text-[13px] text-neutral-600 dark:text-neutral-300">诊断数</div>
                   <div class="font-semibold">{{ card.diagSummary.count }}</div>
                 </div>
                 <div>
-                  <div class="opacity-60">高概率</div>
+                  <div class="text-[13px] text-neutral-600 dark:text-neutral-300">高概率</div>
                   <div class="font-semibold text-red-500 dark:text-red-400">{{ card.diagSummary.highCount }}</div>
                 </div>
                 <div>
-                  <div class="opacity-60">高概设备</div>
+                  <div class="text-[13px] text-neutral-600 dark:text-neutral-300">高概设备</div>
                   <div class="font-semibold">{{ card.diagSummary.highDevices }}</div>
                 </div>
               </div>
 
               <div class="mt-3 grid grid-cols-3 gap-2 text-sm">
                 <div>
-                  <div class="opacity-60">装置RUL</div>
+                  <div class="text-[13px] text-neutral-600 dark:text-neutral-300">装置RUL</div>
                   <div class="font-semibold">{{ card.health.unitLevel.remaining_life }}天</div>
                 </div>
                 <div>
-                  <div class="opacity-60">装置Conf</div>
+                  <div class="text-[13px] text-neutral-600 dark:text-neutral-300">装置Conf</div>
                   <div class="font-semibold">{{ card.health.unitLevel.confidence_level }}%</div>
                 </div>
                 <div>
-                  <div class="opacity-60">设备Avg RUL</div>
+                  <<div class="text-[13px] text-neutral-600 dark:text-neutral-300">设备Avg RUL</div>
                   <div class="font-semibold">{{ card.health.deviceAgg.avgRUL }}</div>
                 </div>
               </div>
@@ -265,6 +269,22 @@ onMounted(load)
         </div>
       </div>
     </el-skeleton>
+
+    <el-dialog
+        v-model="dialogAssess"
+        title="任务评估"
+        width="60vw"
+        append-to-body
+    >
+      <!-- 传入 mock 数据与基地经纬度 -->
+      <DeviceAssessmentModal
+          :devices="assessmentUnits"
+          :base-lat="baseInfo.latitude"
+          :base-lon="baseInfo.longitude"
+      />
+    </el-dialog>
+
+
   </div>
 </template>
 

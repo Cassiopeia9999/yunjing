@@ -1,0 +1,8 @@
+Model Information:
+* title:	Red Alert Airship (Inspired by Kirov Airship)
+* source:	https://sketchfab.com/3d-models/red-alert-airship-inspired-by-kirov-airship-9d97054f757840b1beb3e2fa86c58ebf
+* author:	vertexmonster (https://sketchfab.com/vertexmonster)
+
+Model License:
+* license type:	SKETCHFAB Standard (https://sketchfab.com/licenses)
+* requirements:	Under basic restrictions, use worldwide, on all types of media, commercially or not, and in all types of derivative works

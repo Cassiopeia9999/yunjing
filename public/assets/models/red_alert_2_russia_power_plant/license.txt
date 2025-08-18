@@ -1,0 +1,11 @@
+Model Information:
+* title:	Red Alert 2 Russia Power Plant
+* source:	https://sketchfab.com/3d-models/red-alert-2-russia-power-plant-8215323a171d49a38d1b11f61f60333d
+* author:	TraianDumbrava (https://sketchfab.com/TraianDumbrava)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Red Alert 2 Russia Power Plant" (https://sketchfab.com/3d-models/red-alert-2-russia-power-plant-8215323a171d49a38d1b11f61f60333d) by TraianDumbrava (https://sketchfab.com/TraianDumbrava) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

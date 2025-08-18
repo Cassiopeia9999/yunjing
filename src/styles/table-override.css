@@ -1,0 +1,34 @@
+/* 基础字号与行高 */
+.el-table,
+.el-table .cell,
+.el-table__cell {
+    font-size: 14px;      /* ← 想要的全局表格字号 */
+    line-height: 1.6;
+}
+
+/* 表头稍微更醒目 */
+.el-table thead .cell {
+    font-size: 13.5px;
+    font-weight: 600;
+}
+
+/* 单元格留白，避免字大了显挤 */
+.el-table .cell {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+/* 分页字号 */
+.el-pagination {
+    font-size: 14px;
+}
+
+/* 小屏稍微降一点，避免爆行高 */
+@media (max-width: 1024px){
+    .el-table,
+    .el-table .cell,
+    .el-table__cell,
+    .el-pagination {
+        font-size: 13px;
+    }
+}

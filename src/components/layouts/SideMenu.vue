@@ -113,7 +113,8 @@ const menuItems = [
   // { name: '全局态势', icon: 'MapLocation',  link: '/inner/globalview' },
 
   // 管理视图（基地 / 装置 / 设备 / 维修）
-  { name: '基地视图', icon: 'OfficeBuilding', link: '/inner/manage/baseview' },
+  { name: '基地场景', icon: 'OfficeBuilding', link: '/inner/manage/basesceneview' },
+  { name: '基地详情', icon: 'OfficeBuilding', link: '/inner/manage/baseview' },
   { name: '装置视图', icon: 'Cpu',            link: '/inner/manage/sysview' },
   { name: '设备视图', icon: 'Monitor',        link: '/inner/manage/devview' },
   { name: '故障管理', icon: 'Tools',          link: '/inner/manage/faultcenter' },
@@ -121,15 +122,14 @@ const menuItems = [
 
   // 实时与监控
   { name: '实时情况',     icon: 'Timer',        link: '/inner/rsituation' },
-  { name: '实时监控测试', icon: 'VideoCamera',  link: '/inner/monitor' },
+  // { name: '实时监控测试', icon: 'VideoCamera',  link: '/inner/monitor' },
 
   // 分析 & 测试
   { name: '特征分析', icon: 'DataAnalysis', link: '/inner/featuredemo' },
   { name: '接口测试', icon: 'Link',         link: '/inner/py_interface_test' },
 
   // 外部入口
-  { name: '数据后台（新窗口）', icon: 'Operation', link: '/index/workbench',                 external: true },
-  { name: '生产环节',           icon: 'Box',       link: buildLowcodeUrl(FORM_ID_PRODUCTION_7784), external: true, openInFrame: true },
+  { name: '数据后台', icon: 'Operation', link: '/index/workbench',                 external: true },
   { name: '故障管理',           icon: 'Warning',   link: buildLowcodeUrl(FAULT_CONFIG_FORM_ID),     external: true, openInFrame: true }
 ]
 

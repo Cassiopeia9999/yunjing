@@ -256,4 +256,33 @@ export async function getBasePageData(baseId = 1, { days = 7, highProbThreshold 
         rankings,
         meta: { days, highProbThreshold }
     };
+
 }
+
+
+
+// === 任务评估：mock 当前基地下所有“装置”的可达性所需数据 ===
+// 说明：这里以“装置（unit）”为评估主体，给出航速(节)与健康寿命(天)
+const genSailingSpeedKn = () => {
+    // 20% 概率无速度（用于“隐藏无速度”筛选演示）
+    if (Math.random() < 0.2) return null;
+    // 其余在 6~24 节之间
+    return +(6 + Math.random() * (24 - 6)).toFixed(1);
+};
+
+/**
+ * 获取基地下全部“装置”的评估数据
+ * 返回：[{ id, name, status, sailing_speed, nextMaintenance }]
+ */
+export async function getAssessmentUnits(baseId = 1) {
+    await new Promise(r => setTimeout(r, 120)); // 模拟网络延迟
+    const units = genUnits(baseId, 8);
+    return units.map(u => ({
+        id: u.id,
+        name: u.system_name,
+        status: u.system_status,
+        sailing_speed: genSailingSpeedKn(), // 节(kn)
+        nextMaintenance: u.remaining_life    // 直接用装置剩余寿命（天）
+    }));
+}
+

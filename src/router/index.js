@@ -22,6 +22,8 @@ import { getToken } from '@/utils/auth.js'
 
 // ✅ 新增：manage 下的四个页面（按需加载）
 const BaseView   = () => import('@/views/manage/BaseView.vue')
+const BaseSceneView   = () => import('@/views/manage/BaseScenarioView.vue')
+
 const SysView    = () => import('@/views/manage/SysView.vue')
 const DevView    = () => import('@/views/manage/DevView.vue')
 const Maintain   = () => import('@/views/manage/Maintain.vue')
@@ -59,6 +61,7 @@ const routes = [
 
             // 🔥 新增四个管理视图（与你菜单的链接一致）
             { path: 'manage/baseview',  name: 'ManageBaseView',  component: BaseView,  meta: { requiresAuth: true } },
+            { path: 'manage/basesceneview',  name: 'ManageBaseSceneView',  component: BaseSceneView,  meta: { requiresAuth: true } },
             { path: 'manage/sysview',   name: 'ManageSysView',   component: SysView,   meta: { requiresAuth: true } },
             { path: 'manage/devview',   name: 'ManageDevView',   component: DevView,   meta: { requiresAuth: true } },
             { path: 'manage/decision',   name: 'DecisionView',   component: DecisionView,   meta: { requiresAuth: true } },
