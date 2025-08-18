@@ -26,6 +26,8 @@ const SysView    = () => import('@/views/manage/SysView.vue')
 const DevView    = () => import('@/views/manage/DevView.vue')
 const Maintain   = () => import('@/views/manage/Maintain.vue')
 const DecisionView   = () => import('@/views/manage/DecisionView.vue')
+const FaultCenterView   = () => import('@/views/manage/FaultCenter.vue')
+
 
 const routes = [
     {
@@ -60,6 +62,7 @@ const routes = [
             { path: 'manage/sysview',   name: 'ManageSysView',   component: SysView,   meta: { requiresAuth: true } },
             { path: 'manage/devview',   name: 'ManageDevView',   component: DevView,   meta: { requiresAuth: true } },
             { path: 'manage/decision',   name: 'DecisionView',   component: DecisionView,   meta: { requiresAuth: true } },
+            { path: 'manage/faultcenter',   name: 'FaultCenterView',   component: FaultCenterView,   meta: { requiresAuth: true } },
             { path: 'manage/maintain',  name: 'ManageMaintain',  component: Maintain,  meta: { requiresAuth: true } }
         ]
     }

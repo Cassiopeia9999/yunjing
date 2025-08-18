@@ -5,15 +5,15 @@ import { useRoute, useRouter } from 'vue-router'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { getDevicePageData } from '@/mock/deviceMock' // 下面提供
 import { ArrowRight, WarningFilled, CircleCheck, Upload, Document } from '@element-plus/icons-vue'
+import FaultDiagnosisPanel from "@/components/alg/FaultDiagnosisPanel.vue";
 
 const route = useRoute()
-const router = useRouter()
 const deviceId = ref(route.params.deviceId || 101)
 const days = ref(30)
 
 const loading = ref(true)
 const data = ref(null)
-
+const dialogFaultDiag = ref(false)
 // 头部/基础
 const dev = computed(()=> data.value?.device || {})
 const parents = computed(()=> data.value?.parents || {})
@@ -156,30 +156,43 @@ onMounted(load)
       <!-- 健康与寿命（KPI 卡） -->
       <div class="grid grid-cols-5 gap-3">
         <el-card shadow="never" class="dark:bg-neutral-800">
-          <div class="text-xs opacity-60 mb-1">健康度</div>
-          <div class="text-2xl font-semibold">{{ dev.health_level ?? '—' }}</div>
+          <div class="text-sm font-medium text-neutral-800 dark:text-neutral-100">健康度</div>
+          <div class="mt-1 text-2xl font-semibold leading-snug text-sky-600 dark:text-sky-300">
+            {{ dev.health_level ?? '—' }}
+          </div>
         </el-card>
+
         <el-card shadow="never" class="dark:bg-neutral-800">
-          <div class="text-xs opacity-60 mb-1">剩余寿命 RUL</div>
-          <div class="text-2xl font-semibold">{{ dev.remaining_life ?? '—' }} 天</div>
+          <div class="text-sm font-medium text-neutral-800 dark:text-neutral-100">剩余寿命 RUL</div>
+          <div class="mt-1 text-2xl font-semibold leading-snug text-indigo-600 dark:text-indigo-300">
+            {{ dev.remaining_life ?? '—' }}
+            <span class="ml-0.5 text-[12px] font-medium text-neutral-600 dark:text-neutral-300">天</span>
+          </div>
         </el-card>
+
         <el-card shadow="never" class="dark:bg-neutral-800">
-          <div class="text-xs opacity-60 mb-1">置信度</div>
-          <div class="text-2xl font-semibold">{{ dev.confidence_level ?? '—' }}%</div>
+          <div class="text-sm font-medium text-neutral-800 dark:text-neutral-100">置信度</div>
+          <div class="mt-1 text-2xl font-semibold leading-snug text-emerald-600 dark:text-emerald-300">
+            {{ dev.confidence_level ?? '—' }}<span class="ml-0.5 text-[12px] font-medium">%</span>
+          </div>
         </el-card>
+
         <el-card shadow="never" class="dark:bg-neutral-800">
-          <div class="text-xs opacity-60 mb-1">最近诊断概率</div>
-          <div class="text-2xl font-semibold">
+          <div class="text-sm font-medium text-neutral-800 dark:text-neutral-100">最近诊断概率</div>
+          <div class="mt-1 text-2xl font-semibold leading-snug text-amber-600 dark:text-amber-300">
             {{ snap?.probability != null ? (snap.probability + '%') : '—' }}
           </div>
         </el-card>
+
         <el-card shadow="never" class="dark:bg-neutral-800">
-          <div class="text-xs opacity-60 mb-1">最近诊断时间</div>
-          <div class="text-2xl font-semibold">
+          <div class="text-sm font-medium text-neutral-800 dark:text-neutral-100">最近诊断时间</div>
+          <div class="mt-1 text-xl font-semibold leading-snug text-neutral-900 dark:text-neutral-100">
             {{ snap?.diagnosis_time ? snap.diagnosis_time.replace('T',' ').slice(0,19) : '—' }}
           </div>
         </el-card>
       </div>
+
+
 
       <!-- QA 拦截提示 -->
       <div v-if="qa?.block" class="mt-2 text-sm text-amber-500">
@@ -191,7 +204,27 @@ onMounted(load)
     <div class="flex-1 min-h-0 overflow-auto p-4 lg:p-6">
       <el-skeleton :loading="loading" animated>
         <template #template><el-skeleton-item variant="rect" style="height:420px"/></template>
-
+        <!-- 快捷操作 -->
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <div class="text-xs opacity-70">
+            * 高概率阈值：{{ highProbText }}；每条诊断可作为故障证据挂载。
+          </div>
+          <div class="flex items-center gap-2">
+            <el-button size="small" type="primary" :icon="CircleCheck" @click="goDiagnose" :disabled="actionsDisabled">
+              开始故障诊断
+            </el-button>
+            <el-button size="small" type="primary" plain :icon="Upload" @click="goForecast" :disabled="actionsDisabled">
+              趋势预测
+            </el-button>
+            <el-button size="small" type="success" @click="newOrLinkFault">
+              新建故障 / 关联
+            </el-button>
+              <!-- ✅ 新增：设备故障诊断操作面板入口 -->
+             <el-button size="small" type="primary" plain :icon="Document" @click="dialogFaultDiag = true">
+               故障诊断面板
+             </el-button>
+          </div>
+        </div>
         <div class="grid grid-cols-12 gap-4 min-h-0">
           <!-- 左侧：最新诊断快照 + 风险提示 -->
           <div class="col-span-4 min-w-0 flex flex-col gap-3">
@@ -296,23 +329,7 @@ onMounted(load)
           </el-card>
         </div>
 
-        <!-- 快捷操作 -->
-        <div class="mt-4 flex items-center justify-between gap-3">
-          <div class="text-xs opacity-70">
-            * 高概率阈值：{{ highProbText }}；每条诊断可作为故障证据挂载。
-          </div>
-          <div class="flex items-center gap-2">
-            <el-button size="small" type="primary" :icon="CircleCheck" @click="goDiagnose" :disabled="actionsDisabled">
-              开始故障诊断
-            </el-button>
-            <el-button size="small" type="primary" plain :icon="Upload" @click="goForecast" :disabled="actionsDisabled">
-              趋势预测
-            </el-button>
-            <el-button size="small" type="success" @click="newOrLinkFault">
-              新建故障 / 关联
-            </el-button>
-          </div>
-        </div>
+
 
         <!-- 依据抽屉 -->
         <el-drawer v-model="drawerBasis.visible" title="诊断依据" size="50%">
@@ -364,6 +381,22 @@ onMounted(load)
             <el-button type="success" @click="dialogNewFault=false">提交</el-button>
           </template>
         </el-dialog>
+
+         <el-dialog
+            v-model="dialogFaultDiag"
+            title="设备故障诊断"
+            width="80vw"
+            class="fd-dlg"
+            append-to-body
+          >
+           <div class="h-full min-h-0 flex flex-col">
+              <FaultDiagnosisPanel
+                   :device-name="dev.device_name || ('设备-' + deviceId)"
+                   :channel="dev.default_channel || 'CH-1'"
+                   :autorun="true"
+                />
+           </div>
+        </el-dialog>
       </el-skeleton>
     </div>
   </div>
@@ -371,4 +404,29 @@ onMounted(load)
 
 <style scoped>
 :deep(.el-card__body){ padding: 12px; }
+
+
+/* 弹窗整体占 80% 视口高，并用 flex 布局分配空间 */
+:deep(.fd-dlg .el-dialog){
+  width: 80vw !important;
+  height: 80vh;            /* 关键：固定高度 */
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+}
+/* 头/尾固定高度，body 扩展 */
+:deep(.fd-dlg .el-dialog__header),
+:deep(.fd-dlg .el-dialog__footer){
+  flex: 0 0 auto;
+}
+:deep(.fd-dlg .el-dialog__body){
+  flex: 1 1 auto;          /* 关键：填满剩余高度 */
+  overflow: hidden;        /* 滚动交给内部各区（表格/Tabs） */
+  padding: 0;              /* 需要留内边距可自行调整 */
+}
+
+/* 若面板内部使用了 <el-tabs>，让内容区可拉伸 */
+:deep(.fd-dlg .el-tabs){ height: 100%; display: flex; flex-direction: column; }
+:deep(.fd-dlg .el-tabs__content){ flex: 1 1 auto; min-height: 0; overflow: auto; }
+
 </style>

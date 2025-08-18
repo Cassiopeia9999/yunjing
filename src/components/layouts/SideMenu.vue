@@ -116,6 +116,7 @@ const menuItems = [
   { name: '基地视图', icon: 'OfficeBuilding', link: '/inner/manage/baseview' },
   { name: '装置视图', icon: 'Cpu',            link: '/inner/manage/sysview' },
   { name: '设备视图', icon: 'Monitor',        link: '/inner/manage/devview' },
+  { name: '故障管理', icon: 'Tools',          link: '/inner/manage/faultcenter' },
   { name: '维修决策', icon: 'Tools',          link: '/inner/manage/decision' },
 
   // 实时与监控
