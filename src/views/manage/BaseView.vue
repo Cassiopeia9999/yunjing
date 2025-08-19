@@ -66,7 +66,7 @@ onMounted(load)
     <!-- 顶部条 -->
     <div class="flex items-center justify-between gap-4 mb-4">
       <div class="flex items-center gap-3">
-        <div class="text-xl font-semibold">{{ baseInfo.name || '—' }}</div>
+        <div class="text-3xl font-semibold">{{ baseInfo.name || '—' }}</div>
         <el-tag size="small" :type="(baseInfo.status==='Fault'?'danger':baseInfo.status==='Warning'?'warning':'success')">
           {{ baseInfo.status || 'Unknown' }}
         </el-tag>

@@ -135,7 +135,7 @@ onMounted(load)
     <div class="p-4 lg:p-6 border-b border-neutral-200 dark:border-neutral-700">
       <div class="flex items-center justify-between gap-4 mb-4">
         <div class="flex items-center gap-3">
-          <div class="text-xl font-semibold">{{ dev.device_name || '—' }}</div>
+          <div class="text-3xl font-semibold">{{ dev.device_name || '—' }}</div>
           <el-tag size="small" :type="(dev.status==='Fault'?'danger':dev.status==='Warning'?'warning':'success')">
             {{ dev.status || 'Unknown' }}
           </el-tag>

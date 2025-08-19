@@ -135,7 +135,7 @@ onMounted(load)
       <!-- 顶部条 -->
       <div class="flex items-center justify-between gap-4 mb-4">
         <div class="flex items-center gap-3">
-          <div class="text-xl font-semibold">{{ unit.system_name || '—' }}</div>
+          <div class="text-3xl font-semibold">{{ unit.system_name || '—' }}</div>
           <el-tag size="small" :type="(unit.system_status==='Fault'?'danger':unit.system_status==='Warning'?'warning':'success')">
             {{ unit.system_status || 'Unknown' }}
           </el-tag>
