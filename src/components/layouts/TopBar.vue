@@ -31,8 +31,8 @@
 
     <!-- 右：CTA + 主题开关 + 头像/退出 -->
     <div class="flex items-center gap-2">
-      <button class="btn-neon" @click="$emit('request')">请求</button>
-      <button class="btn-neon" @click="$emit('ai')">云效+DeepSeek</button>
+<!--      <button class="btn-neon" @click="$emit('request')">请求</button>-->
+<!--      <button class="btn-neon" @click="$emit('ai')">云效+DeepSeek</button>-->
 
       <!-- 主题切换 -->
       <ThemeToggle />
