@@ -2,13 +2,13 @@
 .el-table,
 .el-table .cell,
 .el-table__cell {
-    font-size: 14px;      /* ← 想要的全局表格字号 */
-    line-height: 1.6;
+    font-size: 16px;      /* ← 想要的全局表格字号 */
+    line-height: 2.2;
 }
 
 /* 表头稍微更醒目 */
 .el-table thead .cell {
-    font-size: 13.5px;
+    font-size: 15.5px;
     font-weight: 600;
 }
 

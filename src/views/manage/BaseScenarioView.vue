@@ -129,7 +129,7 @@ async function loadHotspots() {
   }
 }
 async function tryLoadGLTF(): Promise<THREE.Object3D|null> {
-  const folder = pubUrl('assets/models/red_alert_2_russia_power_plant/')
+  const folder = pubUrl('assets/models/submarine/')
   const loader = new GLTFLoader()
   loader.setPath(folder)
   loader.setResourcePath(folder)
