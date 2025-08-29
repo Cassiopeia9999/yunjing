@@ -92,8 +92,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Grid } from '@element-plus/icons-vue'
 import { getToken, getTenantId } from '@/utils/auth'
 import {
-  FAULT_CONFIG_FORM_ID,
-  FORM_ID_PRODUCTION_7784
+  getSysConfigFormId
 } from '@/api/constant/form_constant.js'
 
 const emit = defineEmits(['toggle-menu'])
@@ -130,7 +129,7 @@ const menuItems = [
 
   // 外部入口
   { name: '数据后台', icon: 'Operation', link: '/index/workbench',                 external: true },
-  { name: '故障管理',           icon: 'Warning',   link: buildLowcodeUrl(FAULT_CONFIG_FORM_ID),     external: true, openInFrame: true }
+  { name: '故障管理',           icon: 'Warning',   link: buildLowcodeUrl(getSysConfigFormId("FAULT_CONFIG_FORM_ID")),     external: true, openInFrame: true }
 ]
 
 

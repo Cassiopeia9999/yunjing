@@ -1,201 +1,132 @@
-// src/mock/dataService.js
-// 如果你已经有本文件并包含 getBasePageData，直接把下面的 getUnitPageData 与辅助函数合并进去即可。
-// 若是新建文件，也可在此补充/导出 getBasePageData 的 mock。
-
-/** 简单可复现随机数（按 seed） */
-function createRng(seed = 1) {
-    let s = seed % 2147483647
-    if (s <= 0) s += 2147483646
-    return () => (s = (s * 16807) % 2147483647) / 2147483647
-}
-function pick(rng, arr) { return arr[Math.floor(rng()*arr.length)] }
-function randint(rng, min, max) { return Math.floor(rng()*(max-min+1))+min }
-function randfloat(rng, min, max, fixed = 0) {
-    const v = rng()*(max-min)+min
-    return fixed>=0 ? +v.toFixed(fixed) : v
-}
-function dateAddDays(date, d){
-    const t = new Date(date)
-    t.setDate(t.getDate()+d)
-    return t
-}
-function fmtDate(d){
-    const pad = n => String(n).padStart(2,'0')
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
-}
-
-/** 枚举（与前端筛选控件联动） */
-const ENUMS = {
-    status: ['OK','Warning','Fault'],
-    types: ['泵','阀门','电机','风机','轴承座','传感器'],
-    models: ['M-100','M-200','M-300','X-10','X-20','X-30'],
-    alarmLevels: ['Critical','Major','Minor','Info']
-}
-
-/** 知识库名称样例（故障知识点） */
-const KNOWLEDGE = ['轴承磨损','对中偏差','润滑不足','转子不平衡','气蚀','过载','松动','电气故障','对地短路']
-
+import {
+    BASE_FORM_ID,
+    DEVICE_FORM_ID,
+    DIAGNOSIS_FORM_ID,
+    getSysConfigFormId,
+    UNIT_FORM_ID
+} from '@/api/constant/form_constant';
+import { fetchDataById, fetchTableData } from '@/api/querydata';
+import {bucketize, fetchDevices, fetchDiagnoses} from "@/mock/fetchDataApi.js";
 /**
- * Mock：按装置生成页面数据
+ * 获取装置页面数据，动态从服务端获取数据
  * @param {number|string} unitId
  * @param {{days:number, highProbThreshold:number}} opts
  * @returns {Promise<object>}
  */
 export async function getUnitPageData(unitId = 1, opts = { days: 7, highProbThreshold: 70 }) {
-    // 以 unitId + days 作为随机种子，保证每个装置页面数据相对稳定
-    const seed = Number(String(unitId).replace(/\D/g,'')) + (opts?.days || 7) * 97
-    const rng = createRng(seed || 1)
-
-    // 装置基本信息
-    const system_name = `装置-${unitId}`
-    const system_type = pick(rng, ['压缩机组','循环水系统','锅炉','输送线','冷却塔'])
-    const system_code = `U-${String(unitId).padStart(3,'0')}`
-    const system_model = pick(rng, ENUMS.models)
-    const manufacturer = pick(rng, ['华东重工','北方机电','中能装备','东华动力'])
-    const install_date = `20${randint(rng,18,24)}-${String(randint(rng,1,12)).padStart(2,'0')}-${String(randint(rng,1,28)).padStart(2,'0')}`
-    const system_status = pick(rng, ENUMS.status)
-    const now = new Date()
-    const time = fmtDate(now)
-
-    // 装置级 RUL / Conf
-    const unitRUL = randint(rng, 20, 360)         // 天
-    const unitConf = randint(rng, 60, 98)         // %
-    const highProbThreshold = opts?.highProbThreshold ?? 70
-
-    // 设备数量
-    const deviceCount = randint(rng, 18, 48)
-    const devices = []
-    for (let i=0;i<deviceCount;i++){
-        const id = Number(`${unitId}${i+1}`)
-        const device_name = `设备-${unitId}-${i+1}`
-        const component_type = pick(rng, ENUMS.types)
-        const component_model = pick(rng, ENUMS.models)
-        const component_code = `D-${unitId}-${String(i+1).padStart(3,'0')}`
-        const status = pick(rng, ENUMS.status)
-        const health_level = randint(rng, 40, 100)
-        const remaining_life = randint(rng, 10, 480)
-        const confidence_level = randint(rng, 50, 99)
-        const man = pick(rng, ['中科智造','华通机电','海纳设备','江能动力'])
-
-        // 最近诊断
-        const hasDiag = rng() > 0.18
-        const diag = hasDiag ? {
-            id: Number(`${unitId}${i+1}9`),
-            diagnosis_time: fmtDate(dateAddDays(now, -randint(rng,0,opts.days||7))),
-            fault_knowledge_id: randint(rng, 100, 900),
-            fault_knowledge_name: pick(rng, KNOWLEDGE),
-            probability: randfloat(rng, 30, 98, 0)
-        } : null
-
-        // 最新告警
-        const hasAlarm = rng() > 0.65
-        const severity = hasAlarm ? pick(rng, ENUMS.alarmLevels) : null
-        const severityLevel = severity ? (severity==='Critical'?4:severity==='Major'?3:severity==='Minor'?2:1) : 0
-        const alarm = hasAlarm ? {
-            id: Number(`${unitId}${i+1}8`),
-            type: pick(rng, ['振动超限','温度过高','电流异常','润滑压力低','流量异常']),
-            severity,
-            severityLevel,
-            time: fmtDate(dateAddDays(now, -randint(rng,0,opts.days||7))),
-            desc: pick(rng, ['短时峰值','持续超限','间歇告警','阈值附近抖动'])
-        } : null
-
-        devices.push({
-            id, device_name, component_code, component_type, component_model,
-            manufacturer: man, install_date: install_date,
-            status, health_level, remaining_life, confidence_level,
-            diag, alarm
-        })
+    // 获取装置的基础信息
+    const unit = await fetchDataById(getSysConfigFormId(UNIT_FORM_ID), unitId);
+    if (!unit) {
+        throw new Error(`装置ID ${unitId} 不存在`);
     }
 
-    // 聚合均值
-    const avgRUL = Math.round(devices.reduce((s,d)=>s+(d.remaining_life||0),0)/devices.length || 0)
-    const avgConf = Math.round(devices.reduce((s,d)=>s+(d.confidence_level||0),0)/devices.length || 0)
+    // 获取装置的设备数据
+    const devices = await fetchDevices(unit.parent_site.value, [unitId]); // 根据装置ID获取设备数据
 
-    // KPI（近 days 天）
-    const diagList = devices.map(d=>d.diag).filter(Boolean)
-    const diagCount = diagList.length
-    const highCount = diagList.filter(d=> d.probability >= highProbThreshold).length
-    const alarmOpen = devices.filter(d=> d.alarm).length
+    // 获取装置下的诊断数据
+    const diagnoses = await fetchDiagnoses(devices.map(d => d.id), opts.days); // 过滤出诊断时间在指定天数范围内的数据
 
-    // 图表：诊断分布（按知识库）
-    const diagDistMap = {}
-    for (const d of diagList) {
-        const key = d.fault_knowledge_name
-        if(!diagDistMap[key]) diagDistMap[key] = { value: 0, highs: 0 }
-        diagDistMap[key].value += 1
-        if (d.probability >= highProbThreshold) diagDistMap[key].highs += 1
-    }
-    const diagDist = Object.entries(diagDistMap).map(([name, v])=>({
-        name, value: v.value, highShare: v.value ? Math.round(100*v.highs/v.value) : 0
-    })).sort((a,b)=>b.value-a.value).slice(0,8)
+    // 获取装置下的所有设备，聚合设备数据
+    const deviceByUnit = devices.reduce((m, d) => {
+        (m[d.parent_system] ||= []).push(d);
+        return m;
+    }, {});
 
-    // 图表：告警等级占比
-    const alarmDistMap = { Critical:0, Major:0, Minor:0, Info:0 }
-    for (const d of devices) if (d.alarm) alarmDistMap[d.alarm.severity] += 1
-    const alarmDist = Object.entries(alarmDistMap).map(([level,count])=>({ level, count }))
-        .filter(x=>x.count>0)
+    const diagByUnit = diagnoses.reduce((m, r) => {
+        const dev = devices.find(d => String(d.id) === r.component_id);
+        if (!dev) return m;
+        (m[dev.parent_system] ||= []).push(r);
+        return m;
+    }, {});
 
-    // 图表：诊断趋势（最近 days 天）
-    const trendDays = opts?.days === 30 ? 30 : 7
-    const dates = []
-    const counts = []
-    for (let i=trendDays-1; i>=0; i--){
-        const d = dateAddDays(now, -i)
-        const label = `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-        dates.push(label)
-        // 简单用随机 + 设备数量比例模拟
-        counts.push(randint(rng, Math.round(deviceCount*0.02), Math.round(deviceCount*0.12)))
-    }
+    // KPI 计算（单个装置级别）
+    const devicesCount = devices.length;
+    const diagInWindow = diagnoses.filter(r => {
+        const dt = new Date(r.diagnosis_time);
+        return dt >= new Date(Date.now() - opts.days * 24 * 3600 * 1000);
+    });
+    const highProb = diagInWindow.filter(r => r.probability >= opts.highProbThreshold);
+    const highProbDevices = Array.from(new Set(highProb.map(r => r.component_id))).length;
 
-    // 在制故障（示例）
-    const faults = []
-    const faultN = randint(rng, 0, 4)
-    for (let i=0;i<faultN;i++){
-        const code = `F-${unitId}-${String(i+1).padStart(2,'0')}`
-        faults.push({
-            code,
-            status: pick(rng, ['待分派','处理中','待确认']),
-            owner: pick(rng, ['张工','李工','王工','赵工']),
-            sla_deadline: fmtDate(dateAddDays(now, randint(rng,1,10))),
-            summary: pick(rng, ['轴承温升异常，建议停机检查','振动幅值异常，建议复测','润滑油颗粒度偏高，建议更换'])
-        })
-    }
-
-    // 告警中心（示例）
-    const alarmCenter = devices
-        .filter(d=>d.alarm)
-        .slice(0, 12)
-        .map(d=>({
-            id: d.alarm.id,
-            device_name: d.device_name,
-            type: d.alarm.type,
-            severity: d.alarm.severity,
-            time: d.alarm.time,
-            desc: d.alarm.desc
-        }))
-
-    // 返回结构（与页面期望一致）
-    return Promise.resolve({
-        meta: { highProbThreshold },
-        unit: {
-            system_name, system_type, system_code, system_model, manufacturer,
-            install_date, system_status, time: time,
-            remaining_life: unitRUL, confidence_level: unitConf
-        },
-        aggregates: { avgHealth: null, avgRUL, avgConf }, // avgHealth 可按需提供
-        kpis: { diagCount, highCount, alarmOpen },
+    // 设备健康度分布
+    const healthBuckets = bucketize(
         devices,
-        charts: {
-            diagDist,
-            alarmDist,
-            diagTrend: { dates, counts }
+        d => d.health_level,
+        [
+            { label: '0.0–0.3', min: 0.0, max: 0.3 },
+            { label: '0.3–0.6', min: 0.3, max: 0.6 },
+            { label: '0.6–0.8', min: 0.6, max: 0.8 },
+            { label: '0.8–0.9', min: 0.8, max: 0.9 },
+            { label: '0.9–1.0', min: 0.9, max: 1.0 }
+        ]
+    );
+
+    const rulBuckets = bucketize(
+        devices,
+        d => d.remaining_life,
+        [
+            { label: '0–7天', min: 0, max: 7 },
+            { label: '7–30天', min: 7, max: 30 },
+            { label: '30–90天', min: 30, max: 90 },
+            { label: '90–180天', min: 90, max: 180 },
+            { label: '≥180天', min: 180 }
+        ]
+    );
+
+    // 装置卡片聚合（诊断摘要 + 健康汇总）
+    const aggHealth = devices.length
+        ? {
+            avgHealth: +(devices.reduce((s, d) => s + d.health_level, 0) / devices.length).toFixed(2),
+            avgRUL: Math.round(devices.reduce((s, d) => s + d.remaining_life, 0) / devices.length),
+            avgConf: +(devices.reduce((s, d) => s + d.confidence_level, 0) / devices.length).toFixed(1),
+        }
+        : { avgHealth: 0, avgRUL: 0, avgConf: 0 };
+
+    // 获取诊断信息：计算高概率诊断设备数和设备的健康统计信息
+    const rsIn = diagByUnit[unitId] || [];
+    const highIn = rsIn.filter(r => r.probability >= opts.highProbThreshold);
+    const highDevices = new Set(highIn.map(r => r.component_id)).size;
+
+    const lastDiag = rsIn[0]?.diagnosis_time || null;
+
+    // 简易风险分（仅演示）
+    const riskScore = Math.min(
+        100,
+        Math.round(highDevices * 10 + highIn.length * 2 + (unit.system_status === 'Fault' ? 15 : unit.system_status === 'Warning' ? 5 : 0))
+    );
+    const riskLevel = riskScore >= 60 ? 'high' : riskScore >= 30 ? 'mid' : 'low';
+
+    // 返回装置详细数据
+    return {
+        unit,
+        devices,
+        diagSummary: {
+            count: rsIn.length,
+            highCount: highIn.length,
+            highDevices,
+            lastDiag,
         },
-        faults,
-        alarmCenter,
-        enums: ENUMS
-    })
+        health: {
+            unitLevel: { remaining_life: unit.remaining_life, confidence_level: unit.confidence_level },
+            deviceAgg: aggHealth,
+        },
+        risk: { score: riskScore, level: riskLevel },
+        deviceStats: { healthBuckets, rulBuckets },
+        kpis: {
+            devicesCount,
+            diagnosisCount: diagInWindow.length,
+            highProbCount: highProb.length,
+            highProbDevices,
+        },
+        rankings: {
+            byHighProbDevices: [unit].sort((a, b) => b.diagSummary.highDevices - a.diagSummary.highDevices),
+            byHighProbDiagnoses: [unit].sort((a, b) => b.diagSummary.highCount - a.diagSummary.highCount),
+            byShortRULShare: [unit].sort((a, b) => a.health.deviceAgg.avgRUL - b.health.deviceAgg.avgRUL),
+        },
+        freshnessHours: highIn.length > 0 ? Math.round((Date.now() - new Date(lastDiag).getTime()) / 3600000) : null,
+    };
 }
 
-// 如需导出其它 mock，可在此一并导出
-// export async function getBasePageData(...) { ... }
+
+
+

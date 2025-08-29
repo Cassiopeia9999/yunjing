@@ -60,13 +60,21 @@ const routes = [
             { path: 'repair',           name: 'repair',          component: repair,                  meta: { requiresAuth: true } },
 
             // 🔥 新增四个管理视图（与你菜单的链接一致）
-            { path: 'manage/baseview',  name: 'ManageBaseView',  component: BaseView,  meta: { requiresAuth: true } },
-            { path: 'manage/basesceneview',  name: 'ManageBaseSceneView',  component: BaseSceneView,  meta: { requiresAuth: true } },
-            { path: 'manage/sysview',   name: 'ManageSysView',   component: SysView,   meta: { requiresAuth: true } },
-            { path: 'manage/devview',   name: 'ManageDevView',   component: DevView,   meta: { requiresAuth: true } },
-            { path: 'manage/decision',   name: 'DecisionView',   component: DecisionView,   meta: { requiresAuth: true } },
-            { path: 'manage/faultcenter',   name: 'FaultCenterView',   component: FaultCenterView,   meta: { requiresAuth: true } },
-            { path: 'manage/maintain',  name: 'ManageMaintain',  component: Maintain,  meta: { requiresAuth: true } }
+            // 基地视图（可以选择三维场景或普通列表视图）
+            { path: 'manage/baseview/:baseId?', name: 'ManageBaseView', component: BaseView, meta: { requiresAuth: true } }, // 普通基地视图
+            { path: 'manage/basesceneview/:baseId?', name: 'ManageBaseSceneView', component: BaseSceneView, meta: { requiresAuth: true } }, // 三维场景基地视图
+
+            // 装置和设备视图
+            { path: 'manage/sysview/:baseId?/:unitId?', name: 'ManageSysView', component: SysView, meta: { requiresAuth: true } }, // 设备视图
+            { path: 'manage/devview/:unitId?/:deviceId?', name: 'ManageDevView', component: DevView, meta: { requiresAuth: true } }, // 设备详细视图
+
+            // 其他管理功能视图
+            { path: 'manage/decision', name: 'DecisionView', component: DecisionView, meta: { requiresAuth: true } },
+            { path: 'manage/faultcenter', name: 'FaultCenterView', component: FaultCenterView, meta: { requiresAuth: true } },
+            { path: 'manage/maintain', name: 'ManageMaintain', component: Maintain, meta: { requiresAuth: true } }
+
+
+
         ]
     }
 ]

@@ -182,6 +182,7 @@ const featureList = [
 .home :deep(img[alt="hero"]) {
   animation: bgZoom 18s ease-in-out infinite alternate;
 }
+
 @keyframes bgZoom {
   from { transform: scale(1.0); }
   to   { transform: scale(1.06); }

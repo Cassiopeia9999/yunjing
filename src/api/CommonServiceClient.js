@@ -1,10 +1,12 @@
 // CommonServiceClient.js
 import request from '@/utils/request';
-import {SERVICE_CONFIG_FORM_ID} from "@/api/constant/form_constant.js";
+import {getSysConfigFormId} from "@/api/constant/form_constant.js";
 import {fetchSubDataBatch, fetchTableData} from "@/api/querydata.js";
 import {SERVICE_CODES} from "@/api/constant/serviceCodes.js";
 
 const PARAM_LIST_FIELD_NAME = 'params';
+
+const SERVICE_CONFIG_FORM_ID = "SERVICE_CONFIG_FORM_ID";
 
 class CommonServiceClient {
     constructor() {
@@ -16,14 +18,14 @@ class CommonServiceClient {
         if (this._initialized) return;
 
         // 1. 获取主表数据
-        const serviceRes = await fetchTableData(1, 1000, SERVICE_CONFIG_FORM_ID, []);
+        const serviceRes = await fetchTableData(1, 1000, getSysConfigFormId(SERVICE_CONFIG_FORM_ID), []);
         const serviceList = serviceRes.data.list || [];
 
         // 2. 构建 reid 列表
         const reIds = serviceList.map(service => service.id).filter(Boolean);
 
         // 3. 一次性获取子表数据（参数列表）
-        const subRes = await fetchSubDataBatch(SERVICE_CONFIG_FORM_ID, PARAM_LIST_FIELD_NAME, reIds);
+        const subRes = await fetchSubDataBatch(getSysConfigFormId(SERVICE_CONFIG_FORM_ID), PARAM_LIST_FIELD_NAME, reIds);
         const paramDataMap = subRes.data || {};
 
         // 4. 构建服务配置 Map 和参数 Map

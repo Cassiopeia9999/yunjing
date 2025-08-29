@@ -6,7 +6,7 @@
       <aside class="w-full lg:w-[300px] shrink-0 h-full overflow-y-auto space-y-3">
         <!-- 图片卡 -->
         <el-card shadow="hover" class="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg">
-          <img src="/images/R-C.jpg" alt="图标" class="w-full rounded" />
+          <img src="/images/warm-team.jpg" alt="图标" class="w-full rounded" />
         </el-card>
 
         <!-- 数据选择卡 -->
@@ -199,7 +199,7 @@
 import { ref, reactive, watch, nextTick, onUnmounted, computed } from 'vue'
 import * as echarts from 'echarts'
 import { fetchTableData } from '@/api/querydata.js'
-import { PERIOD_FORM_ID } from '@/api/constant/form_constant.js'
+import { getSysConfigFormId } from '@/api/constant/form_constant.js'
 import PointSelector from '@/buz/common/Selector.vue'
 import { fetchParsedFeatureData, formatTimestamp } from '@/api/featureService.js'
 import FeatureForecastDialog from '@/buz/feature/FeatureForecastDialog.vue'
@@ -281,7 +281,7 @@ function openForecastDialog() { forecastDialogVisible.value = true }
 function handleForecastResult(result) { console.log('预测完成：', result) }
 
 /* 初始化周期（原逻辑不变） */
-fetchTableData(1, 1000, PERIOD_FORM_ID, {})
+fetchTableData(1, 1000, getSysConfigFormId("PERIOD_FORM_ID"), {})
     .then(res => {
       const list = res.data.list || []
       periodOptions.value = list

@@ -15,7 +15,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import * as echarts from 'echarts'
 import { fetchTableData } from '@/api/querydata.js'
-import { BASE_FORM_ID } from "@/api/constant/form_constant.js";
+import { getSysConfigFormId } from "@/api/constant/form_constant.js";
 import { useRouter } from 'vue-router';
 
 // 如果需要进行坐标系转换，请安装并导入 coordtransform 库
@@ -138,7 +138,7 @@ onMounted(() => {
       .then(chinaJson => {
         echarts.registerMap('china', chinaJson)
 
-        fetchTableData(1, 10, BASE_FORM_ID, {})
+        fetchTableData(1, 10, getSysConfigFormId("BASE_FORM_ID"), {})
             .then(response => {
               const data = response.data.list || []
               const locations = data.map(item => ({

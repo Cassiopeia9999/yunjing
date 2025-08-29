@@ -227,7 +227,7 @@
 import { onMounted, onBeforeUnmount, reactive, ref, computed } from 'vue'
 import * as echarts from 'echarts'
 import { fetchTableData } from '@/api/querydata.js'
-import { Real_Time_Device_Data } from "@/api/constant/form_constant.js";
+import { getSysConfigFormId } from "@/api/constant/form_constant.js";
 import { useRouter } from 'vue-router';
 
 // 实时特征数据
@@ -257,7 +257,7 @@ const pageSize = ref(10)
 // 获取设备数据函数
 const fetchDeviceData = async () => {
   try {
-    const res = await fetchTableData(currentPage.value, pageSize.value, Real_Time_Device_Data, {})
+    const res = await fetchTableData(currentPage.value, pageSize.value, getSysConfigFormId("Real_Time_Device_Data"), {})
     deviceData.value = res.data.list || []
     totalCount.value = res.data.total || 0
   } catch (error) {

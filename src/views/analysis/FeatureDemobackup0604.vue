@@ -7,7 +7,7 @@
         <el-card shadow="never">
           <div class="mb-6 text-center">
             <img
-                src="/images/R-C.jpg"
+                src="/images/warm-team.jpg"
                 alt="数据选择图标"
                 class="w-full max-w-lg mx-auto border rounded-lg border-gray-300 shadow-sm"
             >

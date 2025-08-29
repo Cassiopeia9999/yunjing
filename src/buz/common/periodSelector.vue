@@ -21,11 +21,7 @@
 import { ref, onMounted } from 'vue' // 引入 defineExpose
 import { fetchTableData } from '@/api/querydata.js'
 import {
-  BASE_FORM_ID,
-  UNIT_FORM_ID, // 装置相关的导入
-  DEVICE_FORM_ID, // 设备相关的导入
-  // PERIOD_FORM_ID, // 周期相关的导入已移除
-  // POINT_FORM_ID // 测点相关的导入已移除
+  getSysConfigFormId
 } from '@/api/constant/form_constant.js'
 
 // 基础绑定
@@ -47,7 +43,7 @@ const deviceOptions = ref([])
 
 // 组件挂载时初始化加载基地数据
 onMounted(() => {
-  fetchTableData(1, 1000, BASE_FORM_ID, {}).then(res => {
+  fetchTableData(1, 1000, getSysConfigFormId("BASE_FORM_ID"), {}).then(res => {
     baseOptions.value = res.data.list || []
   }).catch(error => {
     console.error('加载基地数据失败:', error)
@@ -70,7 +66,7 @@ function onBaseChange(baseId) {
 
   // 根据选中的基地加载装置
   if (baseId) {
-    fetchTableData(1, 1000, UNIT_FORM_ID, [
+    fetchTableData(1, 1000, getSysConfigFormId("UNIT_FORM_ID"), [
       { key: 'parent_site', value: baseId, queryType: 1 }
     ]).then(res => {
       unitOptions.value = res.data.list || []
@@ -91,7 +87,7 @@ function onUnitChange(unitId) {
 
   // 根据选中的基地和装置加载设备
   if (unitId && selectedBase.value) { // 确保基地也已选中
-    fetchTableData(1, 1000, DEVICE_FORM_ID, [
+    fetchTableData(1, 1000, getSysConfigFormId("DEVICE_FORM_ID"), [
       { key: 'parent_system', value: unitId, queryType: 1 },
       { key: 'parent_site', value: selectedBase.value.id, queryType: 1 }
     ]).then(res => {

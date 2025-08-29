@@ -1,10 +1,14 @@
-<!-- src/pages/BaseView.vue -->
 <script setup>
-import { onMounted, ref, computed } from 'vue'
-import { getBasePageData ,getAssessmentUnits  } from '@/mock/dataService'
+import {onMounted, ref, computed} from 'vue'
+import {getBasePageData} from '@/mock/basePageService'  // 保持不变
+import {BASE_FORM_ID, getSysConfigFormId} from '@/api/constant/form_constant';
+
 import ThemeToggle from '@/components/ThemeToggle.vue'
-import { ArrowRight } from '@element-plus/icons-vue'
+import {ArrowRight} from '@element-plus/icons-vue'
 import DeviceAssessmentModal from '@/buz/eavalue/DeviceAssessmentModal.vue'
+import {getAssessmentUnits, getBaseList} from "@/mock/fetchDataApi.js";
+import {useRoute} from "vue-router";
+import router from "@/router/index.js";
 
 const days = ref(7)
 const loading = ref(true)
@@ -13,70 +17,130 @@ const sortKey = ref('highDevices') // 装置卡排序
 const rankTab = ref('devices')     // 左榜 Tab：devices/diagnoses/rul/lag
 const dialogAssess = ref(false)    // 任务评估弹窗
 const assessmentUnits = ref([])
+
+const selectedBase = ref(null) // 当前选中的基地
+const baseList = ref([]) // 基地列表
+
+// 获取路由中的 baseId
+const route = useRoute()
+const baseId = computed(() => route.params.baseId)  // 从路由参数获取 baseId
+
+
 const highProbText = computed(() => `Pθ=${data.value?.meta?.highProbThreshold || 70}%`)
 const kpis = computed(() => data.value?.kpis || {})
 const baseInfo = computed(() => data.value?.base || {})
+
 const unitCards = computed(() => {
   if (!data.value) return []
   const list = [...data.value.unitCards]
   switch (sortKey.value) {
-    case 'highDevices': return list.sort((a,b)=>b.diagSummary.highDevices-a.diagSummary.highDevices)
-    case 'highCount': return list.sort((a,b)=>b.diagSummary.highCount-a.diagSummary.highCount)
-    case 'risk': return list.sort((a,b)=>b.risk.score-a.risk.score)
-    default: return list
-  }
-})
-const healthBuckets = computed(() => data.value?.deviceStats?.healthBuckets || [])
-const rulBuckets = computed(() => data.value?.deviceStats?.rulBuckets || [])
-const rankRows = computed(()=> {
-  if (!data.value) return []
-  switch (rankTab.value) {
-    case 'devices': return data.value.rankings.byHighProbDevices
-    case 'diagnoses': return data.value.rankings.byHighProbDiagnoses
-    case 'rul': return data.value.rankings.byShortRULShare
-    case 'lag': return data.value.rankings.byCoverageLag
+    case 'highDevices':
+      return list.sort((a, b) => b.diagSummary.highDevices - a.diagSummary.highDevices)
+    case 'highCount':
+      return list.sort((a, b) => b.diagSummary.highCount - a.diagSummary.highCount)
+    case 'risk':
+      return list.sort((a, b) => b.risk.score - a.risk.score)
+    default:
+      return list
   }
 })
 
-function tagLevel(level){
-  return level==='high' ? 'danger' : level==='mid' ? 'warning' : 'success'
+const healthBuckets = computed(() => data.value?.deviceStats?.healthBuckets || [])
+const rulBuckets = computed(() => data.value?.deviceStats?.rulBuckets || [])
+const rankRows = computed(() => {
+  if (!data.value) return []
+  switch (rankTab.value) {
+    case 'devices':
+      return data.value.rankings.byHighProbDevices
+    case 'diagnoses':
+      return data.value.rankings.byHighProbDiagnoses
+    case 'rul':
+      return data.value.rankings.byShortRULShare
+    case 'lag':
+      return data.value.rankings.byCoverageLag
+  }
+})
+
+function tagLevel(level) {
+  return level === 'high' ? 'danger' : level === 'mid' ? 'warning' : 'success'
 }
-function goUnit(card){
-  // 预留路由跳转
-  // router.push({ name:'unit', params:{ unitId: card.unit.id }, query:{ days: days.value } })
-  console.log('→ 装置页', card.unit.system_name)
+
+function goUnit(card) {
+  let unit = card.unit
+  if (unit && unit.id) {  // 确保 unit.id 存在
+    router.push({
+      name: 'ManageSysView',
+      params: {
+        unitId: unit.id      // 装置的 unitId
+      }
+    });
+  } else {
+    console.error("Unit ID is missing, cannot navigate.");
+  }
 }
-function applyBucketFilter(label){
-  // 简化：点击分布，只影响排序与卡片视觉提醒（不展开设备列表）
-  if(label.includes('天')) sortKey.value = 'risk'
+
+
+function applyBucketFilter(label) {
+  if (label.includes('天')) sortKey.value = 'risk'
   else sortKey.value = 'highDevices'
 }
 
-async function load(){
+async function load() {
   loading.value = true
-  data.value = await getBasePageData(1, { days: days.value, highProbThreshold: 70 })
-  assessmentUnits.value = await getAssessmentUnits(1)
+  data.value = await getBasePageData(getSysConfigFormId(BASE_FORM_ID), selectedBase.value?.id || baseId, {
+    days: days.value,
+    highProbThreshold: 70
+  })
+  assessmentUnits.value = await getAssessmentUnits(selectedBase.value?.id || baseId)
   loading.value = false
 }
-onMounted(load)
+
+// 加载基地列表并默认选中第一个基地
+async function loadBaseList() {
+  const baseListRes = await getBaseList();  // 调用获取基地列表的 API
+  baseList.value = baseListRes || [];  // 将返回的基地列表赋值给 baseList
+  console.log('基地列表:', baseList.value)
+
+  // 默认选中第一个基地
+  selectedBase.value = baseList.value[0] || null;
+
+  if (selectedBase.value) {
+    await load();  // 加载选中基地的具体数据
+  }
+}
+
+onMounted(() => {
+  loadBaseList();  // 在页面加载时调用 loadBaseList 方法加载基地列表
+});
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 bg-white dark:bg-neutral-900 min-h-screen text-neutral-900 dark:text-neutral-100 transition-colors">
+  <div
+      class="p-4 lg:p-6 bg-white dark:bg-neutral-900 min-h-screen text-neutral-900 dark:text-neutral-100 transition-colors">
     <!-- 顶部条 -->
     <div class="flex items-center justify-between gap-4 mb-4">
+      <!-- 基地选择器 -->
+      <div class=" gap-1">
+        <!-- 确保绑定的 selectedBase 是可以选中的 -->
+        <el-select v-model="selectedBase" placeholder="请选择基地" style="width: 150px;" @change="load">
+          <el-option v-for="base in baseList" :key="base.id" :label="base.name" :value="base"/>
+        </el-select>
+      </div>
+
       <div class="flex items-center gap-3">
-        <div class="text-3xl font-semibold">{{ baseInfo.name || '—' }}</div>
-        <el-tag size="small" :type="(baseInfo.status==='Fault'?'danger':baseInfo.status==='Warning'?'warning':'success')">
+        <!-- 显示当前选中的基地名称 -->
+        <div class="text-3xl font-semibold">{{ selectedBase?.name || '请选择基地' }}</div>
+        <el-tag size="small"
+                :type="(baseInfo.status === 'Fault' ? 'danger' : baseInfo.status === 'Warning' ? 'warning' : 'success')">
           {{ baseInfo.status || 'Unknown' }}
         </el-tag>
-        <el-tag size="small" effect="plain">地址：{{ baseInfo.adress || '—' }}</el-tag>
+        <el-tag size="small" effect="plain">地址：{{ baseInfo.address || '—' }}</el-tag>
       </div>
       <div class="flex items-center gap-3">
-        <el-segmented v-model="days" :options="[7,30]" size="small" />
+        <el-segmented v-model="days" :options="[7,30]" size="small"/>
         <el-tag size="small" effect="plain">{{ highProbText }}</el-tag>
         <div class="text-xs opacity-70">
-          更新时间：{{ (baseInfo.time || '').replace('T',' ').slice(0,19) }}
+          更新时间：{{ (baseInfo.time || '').replace('T', ' ').slice(0, 19) }}
         </div>
         <el-button size="small" @click="load">刷新</el-button>
         <el-button size="small" type="primary" @click="dialogAssess = true">任务评估</el-button>
@@ -91,7 +155,7 @@ onMounted(load)
         <div class="text-2xl font-semibold">{{ kpis.unitsCount || 0 }} / {{ kpis.devicesCount || 0 }}</div>
       </el-card>
       <el-card shadow="never" class="dark:bg-neutral-800">
-        <div class="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">诊断次数（{{days}}天）</div>
+        <div class="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">诊断次数（{{ days }}天）</div>
         <div class="text-2xl font-semibold">{{ kpis.diagnosisCount || 0 }}</div>
       </el-card>
       <el-card shadow="never" class="dark:bg-neutral-800">
@@ -110,7 +174,7 @@ onMounted(load)
 
     <el-skeleton :loading="loading" animated>
       <template #template>
-        <el-skeleton-item variant="rect" style="height:420px" />
+        <el-skeleton-item variant="rect" style="height:420px"/>
       </template>
 
       <!-- 单屏三栏 -->
@@ -121,7 +185,7 @@ onMounted(load)
             <div class="font-medium">装置风险榜</div>
             <el-segmented v-model="rankTab"
                           :options="[{label:'高概率设备',value:'devices'},{label:'高概率诊断',value:'diagnoses'},{label:'RUL短期',value:'rul'},{label:'覆盖滞后',value:'lag'}]"
-                          size="small" />
+                          size="small"/>
           </div>
           <div class="max-h-[520px] overflow-auto">
             <el-table :data="rankRows" size="small" class="!bg-transparent" :row-class-name="()=>'cursor-pointer'"
@@ -130,19 +194,23 @@ onMounted(load)
                 <template #default="{row}">
                   <div class="flex items-center gap-2">
                     <span class="truncate" :title="row.unit.system_name">{{ row.unit.system_name }}</span>
-                    <el-tag size="small" :type="(row.unit.system_status==='Fault'?'danger':row.unit.system_status==='Warning'?'warning':'success')">
+                    <el-tag size="small"
+                            :type="(row.unit.system_status==='Fault'?'danger':row.unit.system_status==='Warning'?'warning':'success')">
                       {{ row.unit.system_status }}
                     </el-tag>
                   </div>
                 </template>
               </el-table-column>
               <el-table-column v-if="rankTab==='devices'" label="高概率设备" width="96" prop="diagSummary.highDevices"/>
-              <el-table-column v-else-if="rankTab==='diagnoses'" label="高概率诊断" width="96" prop="diagSummary.highCount"/>
+              <el-table-column v-else-if="rankTab==='diagnoses'" label="高概率诊断" width="96"
+                               prop="diagSummary.highCount"/>
               <el-table-column v-else-if="rankTab==='rul'" label="Avg RUL" width="88">
                 <template #default="{row}">{{ row.health.deviceAgg.avgRUL }}</template>
               </el-table-column>
               <el-table-column v-else label="最近诊断" width="112">
-                <template #default="{row}">{{ row.diagSummary.lastDiag ? row.diagSummary.lastDiag.replace('T',' ').slice(5,16) : '—' }}</template>
+                <template #default="{row}">
+                  {{ row.diagSummary.lastDiag ? row.diagSummary.lastDiag.replace('T', ' ').slice(5, 16) : '—' }}
+                </template>
               </el-table-column>
               <el-table-column label="风险" width="84">
                 <template #default="{row}">
@@ -151,7 +219,9 @@ onMounted(load)
               </el-table-column>
               <el-table-column width="50" align="center">
                 <template #default>
-                  <el-icon><ArrowRight/></el-icon>
+                  <el-icon>
+                    <ArrowRight/>
+                  </el-icon>
                 </template>
               </el-table-column>
             </el-table>
@@ -178,7 +248,9 @@ onMounted(load)
                      @click="goUnit(card)">
               <div class="flex items-center justify-between mb-1">
                 <div class="font-medium truncate">{{ card.unit.system_name }}</div>
-                <el-tag :type="(card.unit.system_status==='Fault'?'danger':card.unit.system_status==='Warning'?'warning':'success')" size="small">
+                <el-tag
+                    :type="(card.unit.system_status==='Fault'?'danger':card.unit.system_status==='Warning'?'warning':'success')"
+                    size="small">
                   {{ card.unit.system_status }}
                 </el-tag>
               </div>
@@ -211,7 +283,8 @@ onMounted(load)
                   <div class="font-semibold">{{ card.health.unitLevel.confidence_level }}%</div>
                 </div>
                 <div>
-                  <<div class="text-[13px] text-neutral-600 dark:text-neutral-300">设备Avg RUL</div>
+                  <
+                  <div class="text-[13px] text-neutral-600 dark:text-neutral-300">设备Avg RUL</div>
                   <div class="font-semibold">{{ card.health.deviceAgg.avgRUL }}</div>
                 </div>
               </div>
@@ -279,8 +352,8 @@ onMounted(load)
       <!-- 传入 mock 数据与基地经纬度 -->
       <DeviceAssessmentModal
           :devices="assessmentUnits"
-          :base-lat="baseInfo.latitude"
-          :base-lon="baseInfo.longitude"
+          :baseLat="baseInfo.latitude"
+          :baseLon="baseInfo.longitude"
       />
     </el-dialog>
 
@@ -290,5 +363,7 @@ onMounted(load)
 
 <style scoped>
 /* 适度收紧卡片留白，提升信息密度 */
-:deep(.el-card__body){ padding: 12px; }
+:deep(.el-card__body) {
+  padding: 12px;
+}
 </style>

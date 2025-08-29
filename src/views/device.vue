@@ -110,7 +110,7 @@
 import {ref, computed, onMounted} from 'vue'
 import {useRoute, useRouter} from 'vue-router' // 引入路由钩子
 import {fetchTableData} from '@/api/querydata.js'
-import {UNIT_FORM_ID, DEVICE_FORM_ID, POINT_FORM_ID} from '@/api/constant/form_constant.js'
+import {getSysConfigFormId} from '@/api/constant/form_constant.js'
 // 顶部四个方块的设备数据
 
 const route = useRoute()
@@ -229,7 +229,7 @@ onMounted(async () => {
   latitude.value = route.query.latitude
   devicename.value = route.query.devicename
 
-  const res = await fetchTableData(1, 10, DEVICE_FORM_ID, {})
+  const res = await fetchTableData(1, 10, getSysConfigFormId("DEVICE_FORM_ID"), {})
   const data = res.data.list || []
 
   devices.value = data.filter(item =>

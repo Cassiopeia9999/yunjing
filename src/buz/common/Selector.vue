@@ -45,10 +45,7 @@
 import {onMounted, ref} from 'vue'
         import {fetchTableData} from '@/api/querydata.js'
         import {
-          BASE_FORM_ID,
-          UNIT_FORM_ID, // 修复：正确使用UNIT_FORM_ID
-          DEVICE_FORM_ID,
-          FEATURE_DATA_FORM_ID
+          getSysConfigFormId
         } from '@/api/constant/form_constant.js'
 
         const emit = defineEmits(['data-ready']);
@@ -75,7 +72,7 @@ import {onMounted, ref} from 'vue'
         selectedBaseId.value = cache.selectedBaseId
         selectedBase.value = baseOptions.value.find(i => i.id === cache.selectedBaseId)
 
-        const unitRes = await fetchTableData(1, 1000, UNIT_FORM_ID, [
+        const unitRes = await fetchTableData(1, 1000, getSysConfigFormId("UNIT_FORM_ID"), [
           {key: 'parent_site', value: cache.selectedBaseId, queryType: 1}
         ])
         unitOptions.value = unitRes.data.list || []
@@ -86,7 +83,7 @@ import {onMounted, ref} from 'vue'
         selectedUnitId.value = cache.selectedUnitId
         selectedUnit.value = unitOptions.value.find(i => i.id === cache.selectedUnitId)
 
-        const deviceRes = await fetchTableData(1, 1000, DEVICE_FORM_ID, [
+        const deviceRes = await fetchTableData(1, 1000, getSysConfigFormId("DEVICE_FORM_ID"), [
           {key: 'parent_system', value: cache.selectedUnitId, queryType: 1},
           {key: 'parent_site', value: cache.selectedBaseId, queryType: 1}
         ])
@@ -101,7 +98,7 @@ import {onMounted, ref} from 'vue'
         const queryParams = [
           {key: 'device_id', value: selectedDevice.value.id, queryType: 1}
         ]
-        const featureRes = await fetchTableData(1, 1000, FEATURE_DATA_FORM_ID, queryParams)
+        const featureRes = await fetchTableData(1, 1000, getSysConfigFormId("FEATURE_DATA_FORM_ID"), queryParams)
         const featureDataList = featureRes.data.list || []
 
         // 设置特征类型
@@ -164,7 +161,7 @@ import {onMounted, ref} from 'vue'
           featureTypeOptions.value = [];
           saveCache()
           // 修复：正确使用UNIT_FORM_ID获取装置数据
-          fetchTableData(1, 1000, UNIT_FORM_ID, [
+          fetchTableData(1, 1000, getSysConfigFormId("UNIT_FORM_ID"), [
             {key: 'parent_site', value: baseId, queryType: 1}
           ]).then(res => {
             unitOptions.value = res.data.list || [];
@@ -180,7 +177,7 @@ import {onMounted, ref} from 'vue'
           featureTypeOptions.value = [];
           saveCache()
           // 修复：正确传递装置ID和基地ID获取设备数据
-          fetchTableData(1, 1000, DEVICE_FORM_ID, [
+          fetchTableData(1, 1000, getSysConfigFormId("DEVICE_FORM_ID"), [
             {key: 'parent_system', value: unitId, queryType: 1},
             {key: 'parent_site', value: selectedBase.value.id, queryType: 1}
           ]).then(res => {
@@ -202,7 +199,7 @@ import {onMounted, ref} from 'vue'
             { key: 'device_id', value: selectedDevice.value.id, queryType: 1 }
           ]
 
-          fetchTableData(1, 1000, FEATURE_DATA_FORM_ID, queryParams)
+          fetchTableData(1, 1000, getSysConfigFormId("FEATURE_DATA_FORM_ID"), queryParams)
               .then(res => {
                 const featureDataList = res.data.list || []
 
@@ -236,7 +233,7 @@ import {onMounted, ref} from 'vue'
           ];
 
           try {
-            const res = await fetchTableData(1, 1000, FEATURE_DATA_FORM_ID, queryParams);
+            const res = await fetchTableData(1, 1000, getSysConfigFormId("FEATURE_DATA_FORM_ID"), queryParams);
             emit('data-ready', res.data.list || []);
           } catch (error) {
             console.error('加载特征数据失败:', error);

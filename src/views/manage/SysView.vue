@@ -1,4 +1,3 @@
-<!-- src/pages/UnitView.vue -->
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
@@ -6,13 +5,18 @@ import { useRoute } from 'vue-router'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { getUnitPageData } from '@/mock/unitMock'
 import { ArrowRight, WarningFilled, TrendCharts, Operation } from '@element-plus/icons-vue'
+import { getAssessmentUnits, getBaseList } from "@/mock/fetchDataApi.js";
 
 /** 路由/状态 */
 const route = useRoute()
-const unitId = ref(route.params.unitId || 1)
+const baseId = computed(() => route.params.baseId)  // 获取 baseId
+const unitId = computed(() => route.params.unitId)  // 获取 unitId
+
 const days = ref(7) // 7/30
 const loading = ref(true)
 const data = ref(null)
+const baseList = ref([]) // 基地列表
+const unitList = ref([]) // 装置列表
 
 /** 过滤/排序/搜索 */
 const keyword = ref('')
@@ -20,6 +24,7 @@ const sortKey = ref('health') // health/rul/conf/diagTime/alarm
 const filters = ref({
   status: null, type: null, model: null, alarmSeverity: null
 })
+
 
 /** 阈值与派生 */
 const highProbText = computed(() => `Pθ=${data.value?.meta?.highProbThreshold ?? 70}%`)
@@ -80,6 +85,7 @@ function renderCharts(){
       tooltip:{trigger:'item'},
       series:[{ type:'pie', roseType:'area', radius:['20%','70%'],
         data: s.map(d=>({ name:`${d.name} (${d.highShare}%)`, value:d.value })) }]
+
     })
     ecDiag.off('click')
     ecDiag.on('click', p => { if(p?.name){ keyword.value = p.name.split(' (')[0] } })
@@ -90,6 +96,7 @@ function renderCharts(){
     ecAlarm.setOption({
       tooltip:{trigger:'item'},
       series:[{ type:'pie', radius:'70%', data: s.map(d=>({ name:d.level, value:d.count })) }]
+
     })
     ecAlarm.off('click')
     ecAlarm.on('click', p => { filters.value.alarmSeverity = p?.name || null })
@@ -106,26 +113,56 @@ function renderCharts(){
   }
 }
 
-/** 抽屉/对话框 */
-const drawerAlarm = ref(false)
-const dialogBatchDiag = ref(false)
-const dialogBatchForecast = ref(false)
-const dialogDecision = ref(false)
-function openAlarmCenter(){ drawerAlarm.value = true }
-function openBatchDiagnose(){ dialogBatchDiag.value = true }
-function openBatchForecast(){ dialogBatchForecast.value = true }
-function openDecision(){ dialogDecision.value = true }
-
-/** 加载 */
-async function load(){
+/** 加载装置数据 */
+async function load() {
   loading.value = true
-  data.value = await getUnitPageData(unitId.value, { days: days.value, highProbThreshold: highProb.value })
+  data.value = await getUnitPageData(unitId.value, { baseId: baseId.value, days: days.value, highProbThreshold: highProb.value })
   loading.value = false
   await nextTick()
   renderCharts()
 }
-onMounted(load)
+
+/** 加载基地和装置数据 */
+async function loadBaseList() {
+  baseList.value = await getBaseList(); // 获取基地列表
+  baseId.value = baseList.value[0]?.id || 1; // 默认选择第一个基地
+  unitList.value = await getAssessmentUnits(baseId.value); // 获取选中基地下的装置列表
+
+  // 处理装置列表为空的情况
+  if (unitList.value.length === 0) {
+    // 如果没有装置，显示提示信息
+    unitId.value = null; // 清空当前装置ID
+    // 在界面中显示一个提示（例如使用 el-message）
+    this.$message.error('当前基地没有装置，无法加载装置数据');
+  } else {
+    unitId.value = unitList.value[0]?.id || null; // 默认选择第一个装置
+  }
+
+  await load(); // 加载装置数据
+}
+
+/** 加载选中的基地下的装置数据 */
+async function loadUnits() {
+  unitList.value = await getAssessmentUnits(baseId.value); // 获取选中基地下的装置列表
+
+  // 处理装置列表为空的情况
+  if (unitList.value.length === 0) {
+    // 如果没有装置，显示提示信息
+    unitId.value = null; // 清空当前装置ID
+    // 在界面中显示一个提示（例如使用 el-message）
+    this.$message.error('当前基地没有装置，无法加载装置数据');
+  } else {
+    unitId.value = unitList.value[0]?.id || null; // 默认选择第一个装置
+  }
+
+  await load(); // 加载装置数据
+}
+
+onMounted(() => {
+  loadBaseList();
+})
 </script>
+
 
 <template>
   <!-- 顶层固定布局：头部固定 + 内容滚动 -->
@@ -133,27 +170,45 @@ onMounted(load)
     <!-- 头部（固定区域，不滚动） -->
     <div class="p-4 lg:p-6 border-b border-neutral-200 dark:border-neutral-700">
       <!-- 顶部条 -->
-      <div class="flex items-center justify-between gap-4 mb-4">
-        <div class="flex items-center gap-3">
-          <div class="text-3xl font-semibold">{{ unit.system_name || '—' }}</div>
-          <el-tag size="small" :type="(unit.system_status==='Fault'?'danger':unit.system_status==='Warning'?'warning':'success')">
-            {{ unit.system_status || 'Unknown' }}
-          </el-tag>
-          <el-tag size="small" effect="plain">{{ unit.system_type || '—' }} · {{ unit.system_code || '—' }}</el-tag>
-          <el-tag size="small" effect="plain">型号：{{ unit.system_model || '—' }}</el-tag>
-          <el-tag size="small" effect="plain">厂家：{{ unit.manufacturer || '—' }}</el-tag>
-          <el-tag size="small" effect="plain">安装：{{ unit.install_date || '—' }}</el-tag>
-        </div>
-        <div class="flex items-center gap-3">
-          <el-segmented v-model="days" :options="[7,30]" size="small" @change="load"/>
-          <el-tag size="small" effect="plain">{{ highProbText }}</el-tag>
-          <div class="text-xs opacity-70">更新时间：{{ (unit.time || '').replace('T',' ').slice(0,19) }}</div>
-          <el-button size="small" @click="load">刷新</el-button>
-          <ThemeToggle/>
-        </div>
-      </div>
+      <!-- 顶部条 -->
+         <div class="flex items-center justify-between gap-4 mb-4">
+          <div class="flex items-center gap-3 flex-grow">
+            <!-- 基地选择器 -->
+            <el-select v-model="baseId" style="width: 150px;" @change="loadUnits">
+              <el-option v-for="base in baseList" :key="base.id" :label="base.name" :value="base.id" />
+            </el-select>
 
-      <!-- KPI 带 -->
+            <!-- 装置选择器 -->
+            <el-select v-model="unitId" style="width: 150px;" @change="load">
+              <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="unit.id" />
+            </el-select>
+
+            <!-- 装置信息展示 -->
+            <div class="flex flex-wrap gap-3 text-ellipsis whitespace-nowrap overflow-hidden flex-grow">
+              <div class="text-3xl font-semibold flex-shrink-0" :title="unit.system_name">{{ unit.system_name || '—' }}</div>
+              <el-tag size="small" :type="(unit.system_status==='Fault'?'danger':unit.system_status==='Warning'?'warning':'success')">
+                {{ unit.system_status || 'Unknown' }}
+              </el-tag>
+              <el-tag size="small" effect="plain" :title="unit.system_type">{{ unit.system_type || '—' }} · {{ unit.system_code || '—' }}</el-tag>
+              <el-tag size="small" effect="plain" :title="unit.system_model">{{ unit.system_model || '—' }}</el-tag>
+              <el-tag size="small" effect="plain" :title="unit.manufacturer">{{ unit.manufacturer || '—' }}</el-tag>
+              <el-tag size="small" effect="plain" :title="unit.install_date">{{ unit.install_date || '—' }}</el-tag>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <el-segmented v-model="days" :options="[7,30]" size="small" @change="load"/>
+            <el-tag size="small" effect="plain">{{ highProbText }}</el-tag>
+            <div class="text-xs opacity-70">更新时间：{{ (unit.time || '').replace('T',' ').slice(0,19) }}</div>
+            <el-button size="small" @click="load">刷新</el-button>
+            <ThemeToggle/>
+          </div>
+        </div>
+
+
+
+
+        <!-- KPI 带 -->
       <div class="grid grid-cols-5 gap-3">
         <el-card shadow="never" class="dark:bg-neutral-800">
           <div class="text-xs opacity-60 mb-1">装置级 RUL / Conf</div>
@@ -175,6 +230,26 @@ onMounted(load)
           <div class="text-xs opacity-60 mb-1">未处理告警数</div>
           <div class="text-2xl font-semibold">{{ kpis.alarmOpen ?? 0 }}</div>
         </el-card>
+      </div>
+
+      <div class="mt-4 flex items-center justify-between gap-3">
+        <div class="text-xs opacity-70">
+          * 双击行进入设备页；{{ highProbText }} 用于高概率着色与统计
+        </div>
+        <div class="flex items-center gap-2">
+          <el-button size="small" type="primary" :icon="TrendCharts" plain :disabled="!selection.length" @click="openBatchDiagnose">
+            批量诊断（已选 {{ selection.length }}）
+          </el-button>
+          <el-button size="small" type="primary" :icon="TrendCharts" :disabled="!selection.length" @click="openBatchForecast">
+            批量趋势预测
+          </el-button>
+          <el-button size="small" type="warning" :icon="WarningFilled" plain @click="openAlarmCenter">
+            装置告警中心
+          </el-button>
+          <el-button size="small" type="success" :icon="Operation" @click="openDecision">
+            进入维修决策
+          </el-button>
+        </div>
       </div>
     </div>
 
@@ -314,25 +389,7 @@ onMounted(load)
         </div>
 
         <!-- 快捷入口 -->
-        <div class="mt-4 flex items-center justify-between gap-3">
-          <div class="text-xs opacity-70">
-            * 双击行进入设备页；{{ highProbText }} 用于高概率着色与统计
-          </div>
-          <div class="flex items-center gap-2">
-            <el-button size="small" type="primary" :icon="TrendCharts" plain :disabled="!selection.length" @click="openBatchDiagnose">
-              批量诊断（已选 {{ selection.length }}）
-            </el-button>
-            <el-button size="small" type="primary" :icon="TrendCharts" :disabled="!selection.length" @click="openBatchForecast">
-              批量趋势预测
-            </el-button>
-            <el-button size="small" type="warning" :icon="WarningFilled" plain @click="openAlarmCenter">
-              装置告警中心
-            </el-button>
-            <el-button size="small" type="success" :icon="Operation" @click="openDecision">
-              进入维修决策
-            </el-button>
-          </div>
-        </div>
+
 
         <!-- 在制故障 -->
         <el-card class="mt-3 dark:bg-neutral-800" shadow="never" v-if="(data?.faults?.length||0)>0">

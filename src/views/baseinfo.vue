@@ -97,7 +97,7 @@
 import {ref, onMounted} from 'vue'
 import {useRoute} from 'vue-router'
 import {fetchTableData} from '@/api/querydata.js'
-import {UNIT_FORM_ID, DEVICE_FORM_ID, POINT_FORM_ID} from '@/api/constant/form_constant.js'
+import {getSysConfigFormId} from '@/api/constant/form_constant.js'
 import {Document} from '@element-plus/icons-vue'
 
 // 基础信息
@@ -140,7 +140,7 @@ const handleDeviceClick = async (device) => {
 
 // 获取设备数据
 const fetchDeviceList = async () => {
-  const res = await fetchTableData(1, 10, DEVICE_FORM_ID, {})
+  const res = await fetchTableData(1, 10, getSysConfigFormId("DEVICE_FORM_ID"), {})
   const data = res.data.list || []
 
   deviceList.value = data.filter(device =>
@@ -151,7 +151,7 @@ const fetchDeviceList = async () => {
 
 // 获取测点数据
 const fetchPointList = async () => {
-  const res = await fetchTableData(1, 10, POINT_FORM_ID, {})
+  const res = await fetchTableData(1, 10, getSysConfigFormId("POINT_FORM_ID"), {})
   const data = res.data.list || []
 
   pointList.value = data.filter(point =>
@@ -172,7 +172,7 @@ onMounted(async () => {
   longitude.value = route.query.longitude
   latitude.value = route.query.latitude
 
-  const res = await fetchTableData(1, 10, UNIT_FORM_ID, {})
+  const res = await fetchTableData(1, 10, getSysConfigFormId("UNIT_FORM_ID"), {})
   const data = res.data.list || []
 
   systemNames.value = data.filter(item =>

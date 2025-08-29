@@ -4,40 +4,89 @@ import * as echarts from 'echarts'
 import { useRoute, useRouter } from 'vue-router'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { getDevicePageData } from '@/mock/deviceMock' // 下面提供
+import { fetchDevices, getBaseList, getAssessmentUnits } from '@/mock/fetchDataApi' // 假设你已经有这些API方法
 import { ArrowRight, WarningFilled, CircleCheck, Upload, Document } from '@element-plus/icons-vue'
 import FaultDiagnosisPanel from "@/components/alg/FaultDiagnosisPanel.vue";
 
 const route = useRoute()
-const deviceId = ref(route.params.deviceId || 101)
+const deviceId = ref(route.params.deviceId || null)
 const days = ref(30)
 
 const loading = ref(true)
 const data = ref(null)
 const dialogFaultDiag = ref(false)
-// 头部/基础
-const dev = computed(()=> data.value?.device || {})
-const parents = computed(()=> data.value?.parents || {})
-const highProbText = computed(()=> `Pθ=${data.value?.meta?.highProbThreshold ?? 70}%`)
+
+// 基地、装置和设备选择
+const baseId = ref(null)
+const unitId = ref(null)
+
+// 数据存储
+const baseList = ref([])
+const unitList = ref([])
+const deviceList = ref([])
+
+// 获取基地列表
+async function loadBaseList() {
+  baseList.value = await getBaseList()
+  if (baseList.value.length > 0) {
+    baseId.value = baseList.value[0].id
+    await loadUnits()
+  }
+}
+
+// 获取装置列表
+async function loadUnits() {
+  if (!baseId.value) return
+  unitList.value = await getAssessmentUnits(baseId.value)
+  if (unitList.value.length > 0) {
+    unitId.value = unitList.value[0].id
+    await loadDevices()
+  }
+}
+
+// 获取设备列表
+async function loadDevices() {
+  if (!unitId.value) return
+  deviceList.value = await fetchDevices(baseId.value, [unitId.value])
+  if (deviceList.value.length > 0) {
+    deviceId.value = deviceList.value[0].id
+  }
+  await loadDeviceDetails()
+}
+
+// 获取设备详细数据
+async function loadDeviceDetails() {
+  if (!deviceId.value) return
+  loading.value = true
+  data.value = await getDevicePageData(deviceId.value, { days: days.value })
+  loading.value = false
+  await nextTick(); renderCharts()
+}
+
+// 头部基础数据
+const dev = computed(() => data.value?.device || {})
+const parents = computed(() => data.value?.parents || {})
+const highProbText = computed(() => `Pθ=${data.value?.meta?.highProbThreshold ?? 70}%`)
 
 // 最新诊断快照
-const snap = computed(()=> data.value?.snapshot || null)
+const snap = computed(() => data.value?.snapshot || null)
 
 // 诊断记录（时间线/表格）
-const recordsRaw = computed(()=> data.value?.records || [])
+const recordsRaw = computed(() => data.value?.records || [])
 const selectedRows = ref([])
 const keyword = ref('')
 const onlyHigh = ref(false)
 
-const records = computed(()=>{
+const records = computed(() => {
   let list = [...recordsRaw.value]
-  if (keyword.value?.trim()){
+  if (keyword.value?.trim()) {
     const k = keyword.value.trim().toLowerCase()
     list = list.filter(r =>
-        (r.fault_name||'').toLowerCase().includes(k) ||
-        (r.description||'').toLowerCase().includes(k)
+        (r.fault_name || '').toLowerCase().includes(k) ||
+        (r.description || '').toLowerCase().includes(k)
     )
   }
-  if (onlyHigh.value){
+  if (onlyHigh.value) {
     const th = data.value?.meta?.highProbThreshold ?? 70
     list = list.filter(r => (r.probability ?? 0) >= th)
   }
@@ -45,88 +94,92 @@ const records = computed(()=>{
 })
 
 // 规则提示
-const tips = computed(()=> data.value?.riskTips || [])
+const tips = computed(() => data.value?.riskTips || [])
 
 // QA 禁用（关键特征质量）
-const qa = computed(()=> data.value?.qa || { passed:true, block:false, msg:'' })
-const actionsDisabled = computed(()=> qa.value?.block === true)
+const qa = computed(() => data.value?.qa || { passed: true, block: false, msg: '' })
+const actionsDisabled = computed(() => qa.value?.block === true)
 
 // 图表：可做“概率趋势/健康趋势”
 const elProb = ref(null)
 let ecProb
-function renderCharts(){
+function renderCharts() {
   if (!elProb.value) return
   ecProb = echarts.init(elProb.value)
-  const s = data.value?.charts?.probTrend || { dates:[], probs:[] }
+  const s = data.value?.charts?.probTrend || { dates: [], probs: [] }
   ecProb.setOption({
-    tooltip:{trigger:'axis'},
-    xAxis:{ type:'category', data:s.dates },
-    yAxis:{ type:'value', min:0, max:100 },
-    series:[{ type:'line', smooth:true, data:s.probs }]
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category', data: s.dates },
+    yAxis: { type: 'value', min: 0, max: 100 },
+    series: [{ type: 'line', smooth: true, data: s.probs }]
   })
 }
 
 // 行操作
-function markConfirmed(row){
+function markConfirmed(row) {
   row.confirmed = true
   // 真实环境可调用 API；这里仅前端标注
 }
-function upgradeToFault(row){
-  dialogUpgrade.value = { visible:true, record:row }
+function upgradeToFault(row) {
+  dialogUpgrade.value = { visible: true, record: row }
 }
-function viewBasis(row){
-  drawerBasis.value = { visible:true, record:row }
+function viewBasis(row) {
+  drawerBasis.value = { visible: true, record: row }
 }
-function viewRaw(row){
+function viewRaw(row) {
   // 可跳转文件中心/下载页；这里用抽屉占位
-  drawerRaw.value = { visible:true, record:row }
+  drawerRaw.value = { visible: true, record: row }
 }
-function exportSelected(){
+function exportSelected() {
   // 简易导出：把选中转成 CSV 下载（真实可走后端）
   const rows = selectedRows.value
   if (!rows.length) return
-  const header = ['diagnosis_time','fault_name','probability','description']
+  const header = ['diagnosis_time', 'fault_name', 'probability', 'description']
   const csv = [header.join(',')].concat(
-      rows.map(r => [r.diagnosis_time, `"${r.fault_name}"`, r.probability, `"${r.description||''}"`].join(','))
+      rows.map(r => [r.diagnosis_time, `"${r.fault_name}"`, r.probability, `"${r.description || ''}"`].join(','))
   ).join('\n')
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'})
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = url; a.download = `diagnosis_${dev.value.component_code||deviceId.value}.csv`; a.click()
+  a.href = url; a.download = `diagnosis_${dev.value.component_code || deviceId.value}.csv`; a.click()
   URL.revokeObjectURL(url)
 }
 
 // 选择变化
-function onSelChange(rows){ selectedRows.value = rows || [] }
+function onSelChange(rows) { selectedRows.value = rows || [] }
 
 // 快捷操作
-function goDiagnose(){
+function goDiagnose() {
   if (actionsDisabled.value) return
   console.log('→ 跳诊断工作台', deviceId.value, days.value)
   // router.push({ name:'workbench', query:{ deviceId: deviceId.value, days: days.value } })
 }
-function goForecast(){
+function goForecast() {
   if (actionsDisabled.value) return
   dialogForecast.value = true
 }
-function newOrLinkFault(){
+function newOrLinkFault() {
   dialogNewFault.value = true
 }
 
-const drawerBasis = ref({ visible:false, record:null })
-const drawerRaw   = ref({ visible:false, record:null })
+const drawerBasis = ref({ visible: false, record: null })
+const drawerRaw = ref({ visible: false, record: null })
 const dialogForecast = ref(false)
 const dialogNewFault = ref(false)
-const dialogUpgrade = ref({ visible:false, record:null })
+const dialogUpgrade = ref({ visible: false, record: null })
 
-async function load(){
+async function load() {
   loading.value = true
-  data.value = await getDevicePageData(deviceId.value, { days: days.value })
+  await loadBaseList()
+  if(deviceId!=null){
+    data.value = await getDevicePageData(deviceId.value, { days: days.value })
+    await nextTick(); renderCharts()
+  }
   loading.value = false
-  await nextTick(); renderCharts()
 }
 onMounted(load)
 </script>
+
 
 <template>
   <!-- 子页外层：服从框架，只内容滚动 -->
@@ -134,6 +187,22 @@ onMounted(load)
     <!-- 头部区（固定） -->
     <div class="p-4 lg:p-6 border-b border-neutral-200 dark:border-neutral-700">
       <div class="flex items-center justify-between gap-4 mb-4">
+        <div class="flex items-center gap-1">
+            <!-- 基地选择器 -->
+            <el-select v-model="baseId" style="width: 150px;" @change="loadUnits" placeholder="选择基地">
+              <el-option v-for="base in baseList" :key="base.id" :label="base.name" :value="base.id" />
+            </el-select>
+
+            <!-- 装置选择器 -->
+            <el-select v-model="unitId" style="width: 150px;" @change="loadDevices" placeholder="选择装置">
+              <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="unit.id" />
+            </el-select>
+
+            <!-- 设备选择器 -->
+            <el-select v-model="deviceId" style="width: 150px;" filterable @change="loadDeviceDetails" placeholder="选择设备">
+              <el-option v-for="device in deviceList" :key="device.id" :label="device.device_name" :value="device.id" />
+            </el-select>
+        </div>
         <div class="flex items-center gap-3">
           <div class="text-3xl font-semibold">{{ dev.device_name || '—' }}</div>
           <el-tag size="small" :type="(dev.status==='Fault'?'danger':dev.status==='Warning'?'warning':'success')">
