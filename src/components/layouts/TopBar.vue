@@ -33,6 +33,18 @@
     <div class="flex items-center gap-2">
 <!--      <button class="btn-neon" @click="$emit('request')">请求</button>-->
 <!--      <button class="btn-neon" @click="$emit('ai')">云效+DeepSeek</button>-->
+      <!-- 新增：大屏按钮（图标 + 文字） -->
+      <el-button
+          circle
+          type="text"
+          class="icon-btn"
+          size="small"
+          @click="openBigScreen"
+          title="打开大屏"
+      >
+        <el-icon><Monitor /></el-icon>
+      </el-button>
+
 
       <!-- 主题切换 -->
       <ThemeToggle />
@@ -55,7 +67,7 @@
 
 <script setup>
 import { defineEmits } from 'vue'
-import { Grid, User } from '@element-plus/icons-vue'
+import {Grid, Monitor, User} from '@element-plus/icons-vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
@@ -75,6 +87,12 @@ const confirmLogout = () => {
   })
       .then(() => logout())
       .catch(() => {})
+}
+
+function openBigScreen() {
+  // 解析为可用 URL，然后新开标签页
+  const url = router.resolve({ name: 'DashboardFull' }).href
+  window.open(url, '_blank')
 }
 
 const logout = async () => {

@@ -1,5 +1,5 @@
 <script setup>
-import {onMounted, ref, computed} from 'vue'
+import {onMounted, ref, computed, watch} from 'vue'
 import {getBasePageData} from '@/mock/basePageService'  // 保持不变
 import {BASE_FORM_ID, getSysConfigFormId} from '@/api/constant/form_constant';
 
@@ -18,12 +18,26 @@ const rankTab = ref('devices')     // 左榜 Tab：devices/diagnoses/rul/lag
 const dialogAssess = ref(false)    // 任务评估弹窗
 const assessmentUnits = ref([])
 
-const selectedBase = ref(null) // 当前选中的基地
 const baseList = ref([]) // 基地列表
 
-// 获取路由中的 baseId
+const selectedBaseId = ref(null)
+const selectedBase = computed(() =>
+    baseList.value.find(b => String(b.id) === String(selectedBaseId.value)) || null
+)
+
+// 路由参数
 const route = useRoute()
-const baseId = computed(() => route.params.baseId)  // 从路由参数获取 baseId
+
+// 监听路由参数变化，把它同步到 selectedBaseId
+watch(
+    () => route.params.baseId,
+    (newBaseId) => {
+      if (newBaseId) {
+        selectedBaseId.value = String(newBaseId)
+      }
+    },
+    { immediate: true } // 页面初始挂载时也执行一次
+)
 
 
 const highProbText = computed(() => `Pθ=${data.value?.meta?.highProbThreshold || 70}%`)
@@ -65,19 +79,26 @@ function tagLevel(level) {
   return level === 'high' ? 'danger' : level === 'mid' ? 'warning' : 'success'
 }
 
-function goUnit(card) {
-  let unit = card.unit
-  if (unit && unit.id) {  // 确保 unit.id 存在
-    router.push({
-      name: 'ManageSysView',
-      params: {
-        unitId: unit.id      // 装置的 unitId
-      }
-    });
-  } else {
-    console.error("Unit ID is missing, cannot navigate.");
+function goUnit(rowOrCard) {
+  // 兼容：左侧榜单 row 有 row.unit；中间卡片直接传 card（包含 card.unit）
+  const unit = rowOrCard?.unit ?? rowOrCard
+  const uid  = unit?.id
+  const bid  = selectedBaseId?.value ?? route.params.baseId
+
+  if (!uid || !bid) {
+    console.error('[goUnit] 缺少必要参数', { uid, bid, rowOrCard })
+    return
   }
+
+  router.push({
+    name: 'ManageSysView',
+    params: {
+      baseId: String(bid),
+      unitId: String(uid)
+    }
+  })
 }
+
 
 
 function applyBucketFilter(label) {
@@ -85,28 +106,28 @@ function applyBucketFilter(label) {
   else sortKey.value = 'highDevices'
 }
 
+async function loadBaseList() {
+  const baseListRes = await getBaseList()
+  baseList.value = baseListRes || []
+
+  selectedBaseId.value = route.params.baseId
+      ? String(route.params.baseId)
+      : (baseList.value[0] ? String(baseList.value[0].id) : null)
+
+  if (selectedBaseId.value != null) {
+    await load()
+  }
+}
+
+
 async function load() {
   loading.value = true
-  data.value = await getBasePageData(getSysConfigFormId(BASE_FORM_ID), selectedBase.value?.id || baseId, {
+  data.value = await getBasePageData(getSysConfigFormId(BASE_FORM_ID), selectedBaseId.value, {
     days: days.value,
     highProbThreshold: 70
   })
-  assessmentUnits.value = await getAssessmentUnits(selectedBase.value?.id || baseId)
+  assessmentUnits.value = await getAssessmentUnits(selectedBaseId.value)
   loading.value = false
-}
-
-// 加载基地列表并默认选中第一个基地
-async function loadBaseList() {
-  const baseListRes = await getBaseList();  // 调用获取基地列表的 API
-  baseList.value = baseListRes || [];  // 将返回的基地列表赋值给 baseList
-  console.log('基地列表:', baseList.value)
-
-  // 默认选中第一个基地
-  selectedBase.value = baseList.value[0] || null;
-
-  if (selectedBase.value) {
-    await load();  // 加载选中基地的具体数据
-  }
 }
 
 onMounted(() => {
@@ -122,8 +143,12 @@ onMounted(() => {
       <!-- 基地选择器 -->
       <div class=" gap-1">
         <!-- 确保绑定的 selectedBase 是可以选中的 -->
-        <el-select v-model="selectedBase" placeholder="请选择基地" style="width: 150px;" @change="load">
-          <el-option v-for="base in baseList" :key="base.id" :label="base.name" :value="base"/>
+        <el-select v-model="selectedBaseId" placeholder="请选择基地" style="width:150px;" @change="load">
+          <el-option v-for="base in baseList"
+                     :key="base.id"
+                     :label="base.name"
+                     :value="String(base.id)" />
+
         </el-select>
       </div>
 

@@ -1,82 +1,49 @@
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch, onBeforeUnmount } from 'vue'
 import * as echarts from 'echarts'
 import { useRoute, useRouter } from 'vue-router'
 import ThemeToggle from '@/components/ThemeToggle.vue'
-import { getDevicePageData } from '@/mock/deviceMock' // 下面提供
-import { fetchDevices, getBaseList, getAssessmentUnits } from '@/mock/fetchDataApi' // 假设你已经有这些API方法
+import { getDevicePageData } from '@/mock/deviceMock'
+import { fetchDevices, getBaseList, getAssessmentUnits } from '@/mock/fetchDataApi'
 import { ArrowRight, WarningFilled, CircleCheck, Upload, Document } from '@element-plus/icons-vue'
 import FaultDiagnosisPanel from "@/components/alg/FaultDiagnosisPanel.vue";
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
-const deviceId = ref(route.params.deviceId || null)
-const days = ref(30)
+const router = useRouter()
 
+/** 统一使用“字符串 id”，避免 1 vs "1" 不相等 **/
+const baseId   = ref(null)   // v-model
+const unitId   = ref(null)   // v-model
+const deviceId = ref(null)   // v-model
+
+/** 首次 & 变化：从路由同步三参（若存在） */
+watch(() => route.params.baseId,   v => { if (v != null) baseId.value   = String(v) }, { immediate: true })
+watch(() => route.params.unitId,   v => { if (v != null) unitId.value   = String(v) }, { immediate: true })
+watch(() => route.params.deviceId, v => { if (v != null) deviceId.value = String(v) }, { immediate: true })
+
+/** 其他状态 */
+const days = ref(30)
 const loading = ref(true)
 const data = ref(null)
 const dialogFaultDiag = ref(false)
 
-// 基地、装置和设备选择
-const baseId = ref(null)
-const unitId = ref(null)
-
-// 数据存储
+/** 列表数据 */
 const baseList = ref([])
 const unitList = ref([])
 const deviceList = ref([])
 
-// 获取基地列表
-async function loadBaseList() {
-  baseList.value = await getBaseList()
-  if (baseList.value.length > 0) {
-    baseId.value = baseList.value[0].id
-    await loadUnits()
-  }
-}
-
-// 获取装置列表
-async function loadUnits() {
-  if (!baseId.value) return
-  unitList.value = await getAssessmentUnits(baseId.value)
-  if (unitList.value.length > 0) {
-    unitId.value = unitList.value[0].id
-    await loadDevices()
-  }
-}
-
-// 获取设备列表
-async function loadDevices() {
-  if (!unitId.value) return
-  deviceList.value = await fetchDevices(baseId.value, [unitId.value])
-  if (deviceList.value.length > 0) {
-    deviceId.value = deviceList.value[0].id
-  }
-  await loadDeviceDetails()
-}
-
-// 获取设备详细数据
-async function loadDeviceDetails() {
-  if (!deviceId.value) return
-  loading.value = true
-  data.value = await getDevicePageData(deviceId.value, { days: days.value })
-  loading.value = false
-  await nextTick(); renderCharts()
-}
-
-// 头部基础数据
+/** 顶部派生 */
 const dev = computed(() => data.value?.device || {})
 const parents = computed(() => data.value?.parents || {})
 const highProbText = computed(() => `Pθ=${data.value?.meta?.highProbThreshold ?? 70}%`)
-
-// 最新诊断快照
 const snap = computed(() => data.value?.snapshot || null)
 
-// 诊断记录（时间线/表格）
+/** 记录/筛选 */
 const recordsRaw = computed(() => data.value?.records || [])
 const selectedRows = ref([])
 const keyword = ref('')
 const onlyHigh = ref(false)
-
 const records = computed(() => {
   let list = [...recordsRaw.value]
   if (keyword.value?.trim()) {
@@ -93,17 +60,17 @@ const records = computed(() => {
   return list
 })
 
-// 规则提示
+/** 规则提示/QA */
 const tips = computed(() => data.value?.riskTips || [])
-
-// QA 禁用（关键特征质量）
 const qa = computed(() => data.value?.qa || { passed: true, block: false, msg: '' })
 const actionsDisabled = computed(() => qa.value?.block === true)
 
-// 图表：可做“概率趋势/健康趋势”
+/** 图表 */
 const elProb = ref(null)
-let ecProb
-function renderCharts() {
+let ecProb = null
+function disposeCharts(){ if (ecProb){ ecProb.dispose(); ecProb = null } }
+function renderCharts(){
+  disposeCharts()
   if (!elProb.value) return
   ecProb = echarts.init(elProb.value)
   const s = data.value?.charts?.probTrend || { dates: [], probs: [] }
@@ -114,71 +81,109 @@ function renderCharts() {
     series: [{ type: 'line', smooth: true, data: s.probs }]
   })
 }
+onBeforeUnmount(disposeCharts)
 
-// 行操作
-function markConfirmed(row) {
-  row.confirmed = true
-  // 真实环境可调用 API；这里仅前端标注
+/** ────────── 数据加载（自上而下保证有效） ────────── */
+async function ensureBase(){
+  baseList.value = await getBaseList()
+  if (!baseList.value.length){
+    baseId.value = null; unitList.value = []; deviceList.value = []
+    ElMessage.warning('暂无基地数据'); return false
+  }
+  const exists = baseList.value.some(b => String(b.id) === String(baseId.value))
+  if (!exists) baseId.value = String(baseList.value[0].id)
+  return true
 }
-function upgradeToFault(row) {
-  dialogUpgrade.value = { visible: true, record: row }
+async function ensureUnit(){
+  if (!baseId.value) return false
+  unitList.value = await getAssessmentUnits(baseId.value)
+  if (!unitList.value.length){
+    unitId.value = null; deviceList.value = []
+    ElMessage.error('当前基地没有装置'); return false
+  }
+  const exists = unitList.value.some(u => String(u.id) === String(unitId.value))
+  if (!exists) unitId.value = String(unitList.value[0].id)
+  return true
 }
-function viewBasis(row) {
-  drawerBasis.value = { visible: true, record: row }
+async function ensureDevice(){
+  if (!baseId.value || !unitId.value) return false
+  deviceList.value = await fetchDevices(baseId.value, [unitId.value])
+  if (!deviceList.value.length){
+    deviceId.value = null
+    ElMessage.error('当前装置下没有设备'); return false
+  }
+  const exists = deviceList.value.some(d => String(d.id) === String(deviceId.value))
+  if (!exists) deviceId.value = String(deviceList.value[0].id)
+  return true
 }
-function viewRaw(row) {
-  // 可跳转文件中心/下载页；这里用抽屉占位
-  drawerRaw.value = { visible: true, record: row }
-}
-function exportSelected() {
-  // 简易导出：把选中转成 CSV 下载（真实可走后端）
-  const rows = selectedRows.value
-  if (!rows.length) return
-  const header = ['diagnosis_time', 'fault_name', 'probability', 'description']
-  const csv = [header.join(',')].concat(
-      rows.map(r => [r.diagnosis_time, `"${r.fault_name}"`, r.probability, `"${r.description || ''}"`].join(','))
-  ).join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url; a.download = `diagnosis_${dev.value.component_code || deviceId.value}.csv`; a.click()
-  URL.revokeObjectURL(url)
-}
-
-// 选择变化
-function onSelChange(rows) { selectedRows.value = rows || [] }
-
-// 快捷操作
-function goDiagnose() {
-  if (actionsDisabled.value) return
-  console.log('→ 跳诊断工作台', deviceId.value, days.value)
-  // router.push({ name:'workbench', query:{ deviceId: deviceId.value, days: days.value } })
-}
-function goForecast() {
-  if (actionsDisabled.value) return
-  dialogForecast.value = true
-}
-function newOrLinkFault() {
-  dialogNewFault.value = true
+async function loadDeviceDetails(){
+  if (!deviceId.value) return
+  loading.value = true
+  data.value = await getDevicePageData(deviceId.value, { days: days.value })
+  loading.value = false
+  await nextTick(); renderCharts()
 }
 
-const drawerBasis = ref({ visible: false, record: null })
-const drawerRaw = ref({ visible: false, record: null })
+/** 入口 orchestrator：优先使用“路由传参”，否则逐级默认 */
+async function loadAll(){
+  loading.value = true
+  const okBase   = await ensureBase();   if (!okBase) { loading.value = false; return }
+  const okUnit   = await ensureUnit();   if (!okUnit) { loading.value = false; return }
+  const okDevice = await ensureDevice(); if (!okDevice){ loading.value = false; return }
+  await loadDeviceDetails()
+}
+
+/** 下拉切换时的联动（并可选同步到路由） */
+async function onBaseChange(){
+  unitId.value = null; deviceId.value = null
+  const okUnit = await ensureUnit(); if (!okUnit) return
+  const okDev  = await ensureDevice(); if (!okDev) return
+  await loadDeviceDetails()
+  // router.replace({ params: { ...route.params, baseId: baseId.value, unitId: unitId.value, deviceId: deviceId.value } })
+}
+async function onUnitChange(){
+  deviceId.value = null
+  const okDev = await ensureDevice(); if (!okDev) return
+  await loadDeviceDetails()
+  // router.replace({ params: { ...route.params, baseId: baseId.value, unitId: unitId.value, deviceId: deviceId.value } })
+}
+async function onDeviceChange(){ await loadDeviceDetails() /* 可同步路由 */ }
+
+/** 其它交互 */
+function onSelChange(rows){ selectedRows.value = rows || [] }
+function markConfirmed(row){ row.confirmed = true }
+const drawerBasis = ref({ visible:false, record:null })
+const drawerRaw   = ref({ visible:false, record:null })
 const dialogForecast = ref(false)
 const dialogNewFault = ref(false)
-const dialogUpgrade = ref({ visible: false, record: null })
+const dialogUpgrade  = ref({ visible:false, record:null })
+function upgradeToFault(row){ dialogUpgrade.value = { visible:true, record:row } }
+function viewBasis(row){ drawerBasis.value = { visible:true, record:row } }
+function viewRaw(row){   drawerRaw.value   = { visible:true, record:row } }
 
-async function load() {
-  loading.value = true
-  await loadBaseList()
-  if(deviceId!=null){
-    data.value = await getDevicePageData(deviceId.value, { days: days.value })
-    await nextTick(); renderCharts()
-  }
-  loading.value = false
+function exportSelected(){
+  const rows = selectedRows.value; if (!rows.length) return
+  const header = ['diagnosis_time','fault_name','probability','description']
+  const csv = [header.join(',')].concat(
+      rows.map(r => [r.diagnosis_time, `"${r.fault_name}"`, r.probability, `"${r.description||''}"`].join(','))
+  ).join('\n')
+  const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a'); a.href = url
+  a.download = `diagnosis_${dev.value.component_code || deviceId.value}.csv`; a.click()
+  URL.revokeObjectURL(url)
 }
-onMounted(load)
+function goDiagnose(){ if(!actionsDisabled.value){ /* TODO */ } }
+function goForecast(){ if(!actionsDisabled.value){ dialogForecast.value = true } }
+function newOrLinkFault(){ dialogNewFault.value = true }
+
+/** days 变化时仅刷新详情（不改选中项） */
+watch(days, () => loadDeviceDetails())
+
+/** 首次加载 */
+onMounted(loadAll)
 </script>
+
 
 
 <template>
@@ -188,20 +193,21 @@ onMounted(load)
     <div class="p-4 lg:p-6 border-b border-neutral-200 dark:border-neutral-700">
       <div class="flex items-center justify-between gap-4 mb-4">
         <div class="flex items-center gap-1">
-            <!-- 基地选择器 -->
-            <el-select v-model="baseId" style="width: 150px;" @change="loadUnits" placeholder="选择基地">
-              <el-option v-for="base in baseList" :key="base.id" :label="base.name" :value="base.id" />
-            </el-select>
+          <!-- 基地选择器 -->
+          <el-select v-model="baseId" style="width: 150px;" @change="onBaseChange" placeholder="选择基地">
+            <el-option v-for="base in baseList" :key="base.id" :label="base.name" :value="String(base.id)" />
+          </el-select>
 
-            <!-- 装置选择器 -->
-            <el-select v-model="unitId" style="width: 150px;" @change="loadDevices" placeholder="选择装置">
-              <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="unit.id" />
-            </el-select>
+          <!-- 装置选择器 -->
+          <el-select v-model="unitId" style="width: 150px;" @change="onUnitChange" placeholder="选择装置">
+            <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="String(unit.id)" />
+          </el-select>
 
-            <!-- 设备选择器 -->
-            <el-select v-model="deviceId" style="width: 150px;" filterable @change="loadDeviceDetails" placeholder="选择设备">
-              <el-option v-for="device in deviceList" :key="device.id" :label="device.device_name" :value="device.id" />
-            </el-select>
+          <!-- 设备选择器 -->
+          <el-select v-model="deviceId" style="width: 150px;" filterable @change="onDeviceChange" placeholder="选择设备">
+            <el-option v-for="device in deviceList" :key="device.id" :label="device.device_name" :value="String(device.id)" />
+          </el-select>
+
         </div>
         <div class="flex items-center gap-3">
           <div class="text-3xl font-semibold">{{ dev.device_name || '—' }}</div>
@@ -222,7 +228,7 @@ onMounted(load)
         </div>
       </div>
 
-      <!-- 健康与寿命（KPI 卡） -->
+
       <div class="grid grid-cols-5 gap-3">
         <el-card shadow="never" class="dark:bg-neutral-800">
           <div class="text-sm font-medium text-neutral-800 dark:text-neutral-100">健康度</div>
@@ -263,6 +269,7 @@ onMounted(load)
 
 
 
+
       <!-- QA 拦截提示 -->
       <div v-if="qa?.block" class="mt-2 text-sm text-amber-500">
         关键特征质量未通过（{{ qa.msg }}），已禁用“开始诊断/趋势预测”。请先修复数据。
@@ -288,10 +295,10 @@ onMounted(load)
             <el-button size="small" type="success" @click="newOrLinkFault">
               新建故障 / 关联
             </el-button>
-              <!-- ✅ 新增：设备故障诊断操作面板入口 -->
-             <el-button size="small" type="primary" plain :icon="Document" @click="dialogFaultDiag = true">
-               故障诊断面板
-             </el-button>
+            <!-- ✅ 新增：设备故障诊断操作面板入口 -->
+            <el-button size="small" type="primary" plain :icon="Document" @click="dialogFaultDiag = true">
+              故障诊断面板
+            </el-button>
           </div>
         </div>
         <div class="grid grid-cols-12 gap-4 min-h-0">
@@ -451,20 +458,20 @@ onMounted(load)
           </template>
         </el-dialog>
 
-         <el-dialog
+        <el-dialog
             v-model="dialogFaultDiag"
             title="设备故障诊断"
             width="80vw"
             class="fd-dlg"
             append-to-body
-          >
-           <div class="h-full min-h-0 flex flex-col">
-              <FaultDiagnosisPanel
-                   :device-name="dev.device_name || ('设备-' + deviceId)"
-                   :channel="dev.default_channel || 'CH-1'"
-                   :autorun="true"
-                />
-           </div>
+        >
+          <div class="h-full min-h-0 flex flex-col">
+            <FaultDiagnosisPanel
+                :device-name="dev.device_name || ('设备-' + deviceId)"
+                :channel="dev.default_channel || 'CH-1'"
+                :autorun="true"
+            />
+          </div>
         </el-dialog>
       </el-skeleton>
     </div>
@@ -473,7 +480,6 @@ onMounted(load)
 
 <style scoped>
 :deep(.el-card__body){ padding: 12px; }
-
 
 /* 弹窗整体占 80% 视口高，并用 flex 布局分配空间 */
 :deep(.fd-dlg .el-dialog){

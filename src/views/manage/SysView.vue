@@ -1,17 +1,22 @@
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch, onBeforeUnmount } from 'vue'
 import * as echarts from 'echarts'
-import { useRoute } from 'vue-router'
+import {useRoute, useRouter} from 'vue-router'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { getUnitPageData } from '@/mock/unitMock'
 import { ArrowRight, WarningFilled, TrendCharts, Operation } from '@element-plus/icons-vue'
 import { getAssessmentUnits, getBaseList } from "@/mock/fetchDataApi.js";
+import { ElMessage } from 'element-plus'
 
-/** 路由/状态 */
+/** 路由 */
 const route = useRoute()
-const baseId = computed(() => route.params.baseId)  // 获取 baseId
-const unitId = computed(() => route.params.unitId)  // 获取 unitId
+const router = useRouter()
 
+/** 基地/装置主键（统一用字符串，避免 1 与 "1" 不相等） */
+const baseId  = ref(null)  // v-model 用它
+const unitId  = ref(null)  // v-model 用它
+
+/** 状态 */
 const days = ref(7) // 7/30
 const loading = ref(true)
 const data = ref(null)
@@ -24,7 +29,6 @@ const sortKey = ref('health') // health/rul/conf/diagTime/alarm
 const filters = ref({
   status: null, type: null, model: null, alarmSeverity: null
 })
-
 
 /** 阈值与派生 */
 const highProbText = computed(() => `Pθ=${data.value?.meta?.highProbThreshold ?? 70}%`)
@@ -67,7 +71,24 @@ const devices = computed(() => {
 /** 业务入口/事件 */
 const selection = ref([])
 function onSelectionChange(rows){ selection.value = rows || [] }
-function openDevice(row){ console.log('→ 设备页', row.device_name) }
+function openDevice(row) {
+  // 设备 id 兜底兼容不同字段名
+  const did = String(row?.id ?? row?.device_id ?? '')
+  const bid = String(baseId.value ?? '')
+  const uid = String(unitId.value ?? '')
+
+  if (!did || !uid) {
+    console.error('[openDevice] 缺少必要参数', { did, uid, bid, row })
+    ElMessage.error('无法跳转：缺少设备或装置ID')
+    return
+  }
+
+  // 跳转到设备详情
+  router.push({
+    name: 'ManageDevView',
+    params: { baseId: bid, unitId: uid, deviceId: did }
+  }).catch(() => {})
+}
 function openDiagnosisDetail(row){ if(row?.diag) console.log('→ 诊断详情', row.diag) }
 function openAlarmDetail(row){ if(row?.alarm) console.log('→ 告警详情', row.alarm) }
 
@@ -77,7 +98,15 @@ const elAlarmDist = ref(null)
 const elTrend = ref(null)
 let ecDiag, ecAlarm, ecTrend
 
+function disposeCharts() {
+  if (ecDiag) { ecDiag.dispose(); ecDiag = null }
+  if (ecAlarm){ ecAlarm.dispose(); ecAlarm = null }
+  if (ecTrend){ ecTrend.dispose(); ecTrend = null }
+}
+
 function renderCharts(){
+  disposeCharts()
+
   if (elDiagDist.value) {
     ecDiag = echarts.init(elDiagDist.value)
     const s = data.value?.charts?.diagDist || []
@@ -85,9 +114,7 @@ function renderCharts(){
       tooltip:{trigger:'item'},
       series:[{ type:'pie', roseType:'area', radius:['20%','70%'],
         data: s.map(d=>({ name:`${d.name} (${d.highShare}%)`, value:d.value })) }]
-
     })
-    ecDiag.off('click')
     ecDiag.on('click', p => { if(p?.name){ keyword.value = p.name.split(' (')[0] } })
   }
   if (elAlarmDist.value) {
@@ -96,9 +123,7 @@ function renderCharts(){
     ecAlarm.setOption({
       tooltip:{trigger:'item'},
       series:[{ type:'pie', radius:'70%', data: s.map(d=>({ name:d.level, value:d.count })) }]
-
     })
-    ecAlarm.off('click')
     ecAlarm.on('click', p => { filters.value.alarmSeverity = p?.name || null })
   }
   if (elTrend.value) {
@@ -113,55 +138,83 @@ function renderCharts(){
   }
 }
 
-/** 加载装置数据 */
+onBeforeUnmount(disposeCharts)
+
+/** 加载装置数据（依赖 unitId/baseId） */
 async function load() {
+  if (!unitId.value) return
   loading.value = true
-  data.value = await getUnitPageData(unitId.value, { baseId: baseId.value, days: days.value, highProbThreshold: highProb.value })
+  data.value = await getUnitPageData(unitId.value, {
+    baseId: baseId.value,
+    days: days.value,
+    highProbThreshold: highProb.value
+  })
   loading.value = false
   await nextTick()
   renderCharts()
 }
 
-/** 加载基地和装置数据 */
-async function loadBaseList() {
-  baseList.value = await getBaseList(); // 获取基地列表
-  baseId.value = baseList.value[0]?.id || 1; // 默认选择第一个基地
-  unitList.value = await getAssessmentUnits(baseId.value); // 获取选中基地下的装置列表
-
-  // 处理装置列表为空的情况
-  if (unitList.value.length === 0) {
-    // 如果没有装置，显示提示信息
-    unitId.value = null; // 清空当前装置ID
-    // 在界面中显示一个提示（例如使用 el-message）
-    this.$message.error('当前基地没有装置，无法加载装置数据');
-  } else {
-    unitId.value = unitList.value[0]?.id || null; // 默认选择第一个装置
-  }
-
-  await load(); // 加载装置数据
-}
-
-/** 加载选中的基地下的装置数据 */
+/** 加载选中基地下的装置列表 */
 async function loadUnits() {
-  unitList.value = await getAssessmentUnits(baseId.value); // 获取选中基地下的装置列表
+  if (!baseId.value) return
+  unitList.value = await getAssessmentUnits(baseId.value)
 
-  // 处理装置列表为空的情况
-  if (unitList.value.length === 0) {
-    // 如果没有装置，显示提示信息
-    unitId.value = null; // 清空当前装置ID
-    // 在界面中显示一个提示（例如使用 el-message）
-    this.$message.error('当前基地没有装置，无法加载装置数据');
-  } else {
-    unitId.value = unitList.value[0]?.id || null; // 默认选择第一个装置
+  if (!unitList.value.length) {
+    unitId.value = null
+    ElMessage.error('当前基地没有装置，无法加载装置数据')
+    return
   }
 
-  await load(); // 加载装置数据
+  // 如果当前 unitId 不属于新列表，则默认选第一个
+  const stillExists = unitList.value.some(u => String(u.id) === String(unitId.value))
+  if (!stillExists) unitId.value = String(unitList.value[0].id)
+
+  await load()
 }
+
+/** 加载基地列表（并根据路由/默认值设置 baseId & unitId） */
+async function loadBaseList() {
+  baseList.value = await getBaseList()
+
+  // 若路由未提供 baseId，用第一个；有就用路由的
+  if (!baseId.value) {
+    baseId.value = baseList.value?.[0] ? String(baseList.value[0].id) : null
+  }
+  await loadUnits()
+}
+
+/** 路由参数 → 本页选中值（初次/变化时都同步） */
+watch(() => route.params.baseId, (v) => {
+  if (v != null) baseId.value = String(v)
+}, { immediate: true })
+
+watch(() => route.params.unitId, (v) => {
+  if (v != null) unitId.value = String(v)
+}, { immediate: true })
+
+/** 用户手动切换 baseId 时，刷新装置列表 */
+watch(baseId, async (newVal, oldVal) => {
+  if (newVal !== oldVal) await loadUnits()
+})
+
+/** days 切换直接重载 */
+watch(days, () => load())
 
 onMounted(() => {
-  loadBaseList();
+  loadBaseList()
 })
+
+/** 下面弹窗/抽屉开关 & 事件（占位保持你原逻辑） */
+const drawerAlarm = ref(false)
+const dialogBatchDiag = ref(false)
+const dialogBatchForecast = ref(false)
+const dialogDecision = ref(false)
+function openBatchDiagnose(){ dialogBatchDiag.value = true }
+function openBatchForecast(){ dialogBatchForecast.value = true }
+function openAlarmCenter(){ drawerAlarm.value = true }
+function openDecision(){ dialogDecision.value = true }
 </script>
+
 
 
 <template>
@@ -174,13 +227,23 @@ onMounted(() => {
          <div class="flex items-center justify-between gap-4 mb-4">
           <div class="flex items-center gap-3 flex-grow">
             <!-- 基地选择器 -->
-            <el-select v-model="baseId" style="width: 150px;" @change="loadUnits">
-              <el-option v-for="base in baseList" :key="base.id" :label="base.name" :value="base.id" />
+            <el-select v-model="baseId" style="width: 150px;">
+              <el-option
+                  v-for="base in baseList"
+                  :key="base.id"
+                  :label="base.name"
+                  :value="String(base.id)"
+              />
             </el-select>
 
             <!-- 装置选择器 -->
             <el-select v-model="unitId" style="width: 150px;" @change="load">
-              <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="unit.id" />
+              <el-option
+                  v-for="unit in unitList"
+                  :key="unit.id"
+                  :label="unit.name"
+                  :value="String(unit.id)"
+              />
             </el-select>
 
             <!-- 装置信息展示 -->
@@ -306,7 +369,10 @@ onMounted(() => {
                 <el-table-column label="设备" min-width="180">
                   <template #default="{row}">
                     <div class="flex items-center gap-2">
-                      <div class="font-medium truncate" :title="row.device_name">{{ row.device_name }}</div>
+                      <div class="font-medium truncate" :title="row.device_name">{{ row.device_name }}
+                      <el-link type="primary" :underline="false" class="ml-1"
+                                 @click.stop="openDevice(row)">详情</el-link>
+                      </div>
                       <el-tag size="small" :type="(row.status==='Fault'?'danger':row.status==='Warning'?'warning':'success')">
                         {{ row.status }}
                       </el-tag>
@@ -354,9 +420,14 @@ onMounted(() => {
                   </template>
                 </el-table-column>
 
-                <el-table-column align="center" width="44">
-                  <template #default><el-icon><ArrowRight/></el-icon></template>
+                <el-table-column align="center" width="44" label="详情">
+                  <template #default="{ row }">
+                    <el-link type="primary" :underline="false" @click.stop="openDevice(row)">
+                      <el-icon><ArrowRight /></el-icon>
+                    </el-link>
+                  </template>
                 </el-table-column>
+
               </el-table>
             </div>
           </el-card>

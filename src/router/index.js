@@ -29,6 +29,7 @@ const DevView    = () => import('@/views/manage/DevView.vue')
 const Maintain   = () => import('@/views/manage/Maintain.vue')
 const DecisionView   = () => import('@/views/manage/DecisionView.vue')
 const FaultCenterView   = () => import('@/views/manage/FaultCenter.vue')
+import FullscreenLayout from '@/components/layouts/FullscreenLayout.vue'
 
 
 const routes = [
@@ -39,6 +40,20 @@ const routes = [
         children: [
             { path: 'home',  name: 'Home',  component: Home,  meta: { requiresAuth: false } },
             { path: 'login', name: 'Login', component: Login, meta: { requiresAuth: false } }
+        ]
+    },
+
+    {
+        // ✅ 独立大屏：/screen/dashboard
+        path: '/screen',
+        component: FullscreenLayout,
+        children: [
+            {
+                path: 'dashboard',
+                name: 'DashboardFull',
+                component: Dashboard,
+                meta: { requiresAuth: true, fullscreen: true } // 给个标记（可选）
+            }
         ]
     },
     {
@@ -66,14 +81,12 @@ const routes = [
 
             // 装置和设备视图
             { path: 'manage/sysview/:baseId?/:unitId?', name: 'ManageSysView', component: SysView, meta: { requiresAuth: true } }, // 设备视图
-            { path: 'manage/devview/:unitId?/:deviceId?', name: 'ManageDevView', component: DevView, meta: { requiresAuth: true } }, // 设备详细视图
+            { path: 'manage/devview/:baseId?/:unitId?/:deviceId?', name: 'ManageDevView', component: DevView, meta: { requiresAuth: true } }, // 设备详细视图
 
             // 其他管理功能视图
             { path: 'manage/decision', name: 'DecisionView', component: DecisionView, meta: { requiresAuth: true } },
             { path: 'manage/faultcenter', name: 'FaultCenterView', component: FaultCenterView, meta: { requiresAuth: true } },
             { path: 'manage/maintain', name: 'ManageMaintain', component: Maintain, meta: { requiresAuth: true } }
-
-
 
         ]
     }
