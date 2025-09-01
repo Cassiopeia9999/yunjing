@@ -3,20 +3,23 @@ import { ref, onMounted, onBeforeUnmount, nextTick, watch, computed } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { getSceneItems as getMockItems } from '@/mock/sceneMock'  // ← mock 数据源
+import { getSceneItems as getMockItems } from '@/mock/sceneMock.js'  // ← mock 数据源
 
 /* ---------- Props / Emits ---------- */
 type SceneItem = {
   id: string | number
   name: string
-  model: string          // ← 模型名（pump/tank/...）
-  x: number              // ← 在地图/贴图上的 x（像素）
-  y: number              // ← 在地图/贴图上的 y（像素）
+  model: string
+  x: number              // 像素 X（贴图上）
+  y: number              // 像素 Y（贴图上）
+  z?: number             // ★ 高度（世界单位；默认为 0）
   status?: 'Fault' | 'Warning' | 'Normal'
-  size?: number          // ← 相对尺寸（1 为默认）
-  rotY?: number          // ← 绕 Y 轴旋转（度）
-  scale?: number         // ← 额外缩放倍率
+  size?: number
+  rotY?: number
+  scale?: number
+  [key: string]: any
 }
+
 
 const props = defineProps<{
   /** 若不传 items，则组件自动从 mock 读取 */
@@ -51,15 +54,22 @@ let ro: ResizeObserver
 let raf = 0
 
 /* 世界地面宽高（加载地面贴图后会替换为真实像素） */
-const world = { W: 1600, H: 900 }
+const world = { W: 1600, H: 1200 }
 
 /* 拾取 */
 const raycaster = new THREE.Raycaster()
 const mouseNDC  = new THREE.Vector2()
 const clickable = new THREE.Group()
 
+
+
+/* ★ 新增：模型实例索引 & 弹框样式 */
+const idToObj = new Map<string | number, THREE.Object3D>()
+const modelPopStyle = ref<Record<string,string>>({ display:'none' })
+
+
 /* 模型全局放大倍率（再叠加每个 item.size/scale） */
-const MODEL_SCALE_MULT = 20
+const MODEL_SCALE_MULT = 3
 
 /* 固定的模型根目录 + 模型名映射（可按需补充/替换） */
 function pubUrl(rel: string) {
@@ -73,6 +83,51 @@ const modelCache = new Map<string, THREE.Object3D>()
 
 const statusColor = (s:string|undefined) =>
     s === 'Fault' ? 0xef4444 : s === 'Warning' ? 0xf59e0b : 0x10b981
+
+
+
+
+/** 取对象的“顶部锚点”世界坐标：包围盒顶部再上抬 10 */
+function getAnchorWorldPosition(obj: THREE.Object3D) {
+  const box = new THREE.Box3().setFromObject(obj)
+  const center = box.getCenter(new THREE.Vector3())
+  return new THREE.Vector3(center.x, box.max.y + 10, center.z)
+}
+
+/** 更新信息框屏幕位置（选中对象存在时计算） */
+function updateModelPop() {
+  if (!selected.value || !renderer || !camera) {
+    modelPopStyle.value = { display: 'none' }
+    return
+  }
+  const obj = idToObj.get(selected.value.id)
+  if (!obj) { modelPopStyle.value = { display:'none' }; return }
+
+  const world = getAnchorWorldPosition(obj)
+  const v = world.clone().project(camera)
+
+  // 在屏幕外或背面就隐藏
+  if (v.z < -1 || v.z > 1) { modelPopStyle.value = { display:'none' }; return }
+
+  const rect = renderer.domElement.getBoundingClientRect()
+  const x = (v.x * 0.5 + 0.5) * rect.width
+  const y = (-v.y * 0.5 + 0.5) * rect.height
+
+  modelPopStyle.value = {
+    display: 'block',
+    left: `${x}px`,
+    top: `${y}px`,
+    transform: 'translate(-50%, -110%)', // 居中并在上方一点
+  }
+}
+
+/** 额外字段（自动展示） */
+const HIDE_FIELDS = new Set(['id','name','model','x','y','z','status','size','rotY','scale'])
+const extraFields = computed<[string, any][]>(() => {
+  if (!selected.value) return []
+  const entries = Object.entries(selected.value as Record<string, any>)
+  return entries.filter(([k]) => !HIDE_FIELDS.has(k))
+})
 
 
 async function getModelByName(name: string): Promise<THREE.Object3D> {
@@ -173,7 +228,7 @@ function placeCameraToSeeGround(margin=1.15) {
 /* ---------- 资源加载 ---------- */
 async function loadGroundTexture() {
   try {
-    const url = props.mapTextureUrl || pubUrl('assets/maps/base.png')
+    const url = props.mapTextureUrl || pubUrl('assets/maps/map-2.jpg')
     const tex = await new THREE.TextureLoader().loadAsync(url)
     tex.colorSpace = THREE.SRGBColorSpace
     return tex
@@ -229,14 +284,23 @@ async function buildScene() {
     world.W = (img as any).width
     world.H = (img as any).height
   }
-  const EXT = Math.max(world.W, world.H) * 6
-  gtex.wrapS = gtex.wrapT = THREE.MirroredRepeatWrapping
-  gtex.repeat.set(EXT / world.W, EXT / world.H)
-  gtex.anisotropy = renderer.capabilities.getMaxAnisotropy()
-  gtex.offset.set(-0.5 * gtex.repeat.x + 0.5, -0.5 * gtex.repeat.y + 0.5)
+  // ★ 期望的重复次数（横向×纵向），这里是“只扩展 4 次”
+  const REP_X = 4
+  const REP_Y = 4
 
+// 地面实际大小 = 原图大小 × 重复次数（保持比例，不拉伸）
+  const PLANE_W = world.W * REP_X
+  const PLANE_H = world.H * REP_Y
+
+// 镜像重复，重复次数固定为 4×4，并把中央一块对齐到世界原点
+  gtex.wrapS = gtex.wrapT = THREE.MirroredRepeatWrapping
+  gtex.repeat.set(REP_X, REP_Y)
+  gtex.anisotropy = renderer.capabilities.getMaxAnisotropy()
+  gtex.offset.set(-0.5 * REP_X + 0.5, -0.5 * REP_Y + 0.5)
+
+// 平面几何用“精确宽高”，不会无限扩展
   const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(EXT, EXT),
+      new THREE.PlaneGeometry(PLANE_W, PLANE_H),
       new THREE.MeshLambertMaterial({ map: gtex })
   )
   ground.rotation.x = -Math.PI / 2
@@ -255,10 +319,11 @@ async function buildScene() {
     const finalSize  = targetSize * MODEL_SCALE_MULT * (it.size ?? 1) * (it.scale ?? 1)
 
     normalizeScale(inst, finalSize)
-    inst.position.copy(pxToWorldXZ({ x: it.x, y: it.y }, 0))
+    inst.position.copy(pxToWorldXZ({ x: it.x, y: it.y }, it.z ?? 0))
     if (typeof it.rotY === 'number') inst.rotation.y = THREE.MathUtils.degToRad(it.rotY)
     ;(inst as any).__meta = it
     clickable.add(inst)
+    idToObj.set(it.id, inst) // ★ 登记：选中后根据 id 找到实例
 
     const halo = new THREE.Mesh(
         new THREE.CircleGeometry(18, 48),
@@ -287,8 +352,20 @@ async function init() {
 
   await buildScene()
 
+  renderer.domElement.style.touchAction = 'none' // 防止移动端触摸滚动干扰
+
+  renderer.domElement.addEventListener('pointerdown', onPointerDown, { capture: true })
+  renderer.domElement.addEventListener('pointerup', (e: PointerEvent) => {
+    if (!downPos) return
+    const dx = e.clientX - downPos.x
+    const dy = e.clientY - downPos.y
+    downPos = null
+    if (Math.hypot(dx, dy) <= DRAG_EPS) {
+      handlePick(e)  // 只有“几乎没拖拽”才认定为点击
+    }
+  }, { capture: true })
+
   // 事件
-  renderer.domElement.addEventListener('pointerdown', onPointerDown)
   ro = new ResizeObserver(() => forceResize())
   ro.observe(wrapRef.value!)
 
@@ -296,8 +373,10 @@ async function init() {
   const loop = () => {
     controls.update()
     renderer.render(scene, camera)
+    updateModelPop() // ★ 每帧更新，让弹框跟随
     raf = requestAnimationFrame(loop)
   }
+
   loop()
 }
 
@@ -307,25 +386,48 @@ function dispose() {
   cancelAnimationFrame(raf)
   controls?.dispose()
   renderer?.dispose?.()
+  idToObj.clear()              // ★
+  modelPopStyle.value = {display:'none'}  // ★
 }
 
 /* ---------- 交互 ---------- */
 function onPointerDown(e: PointerEvent) {
+  downPos = { x: e.clientX, y: e.clientY }
+}
+
+
+
+let downPos: {x:number;y:number} | null = null
+const DRAG_EPS = 5  // 判定为点击的最大拖拽距离（像素）
+
+function handlePick(e: PointerEvent | MouseEvent) {
   const rect = renderer.domElement.getBoundingClientRect()
-  mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
-  mouseNDC.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1
+  const x = ((e.clientX - rect.left) / rect.width) * 2 - 1
+  const y = -((e.clientY - rect.top)  / rect.height) * 2 + 1
+  mouseNDC.set(x, y)
+
+  camera.updateMatrixWorld()
   raycaster.setFromCamera(mouseNDC, camera)
   const hits = raycaster.intersectObjects(clickable.children, true)
+
   if (hits.length) {
+    console.log('hits', hits.length)
     let obj: THREE.Object3D | null = hits[0].object
     while (obj && !(obj as any).__meta) obj = obj.parent
     if (obj) {
       const meta = (obj as any).__meta as SceneItem
       selected.value = meta
       emit('select', meta)
+      updateModelPop()
     }
+  } else {
+    console.log('not hits', hits.length)
+    // ★ 点空白：关闭弹框与选中态
+    selected.value = null
+    modelPopStyle.value = { display: 'none' }
   }
 }
+
 
 /* ---------- 生命周期 / 监听 ---------- */
 onMounted(init)
@@ -350,6 +452,29 @@ const rootStyle = computed(() => ({
 <template>
   <div class="scene-root" :style="rootStyle">
     <div ref="wrapRef" class="abs-fill"></div>
+    <!-- ★ 模型处的信息框（跟随 3D 位置） -->
+    <div v-if="selected" class="model-pop" :style="modelPopStyle">
+      <div class="mp-head">
+        <span class="mp-name" :title="selected.name">{{ selected.name }}</span>
+        <span class="mp-badge" :class="selected.status?.toLowerCase() || 'normal'">
+      {{ selected.status || 'Normal' }}
+    </span>
+        <span class="mp-close" @click="selected=null">×</span>
+      </div>
+      <div class="mp-body">
+        <div class="mp-row"><label>坐标</label><span>{{ selected.x }}, {{ selected.y }}, z={{ selected.z ?? 0 }}</span></div>
+        <div class="mp-row"><label>型号</label><span>{{ selected.model }}</span></div>
+        <!-- 自动展示 mock 里的额外字段 -->
+        <div class="mp-row" v-for="[k,v] in extraFields" :key="k">
+          <label>{{ k }}</label><span>{{ Array.isArray(v) ? v.join(', ') : (typeof v==='object' ? JSON.stringify(v) : v) }}</span>
+        </div>
+
+        <div class="mp-actions">
+          <el-button size="small" type="primary" @click="$emit('enter', selected!)">查看详情</el-button>
+        </div>
+      </div>
+      <div class="mp-arrow"></div>
+    </div>
 
     <div v-if="showInfo !== false && selected" class="info-card">
       <div class="title">
@@ -397,4 +522,23 @@ const rootStyle = computed(() => ({
 .info-card .sub{ opacity:.75; margin-top:6px; }
 .info-card .actions{ margin-top:10px; display:flex; gap:8px; }
 :deep(canvas){ display:block; width:100%; height:100%; outline:none; }
+
+.model-pop{
+  position:absolute;
+  z-index: 10;
+  min-width: 240px;
+  max-width: 320px;
+  background: rgba(17,20,26,.94);
+  color:#e6e6e6;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  backdrop-filter: blur(6px);
+  padding: 10px 10px 12px 10px;
+  /* 关键：不拦截底下画布的点击 */
+  pointer-events: none;
+}
+.model-pop .mp-close,
+.model-pop .mp-actions { pointer-events: auto; } /* 这些区域照常可点 */
+
 </style>
