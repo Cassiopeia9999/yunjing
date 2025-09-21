@@ -812,11 +812,12 @@ defineExpose({
   font-size:10px;
 }
 .kv{
-  display:grid; grid-template-columns: 88px 1fr; gap:10px 12px;
-  align-items:start; padding:4px 5px;
+  display:grid; grid-template-columns: 88px 1fr; gap:5px 6px;
+  align-items:start;
   background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
   border:1px solid rgba(255,255,255,.08);
-  border-radius:4px;
+  padding: 4px 6px;
+  border-radius: 6px;
 }
 .k{
   opacity:.72; color:#cfd3da; font-weight:500; letter-spacing:.2px;
@@ -888,11 +889,7 @@ defineExpose({
 .mp-body{ gap: 10px; font-size: var(--mp-font-size); }
 
 /* 键值行：更大的留白与圆角 */
-.kv{
-  grid-template-columns: 96px 1fr;
-  padding: 10px 12px;
-  border-radius: 10px;
-}
+
 
 /* 底部按钮区：跟随更大的内边距 */
 .mp-actions{
