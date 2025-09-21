@@ -127,7 +127,6 @@ const POP_FIELDS: PopField[] = [
   { key:'system_code',        label:'系统编码' },
   { key:'manufacturer',       label:'制造厂商' },
   { key:'install_date',       label:'安装日期',   fmt: v => fmtDate(v) },
-  { key:'system_status',      label:'运行状态' },
   { key:'confidence_level',   label:'置信度',     fmt: v => fmtPct(v) },
   { key:'remaining_life',     label:'剩余寿命',   fmt: v => fmtNum(v,'天',0) },
   { key:'sailing_speed',      label:'航行速度',   fmt: v => fmtNum(v,'节') }
@@ -604,13 +603,12 @@ defineExpose({
           <span class="mp-badge" :class="selected.system_status?.toLowerCase() || 'normal'">
             {{ selected.system_status || 'Normal' }}
           </span>
-          <span class="mp-type" title="三维模型">{{ selected.model_name || '未指定模型' }}</span>
+          <span class="mp-type" title="位置">{{ selected.x }}, {{ selected.y }}, z={{ selected.z ?? 0 }}</span>
         </div>
-
         <div class="mp-body">
           <div class="kv">
-            <div class="k">坐标</div>
-            <div class="v mono">{{ selected.x }}, {{ selected.y }}, z={{ selected.z ?? 0 }}</div>
+             <div class="k">剩余寿命</div>
+            <div class="v mono">{{ selected.remaining_life || '无数据' }}</div>
           </div>
           <!-- 自动附加字段 -->
           <div class="kv" v-for="[k,v] in extraFields" :key="k">
