@@ -9,6 +9,35 @@ import { fetchDataById, fetchTableData } from '@/api/querydata';
 import {bucketize, fetchDevices, fetchDiagnoses} from "@/mock/fetchDataApi.js";
 
 
+
+
+/** ========= 新增：按基地分页拉取全部装置 =========
+ *  直接使用后端字段结构（不做字段转换/猜测）
+ *  返回值：后端 list 的直接拼接数组
+ */
+export async function fetchUnitsByBase(baseId, { pageSize = 100 } = {}) {
+    let pageNo = 1;
+    const all = [];
+
+    while (true) {
+        const res = await fetchTableData(
+            pageNo,
+            pageSize,
+            getSysConfigFormId(UNIT_FORM_ID),
+            [{ key: 'parent_site', queryType: '=', value: baseId }]
+        );
+        const list = (res && res.data && Array.isArray(res.data.list)) ? res.data.list : [];
+        const total = (res && res.data && typeof res.data.total === 'number') ? res.data.total : list.length;
+
+        all.push(...list);
+
+        if (all.length >= total || list.length < pageSize) break;
+        pageNo++;
+    }
+
+    return all;
+}
+
 // 获取基地数据
 export async function getBasePageData(formId, baseId, { days = 7, highProbThreshold = 70 } = {}) {
     // 从后端接口获取基地数据

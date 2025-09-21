@@ -3,48 +3,31 @@ import { ref, onMounted, onBeforeUnmount, nextTick, watch, computed } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { getSceneItems as getMockItems } from '@/mock/sceneMock.js'  // ← mock 数据源
+import { getSceneItems as getMockItems, normalizeSceneItems } from '@/mock/sceneMock.js'
+import { useRouter, useRoute } from 'vue-router'
+
+const router = useRouter()
+const route  = useRoute()
 
 /* ---------- Props / Emits ---------- */
-type SceneItem = {
-  id: string | number
-  name: string
-  model: string
-  x: number              // 像素 X（贴图上）
-  y: number              // 像素 Y（贴图上）
-  z?: number             // ★ 高度（世界单位；默认为 0）
-  status?: 'Fault' | 'Warning' | 'Normal'
-  size?: number
-  rotY?: number
-  scale?: number
-  [key: string]: any
-}
-
-
 const props = defineProps<{
-  /** 若不传 items，则组件自动从 mock 读取 */
-  items?: SceneItem[] | null
-  /** 覆盖地面贴图（不传则默认 /assets/maps/base.png 或网格） */
+  /** 若不传 items，则组件自动从 mock 读取（字段名按后端定义） */
+  items?: any[] | null
   mapTextureUrl?: string
-  /** 容器高度（如果父容器不给高度，可用它） */
   height?: string
-  /** 曝光（整体亮度） */
   exposure?: number
-  /** 是否显示内置信息卡 */
   showInfo?: boolean
 }>()
 
 const emit = defineEmits<{
-  /** 选中某个装置/热点时发出 */
-  (e: 'select', item: SceneItem): void
-  /** 点击“查看详情” */
-  (e: 'enter', item: SceneItem): void
+  (e: 'select', item: any): void
+  (e: 'enter', item: any): void
 }>()
 
 /* ---------- DOM & 状态 ---------- */
 const wrapRef   = ref<HTMLDivElement | null>(null)
-const selected  = ref<SceneItem | null>(null)
-const itemsData = ref<SceneItem[]>([])
+const selected  = ref<any | null>(null)
+const itemsData = ref<any[]>([])
 
 let renderer: THREE.WebGLRenderer
 let scene: THREE.Scene
@@ -52,6 +35,22 @@ let camera: THREE.PerspectiveCamera
 let controls: OrbitControls
 let ro: ResizeObserver
 let raf = 0
+
+
+// === 点击坐标显示 ===
+type ClickCoord = { px:number; py:number; wx:number; wy:number; wz:number }
+const clickCoord = ref<ClickCoord | null>(null)
+let coordTimer: number | null = null
+
+function worldXZToPx(wx: number, wz: number){
+  // 与 pxToWorldXZ 互逆：px = wx + W/2, py = -wz + H/2
+  return { x: wx + world.W/2, y: -wz + world.H/2 }
+}
+function showClickCoord(p: ClickCoord){
+  clickCoord.value = p
+  if (coordTimer) { clearTimeout(coordTimer) }
+  coordTimer = window.setTimeout(() => (clickCoord.value = null), 3500) // 3.5s自动隐藏
+}
 
 /* 世界地面宽高（加载地面贴图后会替换为真实像素） */
 const world = { W: 1600, H: 1200 }
@@ -61,40 +60,42 @@ const raycaster = new THREE.Raycaster()
 const mouseNDC  = new THREE.Vector2()
 const clickable = new THREE.Group()
 
-
-
-/* ★ 新增：模型实例索引 & 弹框样式 */
+/* 实例索引 & 弹框样式 */
 const idToObj = new Map<string | number, THREE.Object3D>()
 const modelPopStyle = ref<Record<string,string>>({ display:'none' })
 
-
-/* 模型全局放大倍率（再叠加每个 item.size/scale） */
+/* 模型全局放大倍率（叠加 model_size） */
 const MODEL_SCALE_MULT = 3
 
-/* 固定的模型根目录 + 模型名映射（可按需补充/替换） */
+/* 资源根路径 */
 function pubUrl(rel: string) {
   const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '')
   return `${base}/${rel.replace(/^\/+/, '')}`
 }
 const MODEL_BASE = 'assets/models/'
 
-/* 模型缓存（按 key） */
+/* 模型缓存 */
 const modelCache = new Map<string, THREE.Object3D>()
 
-const statusColor = (s:string|undefined) =>
-    s === 'Fault' ? 0xef4444 : s === 'Warning' ? 0xf59e0b : 0x10b981
+/* 状态颜色（按后端 system_status） */
+const statusColor = (s:string|undefined) => {
+  const v = (s||'').toLowerCase()
+  if (v === 'fault') return 0xef4444
+  if (v === 'warning' || v === 'warn') return 0xf59e0b
+  if (v === 'normal' || v === 'ok') return 0x10b981
+  return 0x60a5fa
+}
 
 
 
-
-/** 取对象的“顶部锚点”世界坐标：包围盒顶部再上抬 10 */
+/** 取对象“顶部锚点”世界坐标：包围盒顶部再上抬 10 */
 function getAnchorWorldPosition(obj: THREE.Object3D) {
   const box = new THREE.Box3().setFromObject(obj)
   const center = box.getCenter(new THREE.Vector3())
   return new THREE.Vector3(center.x, box.max.y + 10, center.z)
 }
 
-/** 更新信息框屏幕位置（选中对象存在时计算） */
+/** 更新信息框屏幕位置 */
 function updateModelPop() {
   if (!selected.value || !renderer || !camera) {
     modelPopStyle.value = { display: 'none' }
@@ -103,66 +104,107 @@ function updateModelPop() {
   const obj = idToObj.get(selected.value.id)
   if (!obj) { modelPopStyle.value = { display:'none' }; return }
 
-  const world = getAnchorWorldPosition(obj)
-  const v = world.clone().project(camera)
-
-  // 在屏幕外或背面就隐藏
+  const wp = getAnchorWorldPosition(obj)
+  const v = wp.clone().project(camera)
   if (v.z < -1 || v.z > 1) { modelPopStyle.value = { display:'none' }; return }
 
   const rect = renderer.domElement.getBoundingClientRect()
   const x = (v.x * 0.5 + 0.5) * rect.width
   const y = (-v.y * 0.5 + 0.5) * rect.height
 
-  modelPopStyle.value = {
-    display: 'block',
-    left: `${x}px`,
-    top: `${y}px`,
-    transform: 'translate(-50%, -110%)', // 居中并在上方一点
-  }
+  const MARGIN = 14, POP_W = 300
+  let left = x, translateX = '-50%'
+  if (x < MARGIN + POP_W * 0.5) { left = Math.max(MARGIN, x); translateX = '0%' }
+  else if (x > rect.width - (MARGIN + POP_W * 0.5)) { left = Math.min(rect.width - MARGIN, x); translateX = '-100%' }
+
+  modelPopStyle.value = { display:'block', left:`${left}px`, top:`${y}px`, transform:`translate(${translateX}, -110%)` }
 }
 
-/** 额外字段（自动展示） */
-const HIDE_FIELDS = new Set(['id','name','model','x','y','z','status','size','rotY','scale'])
+
+/** 弹窗字段白名单（只显示这些，按顺序渲染；可根据你后端字段自行调整） */
+// 仅保留业务关键信息（去掉：system_photo / documents / model_name）
+const POP_FIELDS: PopField[] = [
+  { key:'system_code',        label:'系统编码' },
+  { key:'manufacturer',       label:'制造厂商' },
+  { key:'install_date',       label:'安装日期',   fmt: v => fmtDate(v) },
+  { key:'system_status',      label:'运行状态' },
+  { key:'confidence_level',   label:'置信度',     fmt: v => fmtPct(v) },
+  { key:'remaining_life',     label:'剩余寿命',   fmt: v => fmtNum(v,'天',0) },
+  { key:'sailing_speed',      label:'航行速度',   fmt: v => fmtNum(v,'节') }
+ ]
+
 const extraFields = computed<[string, any][]>(() => {
   if (!selected.value) return []
-  const entries = Object.entries(selected.value as Record<string, any>)
-  return entries.filter(([k]) => !HIDE_FIELDS.has(k))
+  return POP_FIELDS
+      .map(f => [f.label ?? f.key, (selected.value as any)[f.key]] as [string, any])
+      .filter(([, v]) => v !== undefined && v !== null && v !== '')
 })
+// 简单格式化工具
+function fmtPct(v:any){
+  if (v==null || v==='') return ''
+  const n = Number(v); if (Number.isNaN(n)) return String(v)
+  const d = (Math.abs(n)%1>0) ? 1 : 0
+  return `${n.toFixed(d)}%`
+}
+function fmtNum(v:any, unit='', fixed?:number){
+  if (v==null || v==='') return ''
+  const n = Number(v); if (Number.isNaN(n)) return unit ? `${v} ${unit}` : String(v)
+  const s = (fixed!=null) ? n.toFixed(fixed) : `${n}`
+  return unit ? `${s} ${unit}` : s
+}
+function fmtDate(v:any){
+  if (!v) return ''
+  const d = new Date(v); if (isNaN(+d)) return String(v)
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0')
+  return `${y}-${m}-${dd}`
+}
+
+function goUnitFromSelected() {
+  const sel  = selected.value as any
+  const unit = sel?.unit ?? sel
+
+  const uid = unit?.id
+  const bid = sel?.parent_site?.value ?? (route.params as any).baseId
+
+  if (!uid || !bid) {
+    console.error('[goUnitFromSelected] 缺少必要参数', { uid, bid, sel })
+    return
+  }
+
+  router.push({
+    name: 'ManageSysView',
+    params: { baseId: String(bid), unitId: String(uid) }
+  })
+}
 
 
-async function getModelByName(name: string): Promise<THREE.Object3D> {
-  // 名称为空 → 占位
-  if (!name) return makePlaceholder(0x8888ff, 80)
-  // 缓存命中
-  if (modelCache.has(name)) return modelCache.get(name)!.clone(true)
+/* ---------- 资源加载 / 工具 ---------- */
+async function getModelByName(name?: string): Promise<THREE.Object3D> {
+  const model = (name || '').trim()
+  if (!model) return makePlaceholder(0x8888ff, 80)
+  if (modelCache.has(model)) return modelCache.get(model)!.clone(true)
 
-  const folder = pubUrl(`${MODEL_BASE}${name}/`)
+  const folder = pubUrl(`${MODEL_BASE}${model}/`)
   const loader = new GLTFLoader()
   loader.setPath(folder)
   loader.setResourcePath(folder)
 
-  // 依次尝试的文件名（满足“模型名=目录名”的约定）
-  const candidates = ['scene.gltf', `${name}.gltf`, 'index.gltf']
-
+  const candidates = ['scene.gltf', `${model}.gltf`, 'index.gltf']
   for (const file of candidates) {
     try {
-      const scene = await new Promise<THREE.Object3D>((resolve, reject) => {
+      const root = await new Promise<THREE.Object3D>((resolve, reject) => {
         loader.load(file, g => resolve(g.scene), undefined, reject)
       })
-      modelCache.set(name, scene)
-      return scene.clone(true)
-    } catch {
-      // 失败就试下一个
-    }
+      modelCache.set(model, root)
+      return root.clone(true)
+    } catch { /* try next */ }
   }
-
-  console.warn('[Model] not found:', name, 'in', folder)
+  console.warn('[Model] not found:', model, 'in', folder)
   const ph = makePlaceholder(0x8888ff, 80)
-  modelCache.set(name, ph)
+  modelCache.set(model, ph)
   return ph.clone(true)
 }
 
-/* ---------- 小工具 ---------- */
 function makeGridTexture(size = 1024, step = 64) {
   const cvs = document.createElement('canvas')
   cvs.width = cvs.height = size
@@ -180,8 +222,7 @@ function makeSkyTexture(size = 1024, top = '#5FB3FF', bottom = '#AEE3FF') {
   const c = document.createElement('canvas'); c.width = 1; c.height = size
   const g = c.getContext('2d')!
   const grd = g.createLinearGradient(0,0,0,size)
-  grd.addColorStop(0, top)
-  grd.addColorStop(1, bottom)
+  grd.addColorStop(0, top); grd.addColorStop(1, bottom)
   g.fillStyle = grd; g.fillRect(0,0,1,size)
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.SRGBColorSpace
@@ -190,7 +231,7 @@ function makeSkyTexture(size = 1024, top = '#5FB3FF', bottom = '#AEE3FF') {
 function pxToWorldXZ(p:{x:number;y:number}, y=0) {
   return new THREE.Vector3(p.x - world.W/2, y, -(p.y - world.H/2))
 }
-function normalizeScale(root: THREE.Object3D, targetSize=80) {
+function normalizeScale(root: THREE.Object3D, targetSize = 80) {
   const box = new THREE.Box3().setFromObject(root)
   const size = box.getSize(new THREE.Vector3())
   const s = targetSize / Math.max(size.x, size.y, size.z || 1)
@@ -199,16 +240,16 @@ function normalizeScale(root: THREE.Object3D, targetSize=80) {
   const center = box.getCenter(new THREE.Vector3())
   root.position.sub(new THREE.Vector3(center.x, box.min.y, center.z))
 }
-function makePlaceholder(color=0xff4444, size=80) {
+function makePlaceholder(color = 0xff4444, size = 80) {
   const g = new THREE.Group()
   const cone = new THREE.Mesh(
-      new THREE.ConeGeometry(18,40,18),
-      new THREE.MeshBasicMaterial({ color, wireframe:true })
+      new THREE.ConeGeometry(18, 40, 18),
+      new THREE.MeshBasicMaterial({ color, wireframe: true })
   )
-  cone.position.y = 40 * .5 + 20
+  cone.position.y = 40 * 0.5 + 20
   const cyl = new THREE.Mesh(
-      new THREE.CylinderGeometry(8,8,20,16,1,true),
-      new THREE.MeshBasicMaterial({ color, wireframe:true })
+      new THREE.CylinderGeometry(8, 8, 20, 16, 1, true),
+      new THREE.MeshBasicMaterial({ color, wireframe: true })
   )
   cyl.position.y = 10
   g.add(cyl, cone)
@@ -224,6 +265,32 @@ function placeCameraToSeeGround(margin=1.15) {
   controls.target.set(0,0,0)
   controls.update()
 }
+// === 新增：让相机针对单个模型“最合适视野” ===
+function fitCameraToObject(obj: THREE.Object3D, margin = 1.6) {
+  const box = new THREE.Box3().setFromObject(obj)
+  const size = box.getSize(new THREE.Vector3())
+  const center = box.getCenter(new THREE.Vector3())
+
+  // 同时满足垂直/水平 FOV
+  const vFOV = THREE.MathUtils.degToRad(camera.fov)
+  const hFOV = 2 * Math.atan(Math.tan(vFOV / 2) * camera.aspect)
+  const distV = (size.y / 2) / Math.tan(vFOV / 2)
+  const distH = (size.x / 2) / Math.tan(hFOV / 2)
+  const dist  = Math.max(distV, distH) * margin + size.z * 0.5
+
+  // 以一个轻微俯视方向看向目标
+  const dir = new THREE.Vector3(1, 0.55, 1).normalize()
+  camera.position.copy(center.clone().add(dir.multiplyScalar(dist)))
+  controls.target.copy(center)
+  controls.update()
+}
+
+// === 新增：选择一个要对准的模型（优先告警/故障） ===
+function pickFocusObject(): THREE.Object3D | null {
+  const firstAbn = itemsData.value.find(i => (i.system_status || '').toLowerCase() !== 'normal')
+  const chosen   = firstAbn || itemsData.value[0]
+  return chosen ? (idToObj.get(chosen.id) || null) : null
+}
 
 /* ---------- 资源加载 ---------- */
 async function loadGroundTexture() {
@@ -237,8 +304,11 @@ async function loadGroundTexture() {
   }
 }
 async function getItems() {
-  return props.items && props.items.length ? props.items : await getMockItems()
+  const raw = (props.items && props.items.length) ? props.items : await getMockItems()
+  // 允许 mock 或后端字段做一次归一化，产出后端风格字段
+  return normalizeSceneItems ? normalizeSceneItems(raw) : raw
 }
+
 /* ---------- 初始化 / 销毁 ---------- */
 function forceResize() {
   const el = wrapRef.value!
@@ -253,7 +323,6 @@ function forceResize() {
 
 async function buildScene() {
   scene = new THREE.Scene()
-  // scene.fog = new THREE.Fog(0xDFE9F6, 4000, 14000)
 
   camera = new THREE.PerspectiveCamera(55, 1, 0.1, 20000)
   controls = new OrbitControls(camera, renderer.domElement)
@@ -284,21 +353,15 @@ async function buildScene() {
     world.W = (img as any).width
     world.H = (img as any).height
   }
-  // ★ 期望的重复次数（横向×纵向），这里是“只扩展 4 次”
-  const REP_X = 4
-  const REP_Y = 4
-
-// 地面实际大小 = 原图大小 × 重复次数（保持比例，不拉伸）
+  const REP_X = 2, REP_Y = 2
   const PLANE_W = world.W * REP_X
   const PLANE_H = world.H * REP_Y
 
-// 镜像重复，重复次数固定为 4×4，并把中央一块对齐到世界原点
   gtex.wrapS = gtex.wrapT = THREE.MirroredRepeatWrapping
   gtex.repeat.set(REP_X, REP_Y)
   gtex.anisotropy = renderer.capabilities.getMaxAnisotropy()
   gtex.offset.set(-0.5 * REP_X + 0.5, -0.5 * REP_Y + 0.5)
 
-// 平面几何用“精确宽高”，不会无限扩展
   const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(PLANE_W, PLANE_H),
       new THREE.MeshLambertMaterial({ map: gtex })
@@ -310,34 +373,39 @@ async function buildScene() {
   clickable.clear()
   scene.add(clickable)
 
-  // 加载数据 + 实例化
+  // 加载数据 + 实例化（**完全按后端字段**）
   itemsData.value = await getItems()
   for (const it of itemsData.value) {
-    const inst = await getModelByName(it.model)
+    const inst = await getModelByName(it.model_name)
 
-    const targetSize = (it as any).targetSize ?? 100   // 支持后端可选传入
-    const finalSize  = targetSize * MODEL_SCALE_MULT * (it.size ?? 1) * (it.scale ?? 1)
+    const targetSize = (typeof it.model_size === 'number') ? it.model_size : 100
+    const finalSize  = targetSize * MODEL_SCALE_MULT
 
     normalizeScale(inst, finalSize)
     inst.position.copy(pxToWorldXZ({ x: it.x, y: it.y }, it.z ?? 0))
-    if (typeof it.rotY === 'number') inst.rotation.y = THREE.MathUtils.degToRad(it.rotY)
+    if (typeof it.rot_y === 'number') inst.rotation.y = THREE.MathUtils.degToRad(it.rot_y)
     ;(inst as any).__meta = it
     clickable.add(inst)
-    idToObj.set(it.id, inst) // ★ 登记：选中后根据 id 找到实例
+    idToObj.set(it.id, inst)
 
     const halo = new THREE.Mesh(
         new THREE.CircleGeometry(18, 48),
-        new THREE.MeshBasicMaterial({ color: statusColor(it.status), transparent: true, opacity: 0.28 })
+        new THREE.MeshBasicMaterial({ color: statusColor(it.system_status), transparent: true, opacity: 0.28 })
     )
     halo.rotation.x = -Math.PI / 2
     halo.position.copy(inst.position).y = 0.02
     scene.add(halo)
   }
 
-
   await nextTick()
   forceResize()
-  placeCameraToSeeGround(1.15)
+  const focus = pickFocusObject()
+  if (focus) {
+    fitCameraToObject(focus, 1.8)   // 默认对准一个模型，距离更贴近
+  } else {
+    placeCameraToSeeGround(1.1)     // 兜底：无模型时看地面
+  }
+
 }
 
 async function init() {
@@ -352,7 +420,7 @@ async function init() {
 
   await buildScene()
 
-  renderer.domElement.style.touchAction = 'none' // 防止移动端触摸滚动干扰
+  renderer.domElement.style.touchAction = 'none'
 
   renderer.domElement.addEventListener('pointerdown', onPointerDown, { capture: true })
   renderer.domElement.addEventListener('pointerup', (e: PointerEvent) => {
@@ -360,23 +428,18 @@ async function init() {
     const dx = e.clientX - downPos.x
     const dy = e.clientY - downPos.y
     downPos = null
-    if (Math.hypot(dx, dy) <= DRAG_EPS) {
-      handlePick(e)  // 只有“几乎没拖拽”才认定为点击
-    }
+    if (Math.hypot(dx, dy) <= DRAG_EPS) handlePick(e)
   }, { capture: true })
 
-  // 事件
   ro = new ResizeObserver(() => forceResize())
   ro.observe(wrapRef.value!)
 
-  // 渲染循环
   const loop = () => {
     controls.update()
     renderer.render(scene, camera)
-    updateModelPop() // ★ 每帧更新，让弹框跟随
+    updateModelPop()
     raf = requestAnimationFrame(loop)
   }
-
   loop()
 }
 
@@ -386,19 +449,15 @@ function dispose() {
   cancelAnimationFrame(raf)
   controls?.dispose()
   renderer?.dispose?.()
-  idToObj.clear()              // ★
-  modelPopStyle.value = {display:'none'}  // ★
+  idToObj.clear()
+  modelPopStyle.value = {display:'none'}
+  if (coordTimer) { clearTimeout(coordTimer); coordTimer = null }
 }
 
 /* ---------- 交互 ---------- */
-function onPointerDown(e: PointerEvent) {
-  downPos = { x: e.clientX, y: e.clientY }
-}
-
-
-
+function onPointerDown(e: PointerEvent) { downPos = { x: e.clientX, y: e.clientY } }
 let downPos: {x:number;y:number} | null = null
-const DRAG_EPS = 5  // 判定为点击的最大拖拽距离（像素）
+const DRAG_EPS = 5
 
 function handlePick(e: PointerEvent | MouseEvent) {
   const rect = renderer.domElement.getBoundingClientRect()
@@ -408,35 +467,108 @@ function handlePick(e: PointerEvent | MouseEvent) {
 
   camera.updateMatrixWorld()
   raycaster.setFromCamera(mouseNDC, camera)
-  const hits = raycaster.intersectObjects(clickable.children, true)
 
+  // A) 计算与 y=0 平面的交点 → 顶部显示点击坐标
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0) // y=0
+  const hitPoint = new THREE.Vector3()
+  if (raycaster.ray.intersectPlane(plane, hitPoint)) {
+    const { x: wx, y: wy, z: wz } = hitPoint
+    const { x: px, y: py } = worldXZToPx(wx, wz)
+    showClickCoord({ px, py, wx, wy, wz })
+  }
+
+  // B) 原有 picking 逻辑（选中模型、弹出卡片）
+  const hits = raycaster.intersectObjects(clickable.children, true)
   if (hits.length) {
-    console.log('hits', hits.length)
     let obj: THREE.Object3D | null = hits[0].object
     while (obj && !(obj as any).__meta) obj = obj.parent
     if (obj) {
-      const meta = (obj as any).__meta as SceneItem
+      const meta = (obj as any).__meta
       selected.value = meta
       emit('select', meta)
       updateModelPop()
     }
   } else {
-    console.log('not hits', hits.length)
-    // ★ 点空白：关闭弹框与选中态
     selected.value = null
     modelPopStyle.value = { display: 'none' }
   }
 }
 
 
+/* ---------- 视角保存（localStorage） ---------- */
+type ViewMark = {
+  id: string
+  name: string
+  pos: [number, number, number]
+  target: [number, number, number]
+  fov: number
+}
+const LS_KEY = 'SY_VIEW_PRESETS'
+const viewPresets = ref<ViewMark[]>([])
+
+function loadPresets(){
+  try {
+    const raw = localStorage.getItem(LS_KEY)
+    viewPresets.value = raw ? JSON.parse(raw) : []
+  } catch { viewPresets.value = [] }
+}
+function persistPresets(){
+  localStorage.setItem(LS_KEY, JSON.stringify(viewPresets.value))
+}
+function snapshotCamera(): ViewMark {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+    name: `视角${viewPresets.value.length + 1}`,
+    pos: [camera.position.x, camera.position.y, camera.position.z],
+    target: [controls.target.x, controls.target.y, controls.target.z],
+    fov: camera.fov
+  }
+}
+function saveCurrentView(){
+  if (!camera || !controls) return
+  const snap = snapshotCamera()
+  viewPresets.value.push(snap)
+  persistPresets()
+}
+function gotoView(v: ViewMark){
+  if (!camera || !controls) return
+  const fromPos = camera.position.clone()
+  const toPos   = new THREE.Vector3(...v.pos)
+  const fromTar = controls.target.clone()
+  const toTar   = new THREE.Vector3(...v.target)
+
+  const steps = 24
+  let i = 0
+  const animate = () => {
+    i++
+    const k = i / steps
+    camera.position.lerpVectors(fromPos, toPos, k)
+    controls.target.lerpVectors(fromTar, toTar, k)
+    camera.fov = v.fov
+    camera.updateProjectionMatrix()
+    controls.update()
+    if (i < steps) requestAnimationFrame(animate)
+  }
+  animate()
+}
+function removeView(id: string){
+  const idx = viewPresets.value.findIndex(v => v.id === id)
+  if (idx >= 0) { viewPresets.value.splice(idx, 1); persistPresets() }
+}
+function clearAllViews(){
+  viewPresets.value = []
+  persistPresets()
+}
+
 /* ---------- 生命周期 / 监听 ---------- */
-onMounted(init)
+onMounted(async () => {
+  loadPresets()
+  await init()
+})
 onBeforeUnmount(dispose)
 
 watch(() => props.items, async () => {
-  // 外部 items 变化时重建（轻量处理：重新 buildScene）
   if (!renderer) return
-  // 清理上一次
   cancelAnimationFrame(raf)
   scene?.clear()
   await buildScene()
@@ -444,33 +576,53 @@ watch(() => props.items, async () => {
   loop()
 })
 
-const rootStyle = computed(() => ({
-  height: props.height || '92vh'
-}))
+const rootStyle = computed(() => ({ height: props.height || '92vh' }))
+
+/* ---------- 暴露给模板的视角方法/状态 ---------- */
+defineExpose({
+  saveCurrentView, gotoView, removeView, clearAllViews, viewPresets
+})
 </script>
+
 
 <template>
   <div class="scene-root" :style="rootStyle">
     <div ref="wrapRef" class="abs-fill"></div>
-    <!-- ★ 模型处的信息框（跟随 3D 位置） -->
+
+    <!-- 模型处的信息框（跟随 3D 位置） -->
     <div v-if="selected" class="model-pop" :style="modelPopStyle">
-      <div class="mp-head">
-        <span class="mp-name" :title="selected.name">{{ selected.name }}</span>
-        <span class="mp-badge" :class="selected.status?.toLowerCase() || 'normal'">
-      {{ selected.status || 'Normal' }}
-    </span>
-        <span class="mp-close" @click="selected=null">×</span>
-      </div>
-      <div class="mp-body">
-        <div class="mp-row"><label>坐标</label><span>{{ selected.x }}, {{ selected.y }}, z={{ selected.z ?? 0 }}</span></div>
-        <div class="mp-row"><label>型号</label><span>{{ selected.model }}</span></div>
-        <!-- 自动展示 mock 里的额外字段 -->
-        <div class="mp-row" v-for="[k,v] in extraFields" :key="k">
-          <label>{{ k }}</label><span>{{ Array.isArray(v) ? v.join(', ') : (typeof v==='object' ? JSON.stringify(v) : v) }}</span>
+      <div class="mp-inner">
+        <div class="mp-head">
+          <div class="mp-title">
+            <span class="mp-dot" :class="(selected.system_status?.toLowerCase() || 'normal')"></span>
+            <span class="mp-name" :title="selected.system_name">{{ selected.system_name }}</span>
+          </div>
+          <span class="mp-close" @click="selected=null" title="关闭">×</span>
+        </div>
+
+        <div class="mp-sub">
+          <span class="mp-badge" :class="selected.system_status?.toLowerCase() || 'normal'">
+            {{ selected.system_status || 'Normal' }}
+          </span>
+          <span class="mp-type" title="三维模型">{{ selected.model_name || '未指定模型' }}</span>
+        </div>
+
+        <div class="mp-body">
+          <div class="kv">
+            <div class="k">坐标</div>
+            <div class="v mono">{{ selected.x }}, {{ selected.y }}, z={{ selected.z ?? 0 }}</div>
+          </div>
+          <!-- 自动附加字段 -->
+          <div class="kv" v-for="[k,v] in extraFields" :key="k">
+            <div class="k">{{ k }}</div>
+            <div class="v">
+              {{ Array.isArray(v) ? v.join(', ') : (typeof v==='object' ? JSON.stringify(v) : v) }}
+            </div>
+          </div>
         </div>
 
         <div class="mp-actions">
-          <el-button size="small" type="primary" @click="$emit('enter', selected!)">查看详情</el-button>
+          <el-button size="small" type="primary" @click="goUnitFromSelected()">查看详情</el-button>
         </div>
       </div>
       <div class="mp-arrow"></div>
@@ -478,11 +630,14 @@ const rootStyle = computed(() => ({
 
     <div v-if="showInfo !== false && selected" class="info-card">
       <div class="title">
-        <div class="name" :title="selected?.name">{{ selected?.name }}</div>
+        <div class="name" :title="selected?.system_name">{{ selected?.system_name }}</div>
         <span class="badge">
           <i class="dot"
-             :style="{ background: selected?.status==='Fault'?'#EF4444':selected?.status==='Warning'?'#F59E0B':'#10B981' }"></i>
-          {{ selected?.status || 'Normal' }}
+             :style="{ background:
+               (selected?.system_status?.toLowerCase()==='fault')   ? '#EF4444' :
+               (selected?.system_status?.toLowerCase()==='warning') ? '#F59E0B' :
+               (selected?.system_status?.toLowerCase()==='normal')  ? '#10B981' : '#60A5FA' }"></i>
+          {{ selected?.system_status || 'Normal' }}
         </span>
       </div>
       <div class="sub">位置：{{ selected?.x }}, {{ selected?.y }}</div>
@@ -492,7 +647,42 @@ const rootStyle = computed(() => ({
       </div>
     </div>
   </div>
+
+<!--  <div class="click-coord" v-if="clickCoord">-->
+<!--    <div class="cc-inner">-->
+<!--      地图坐标：{{ Math.round(clickCoord.px) }}, {{ Math.round(clickCoord.py) }}-->
+<!--      <span class="sep">|</span>-->
+<!--      世界：x={{ clickCoord.wx.toFixed(1) }}, y={{ clickCoord.wy.toFixed(1) }}, z={{ clickCoord.wz.toFixed(1) }}-->
+<!--    </div>-->
+<!--  </div>-->
+
+  <teleport to="body">
+    <div class="sy-viewbar">
+      <div class="click-coord" v-if="clickCoord">
+        <div class="cc-inner">
+          地图：{{ Math.round(clickCoord.px) }}, {{ Math.round(clickCoord.py) }}
+          <span class="sep">|</span>
+          世界：x={{ clickCoord.wx.toFixed(1) }}, y={{ clickCoord.wy.toFixed(1) }}, z={{ clickCoord.wz.toFixed(1) }}
+        </div>
+      </div>
+
+      <button class="sy-btn" @click="saveCurrentView">保存视角</button>
+      <button class="sy-btn ghost" @click="clearAllViews" title="清空所有">清空</button>
+
+      <div class="sy-chip"
+           v-for="v in viewPresets"
+           :key="v.id"
+           @click="gotoView(v)"
+           :title="`相机: ${v.pos.join(', ')} → 目标: ${v.target.join(', ')}`">
+        {{ v.name }}
+        <span class="x" @click.stop="removeView(v.id)">×</span>
+      </div>
+    </div>
+  </teleport>
+
 </template>
+
+
 
 <style scoped>
 .scene-root{
@@ -524,21 +714,258 @@ const rootStyle = computed(() => ({
 :deep(canvas){ display:block; width:100%; height:100%; outline:none; }
 
 .model-pop{
-  position:absolute;
+  position: absolute;
   z-index: 10;
-  min-width: 240px;
+  min-width: 260px;
   max-width: 320px;
-  background: rgba(17,20,26,.94);
-  color:#e6e6e6;
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:10px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.35);
-  backdrop-filter: blur(6px);
-  padding: 10px 10px 12px 10px;
-  /* 关键：不拦截底下画布的点击 */
-  pointer-events: none;
+  pointer-events: none;           /* 不拦截画布拖拽 */
+  transform-origin: 50% 100%;
+  animation: mp-appear .16s ease-out;
 }
-.model-pop .mp-close,
-.model-pop .mp-actions { pointer-events: auto; } /* 这些区域照常可点 */
+
+@keyframes mp-appear {
+  from { transform: translate(-50%, -110%) scale(.98); opacity: 0; }
+  to   { transform: translate(-50%, -110%) scale(1);   opacity: 1; }
+}
+
+/* 玻璃质感容器 */
+.mp-inner{
+  pointer-events: auto;           /* 内部可交互 */
+  backdrop-filter: blur(10px) saturate(1.1);
+  background: linear-gradient(180deg, rgba(20,24,30,.90), rgba(16,20,26,.86));
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 12px;
+  box-shadow:
+      0 12px 24px rgba(0,0,0,.35),
+      inset 0 0 0 1px rgba(255,255,255,.06);
+  color: #e8eaed;
+  padding: 12px 12px 48px 12px;   /* 预留底部按钮区高度 */
+  position: relative;
+}
+
+/* 霓虹描边（可选） */
+.mp-inner::before{
+  content:'';
+  position:absolute; inset:0; border-radius:12px; pointer-events:none;
+  background: radial-gradient(140% 60% at 10% -10%, rgba(99,102,241,.22), transparent 55%) ,
+  radial-gradient(120% 60% at 110% -20%, rgba(56,189,248,.20), transparent 50%);
+  mask: linear-gradient(#000,#000) content-box, linear-gradient(#000,#000);
+  -webkit-mask: linear-gradient(#000,#000) content-box, linear-gradient(#000,#000);
+  padding:1px; border:1px solid transparent;
+  opacity:.9;
+}
+
+/* 顶部 */
+.mp-head{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+}
+.mp-title{ display:flex; align-items:center; gap:8px; min-width:0; }
+.mp-dot{
+  width:9px; height:9px; border-radius:50%;
+  box-shadow: 0 0 10px currentColor;
+}
+.mp-dot.normal{  color:#10B981; background:#10B981; }
+.mp-dot.warning{ color:#F59E0B; background:#F59E0B; }
+.mp-dot.fault{   color:#EF4444; background:#EF4444; }
+
+.mp-name{
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing:.2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 220px;
+}
+.mp-close{
+  pointer-events:auto;
+  width: 26px; height: 26px; line-height: 26px;
+  text-align:center; border-radius:8px; cursor:pointer;
+  color:#c7cbd1; background: rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  transition: all .15s ease;
+}
+.mp-close:hover{ background: rgba(255,255,255,.08); color:#fff; }
+
+/* 副标题区：状态 + 型号 */
+.mp-sub{
+  margin-top:6px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  font-size:12px; opacity:.92;
+}
+.mp-badge{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:2px 8px; border-radius:999px; border:1px solid transparent;
+  line-height: 18px;
+  background:#0003; color:#e6e6e6;
+}
+.mp-badge.normal{  border-color: #19c08f44; background:#19c08f14; color:#bff6e4; }
+.mp-badge.warning{ border-color: #f59e0b44; background:#f59e0b16; color:#ffe8bd; }
+.mp-badge.fault{   border-color: #ef444444; background:#ef444416; color:#ffc5c5; }
+
+.mp-type{
+  padding:2px 8px; border-radius:6px;
+  background: rgba(255,255,255,.05);
+  border: 1px dashed rgba(255,255,255,.12);
+  color:#cfd6dd;
+}
+
+/* 主体字段：一行一项 */
+.mp-body{
+  margin-top:10px;
+  display:flex; flex-direction:column; gap:8px;
+  font-size:10px;
+}
+.kv{
+  display:grid; grid-template-columns: 88px 1fr; gap:10px 12px;
+  align-items:start; padding:4px 5px;
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:4px;
+}
+.k{
+  opacity:.72; color:#cfd3da; font-weight:500; letter-spacing:.2px;
+}
+.v{ color:#e9edf3; word-break:break-all; }
+.v.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+
+/* 底部固定按钮区 */
+.mp-actions{
+  position:absolute; left:0; right:0; bottom:0;
+  padding:10px 12px;
+  border-top:1px solid rgba(255,255,255,.10);
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.18));
+  display:flex; justify-content:flex-end; gap:8px;
+  pointer-events:auto;
+}
+
+/* 箭头 */
+.mp-arrow{
+  position:absolute; left:50%; top:0;
+  transform: translate(-50%, -3px);
+  width: 0; height: 0; pointer-events:none;
+  border-left: 10px solid transparent;
+  border-right:10px solid transparent;
+  border-bottom:12px solid rgba(20,24,30,.92);
+  filter: drop-shadow(0 -2px 2px rgba(0,0,0,.15));
+}
+
+/* ==== 弹出框优化覆盖：半透明 + 大边距 + 字号增一号 ==== */
+.scene-root{
+  /* 统一的可调变量 */
+  --mp-font-size: 14px;         /* 原来 12px → 14px */
+  --mp-title-size: 16px;        /* 原来 14px → 16px */
+  --mp-pad: 16px;               /* 内边距更大 */
+  --mp-actions-h: 56px;         /* 底部按钮区高度 */
+  --mp-alpha-top: 0.78;         /* 半透明强度（上） */
+  --mp-alpha-bottom: 0.68;      /* 半透明强度（下） */
+}
+
+/* 面板尺寸略放大 */
+.model-pop{
+  min-width: 280px;
+  max-width: 360px;
+}
+
+/* 玻璃体：半透明 + 大边距 + 大字号 */
+.mp-inner{
+  font-size: var(--mp-font-size);
+  padding: var(--mp-pad) var(--mp-pad) calc(var(--mp-actions-h) + 12px) var(--mp-pad);
+  border-radius: 14px;
+  background:
+      linear-gradient(180deg,
+      rgba(20,24,30,var(--mp-alpha-top)),
+      rgba(16,20,26,var(--mp-alpha-bottom)));
+  border: 1px solid rgba(255,255,255,.16);
+  backdrop-filter: blur(12px) saturate(1.08);
+}
+
+/* 霓虹描边稍弱一点，避免喧宾夺主 */
+.mp-inner::before{ opacity:.75; }
+
+/* 标题字号 +1 */
+.mp-name{ font-size: var(--mp-title-size); }
+
+/* 关闭按钮稍大一点，触控更友好 */
+.mp-close{ width: 28px; height: 28px; line-height: 28px; }
+
+/* 信息区间距与字号同步放大 */
+.mp-body{ gap: 10px; font-size: var(--mp-font-size); }
+
+/* 键值行：更大的留白与圆角 */
+.kv{
+  grid-template-columns: 96px 1fr;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+/* 底部按钮区：跟随更大的内边距 */
+.mp-actions{
+  padding: 12px var(--mp-pad);
+  height: var(--mp-actions-h);
+}
+
+/* 箭头颜色与半透明一致 */
+.mp-arrow{
+  border-bottom-color: rgba(20,24,30,var(--mp-alpha-top));
+}
+
+/* 视角工具条（Teleport 到 body，上层显示） */
+.sy-viewbar{
+  position: fixed;
+  left: 50%;
+  top: 60px;
+  transform: translateX(-50%);
+  z-index: 10000;               /* 关键：盖过前景面板 */
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 8px;
+  background: rgb(176, 202, 216);
+  border: 1px solid rgba(0,0,0,.08);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  pointer-events: auto;
+  color: #1e293b;
+}
+:global(html.dark) .sy-viewbar{
+  background: rgba(255,255,255,.72);
+  color:#1e293b;
+}
+.sy-btn{
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,.12);
+  background: rgba(255,255,255,.9);
+  cursor: pointer;
+  font-size: 12px;
+}
+.sy-btn.ghost{ background: transparent; }
+.sy-chip{
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(14,165,233,.12);
+  border: 1px solid rgba(14,165,233,.28);
+  cursor: pointer; user-select: none;
+  font-size: 12px; font-weight: 600;
+}
+.sy-chip .x{
+  display:inline-block; margin-left: 2px; padding:0 4px;
+  border-radius: 6px; background: rgba(0,0,0,.06);
+}
+.sy-chip .x:hover{ background: rgba(0,0,0,.12); }
+.click-coord{
+  position:absolute; top:48px; left:50%; transform:translateX(-30%);
+  width: 500px;
+  z-index: 20; pointer-events: none;
+}
+.cc-inner{
+  padding:6px 10px; border-radius:4px;
+  background: rgba(20,24,30,.72);
+  border:1px solid rgba(255,255,255,.2);
+  color:#fff; font-size:12px; letter-spacing:.2px;
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  box-shadow: 0 6px 14px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.06);
+}
+.cc-inner .sep{ margin:0 8px; opacity:.8 }
 
 </style>
