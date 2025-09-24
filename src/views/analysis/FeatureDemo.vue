@@ -4,10 +4,6 @@
     <div class="flex h-full gap-3">
       <!-- 左侧面板 -->
       <aside class="w-full lg:w-[300px] shrink-0 h-full overflow-y-auto space-y-3">
-        <!-- 图片卡 -->
-        <el-card shadow="hover" class="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg">
-          <img src="/images/warm-team.jpg" alt="图标" class="w-full rounded" />
-        </el-card>
 
         <!-- 数据选择卡 -->
         <el-card shadow="never" class="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg">

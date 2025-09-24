@@ -118,10 +118,11 @@ export function getQueryType(queryTypeKeyWord) {
 
 
 export function generateQueryFilters(filters) {
+// 确保 filters 是数组，处理 null/undefined/非数组的情况
+    const safeFilters = Array.isArray(filters) ? filters : [];
     let queryFilters = [];
-
     // 传入的 filters 是一个数组，每个元素包含 { key, value, queryType }
-    filters.forEach(filter => {
+    safeFilters.forEach(filter => {
         // 获取 queryType 的 SQL 对应符号
         const queryTypeKeyWord = getQueryType(filter.queryType);
 
