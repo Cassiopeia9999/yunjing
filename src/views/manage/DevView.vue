@@ -233,15 +233,15 @@ onMounted(loadAll)
           </div>
 
           <!-- 评价时间（在状态牌正下方一行，小字） -->
-          <div class="mt-2 text-[12px] opacity-80">
-            评价时间
-            <span class="font-medium">
-          {{
-                assessTime
-                    ? assessTime.replace('T',' ').slice(0,19)
-                    : (snap?.diagnosis_time ? snap.diagnosis_time.replace('T',' ').slice(0,19) : '—')
-              }}
-        </span>
+          <div class="mt-2 text-[14px] opacity-80">
+             评价时间 :
+             <span class="font-medium">
+              {{
+                    assessTime
+                        ? assessTime.replace('T',' ').slice(0,19)
+                        : (snap?.diagnosis_time ? snap.diagnosis_time.replace('T',' ').slice(0,19) : '—')
+                  }}
+              </span>
           </div>
         </div>
 
