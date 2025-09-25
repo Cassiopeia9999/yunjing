@@ -309,7 +309,7 @@ onMounted(loadAll)
           <!-- 左侧：最新诊断快照 + 风险提示 -->
           <div class="col-span-4 min-w-0 flex flex-col gap-3">
 
-            <!-- 设备图片（放在左列顶部） -->
+            <!-- 设备图片（放在左列顶部，按 443:590 比例显示） -->
             <el-card v-if="devImages.length" shadow="never" class="dark:bg-neutral-800">
               <div class="flex items-center justify-between mb-2">
                 <div class="font-medium">设备图片</div>
@@ -318,33 +318,38 @@ onMounted(loadAll)
                 </el-tag>
               </div>
 
-              <!-- 多图：轮播 -->
-              <el-carousel
-                  v-if="hasMultiImages"
-                  height="220px"
-                  indicator-position="outside"
-                  trigger="click"
-                  :autoplay="false"
-              >
+              <!-- 多图：轮播（保持比例） -->
+              <div v-if="hasMultiImages" class="ratio-443-590">
+                <el-carousel
+                    class="img-carousel"
+                    height="100%"
+                indicator-position="outside"
+                trigger="click"
+                :autoplay="false"
+                >
                 <el-carousel-item v-for="img in devImages" :key="img.id">
                   <el-image
                       :src="img.url"
-                      fit="cover"
-                      class="w-full h-[220px] rounded-md"
+                      fit="contain"
+                      class="img-fill rounded-md"
                       :preview-src-list="devImages.map(i=>i.url)"
                   />
                 </el-carousel-item>
-              </el-carousel>
+                </el-carousel>
+              </div>
 
-              <!-- 单图：直接展示 -->
-              <el-image
-                  v-else
-                  :src="devImages[0].url"
-                  fit="cover"
-                  class="w-full h-[220px] rounded-md"
-                  :preview-src-list="[devImages[0].url]"
-              />
+
+              <!-- 单图：保持比例 -->
+              <div v-else class="ratio-443-590">
+                <el-image
+                    :src="devImages[0].url"
+                    fit="contain"
+                    class="img-fill rounded-md"
+                    :preview-src-list="[devImages[0].url]"
+                />
+              </div>
             </el-card>
+
 
             <el-card shadow="never" class="dark:bg-neutral-800">
               <div class="flex items-center justify-between mb-2">
@@ -547,5 +552,20 @@ onMounted(loadAll)
 :deep(.fd-dlg .el-tabs__content){ flex: 1 1 auto; min-height: 0; overflow: auto; }
 /* 你的 <style scoped> 末尾增加，可要可不要 */
 .dev-img-wrap { border-radius: 8px; overflow: hidden; }
+/* 443:590（宽:高）的纵向比例盒；高度做限制避免过长 */
+/* 443:590 比例盒 */
+.ratio-443-590 {
+  aspect-ratio: 443 / 590;
+  width: 100%;
+  max-height: clamp(220px, 30vh, 420px);
+}
+
+/* 让轮播与其内部容器都吃满比例盒高度 */
+.img-carousel { height: 100%; }
+:deep(.img-carousel .el-carousel__container) { height: 100%; }
+
+/* 图片等比填充 */
+.img-fill { width: 100%; height: 100%; object-fit: contain; }
+
 
 </style>
