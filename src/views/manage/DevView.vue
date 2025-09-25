@@ -87,6 +87,23 @@ function renderCharts(){
 }
 onBeforeUnmount(disposeCharts)
 
+
+// 后端状态码: 1=正常, 2=预警, 3=故障, 4=停用
+const STATUS_MAP = {
+  '1': { label: '正常', type: 'success' },
+  '2': { label: '预警', type: 'warning' },
+  '3': { label: '故障', type: 'danger' },
+  '4': { label: '停用', type: 'info' },
+  default: { label: '未知', type: 'info' }
+};
+
+const statusInfo = computed(() => {
+  const key = String(dev.value?.status ?? '');
+  return STATUS_MAP[key] || STATUS_MAP.default;
+});
+
+
+
 /** ────────── 数据加载（自上而下保证有效） ────────── */
 async function ensureBase(){
   baseList.value = await getBaseList()
@@ -196,40 +213,51 @@ onMounted(loadAll)
     <!-- 头部区（固定） -->
     <div class="p-4 lg:p-6 border-b border-neutral-200 dark:border-neutral-700">
       <div class="flex items-center justify-between gap-4 mb-4">
-        <div class="flex items-center gap-1">
-          <!-- 基地选择器 -->
-          <el-select v-model="baseId" style="width: 150px;" @change="onBaseChange" placeholder="选择基地">
+        <!-- 左：选择器（固定宽，不收缩） -->
+        <div class="flex items-center gap-1 shrink-0 order-1">
+          <el-select v-model="baseId" style="width:150px" @change="onBaseChange" placeholder="选择基地">
             <el-option v-for="base in baseList" :key="base.id" :label="base.name" :value="String(base.id)" />
           </el-select>
-
-          <!-- 装置选择器 -->
-          <el-select v-model="unitId" style="width: 150px;" @change="onUnitChange" placeholder="选择装置">
+          <el-select v-model="unitId" style="width:150px" @change="onUnitChange" placeholder="选择装置">
             <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="String(unit.id)" />
           </el-select>
-
-          <!-- 设备选择器 -->
-          <el-select v-model="deviceId" style="width: 150px;" filterable @change="onDeviceChange" placeholder="选择设备">
+          <el-select v-model="deviceId" style="width:150px" filterable @change="onDeviceChange" placeholder="选择设备">
             <el-option v-for="device in deviceList" :key="device.id" :label="device.device_name" :value="String(device.id)" />
           </el-select>
+        </div>
 
+        <!-- 中：设备标题区（可收缩，省略号） -->
+        <div class="flex-1 min-w-0 flex items-center gap-2 flex-wrap md:flex-nowrap order-3 md:order-2">
+          <!-- 设备名称：不换行 + 省略号 -->
+          <div class="text-2xl md:text-3xl font-semibold truncate whitespace-nowrap overflow-hidden">
+            {{ dev.device_name || '—' }}
+          </div>
+
+          <!-- 状态标签：不挤压名称，允许换行到下一行 -->
+          <div class="flex items-center gap-2 flex-wrap">
+            <el-tag size="large" :type="statusInfo.type">
+              {{ statusInfo.label }}
+            </el-tag>
+
+            <el-tag size="large" effect="plain" class="hidden md:inline-flex">
+              编号：{{ dev.component_code || '—' }}
+            </el-tag>
+            <el-tag size="large" effect="plain" class="hidden lg:inline-flex">
+              厂家：{{ dev.manufacturer || '—' }}
+            </el-tag>
+            <el-tag size="large" effect="plain" class="hidden lg:inline-flex">
+              安装：{{ dev.install_date || '—' }}
+            </el-tag>
+          </div>
         </div>
-        <div class="flex items-center gap-3">
-          <div class="text-3xl font-semibold">{{ dev.device_name || '—' }}</div>
-          <el-tag size="small" :type="(dev.status==='Fault'?'danger':dev.status==='Warning'?'warning':'success')">
-            {{ dev.status || 'Unknown' }}
-          </el-tag>
-          <el-tag size="small" effect="plain">{{ dev.component_type || '—' }} · {{ dev.component_model || '—' }}</el-tag>
-          <el-tag size="small" effect="plain">编号：{{ dev.component_code || '—' }}</el-tag>
-          <el-tag size="small" effect="plain">厂家：{{ dev.manufacturer || '—' }}</el-tag>
-          <el-tag size="small" effect="plain">安装：{{ dev.install_date || '—' }}</el-tag>
-        </div>
-        <div class="flex items-center gap-3">
-          <el-segmented v-model="days" :options="[7,30]" size="small" @change="load"/>
-          <el-tag size="small" effect="plain">{{ highProbText }}</el-tag>
-          <el-tag size="small" effect="plain">装置：{{ parents.system_name || '—' }}</el-tag>
-          <el-tag size="small" effect="plain">基地：{{ parents.site_name || '—' }}</el-tag>
+
+        <!-- 右：筛选与切换（固定宽，不收缩；小屏自动掉到下一行） -->
+        <div class="flex items-center gap-2 md:gap-3 shrink-0 order-2 md:order-3">
+          <el-segmented v-model="days" :options="[7,30]" size="large" @change="load"/>
+          <el-tag size="large" effect="plain" class="hidden sm:inline-flex">{{ highProbText }}</el-tag>
           <ThemeToggle/>
         </div>
+
       </div>
 
 
