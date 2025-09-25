@@ -145,6 +145,11 @@ async function loadDeviceDetails(){
   await nextTick(); renderCharts()
 }
 
+const assessTime = computed(() => {
+  const m = data.value?.meta || {};
+  return m.assessTime || m.assess_time || m.evaluate_time || dev.value?.evaluate_time || '';
+});
+
 /** 入口 orchestrator：优先使用“路由传参”，否则逐级默认 */
 async function loadAll(){
   loading.value = true
@@ -211,102 +216,88 @@ onMounted(loadAll)
   <!-- 子页外层：服从框架，只内容滚动 -->
   <div class="flex flex-col h-full overflow-hidden bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 transition-colors">
     <!-- 头部区（固定） -->
-    <div class="p-4 lg:p-6 border-b border-neutral-200 dark:border-neutral-700">
-      <div class="flex items-center justify-between gap-4 mb-4">
-        <!-- 左：选择器（固定宽，不收缩） -->
-        <div class="flex items-center gap-1 shrink-0 order-1">
-          <el-select v-model="baseId" style="width:150px" @change="onBaseChange" placeholder="选择基地">
-            <el-option v-for="base in baseList" :key="base.id" :label="base.name" :value="String(base.id)" />
-          </el-select>
-          <el-select v-model="unitId" style="width:150px" @change="onUnitChange" placeholder="选择装置">
-            <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="String(unit.id)" />
-          </el-select>
-          <el-select v-model="deviceId" style="width:150px" filterable @change="onDeviceChange" placeholder="选择设备">
-            <el-option v-for="device in deviceList" :key="device.id" :label="device.device_name" :value="String(device.id)" />
-          </el-select>
-        </div>
+    <!-- 头部：按“图2”布局 -->
+    <div class="px-4 lg:px-6 pt-4 pb-3 border-b border-neutral-200 dark:border-neutral-700">
+      <!-- 第一行：左(标题+状态牌) | 右(KPI三块) -->
+      <div class="grid grid-cols-12 gap-4 items-start">
+        <!-- 左：大标题 + 状态牌 + 评价时间 -->
+        <div class="col-span-7 min-w-0">
+          <div class="flex items-start gap-12">
+            <!-- 设备名（超大） -->
+            <h1 class="device-title truncate">{{ dev.device_name || '—' }}</h1>
 
-        <!-- 中：设备标题区（可收缩，省略号） -->
-        <div class="flex-1 min-w-0 flex items-center gap-2 flex-wrap md:flex-nowrap order-3 md:order-2">
-          <!-- 设备名称：不换行 + 省略号 -->
-          <div class="text-2xl md:text-3xl font-semibold truncate whitespace-nowrap overflow-hidden">
-            {{ dev.device_name || '—' }}
+            <!-- 状态牌（绿色/黄色/红色/灰色） -->
+            <div class="status-board" :class="'sb-'+statusInfo.type">
+              <span class="sb-text">{{ statusInfo.label }}</span>
+            </div>
           </div>
 
-          <!-- 状态标签：不挤压名称，允许换行到下一行 -->
-          <div class="flex items-center gap-2 flex-wrap">
-            <el-tag size="large" :type="statusInfo.type">
-              {{ statusInfo.label }}
-            </el-tag>
-
-            <el-tag size="large" effect="plain" class="hidden md:inline-flex">
-              编号：{{ dev.component_code || '—' }}
-            </el-tag>
-            <el-tag size="large" effect="plain" class="hidden lg:inline-flex">
-              厂家：{{ dev.manufacturer || '—' }}
-            </el-tag>
-            <el-tag size="large" effect="plain" class="hidden lg:inline-flex">
-              安装：{{ dev.install_date || '—' }}
-            </el-tag>
+          <!-- 评价时间（在状态牌正下方一行，小字） -->
+          <div class="mt-2 text-[12px] opacity-80">
+            评价时间
+            <span class="font-medium">
+          {{
+                assessTime
+                    ? assessTime.replace('T',' ').slice(0,19)
+                    : (snap?.diagnosis_time ? snap.diagnosis_time.replace('T',' ').slice(0,19) : '—')
+              }}
+        </span>
           </div>
         </div>
 
-        <!-- 右：筛选与切换（固定宽，不收缩；小屏自动掉到下一行） -->
-        <div class="flex items-center gap-2 md:gap-3 shrink-0 order-2 md:order-3">
-          <el-segmented v-model="days" :options="[7,30]" size="large" @change="load"/>
-          <el-tag size="large" effect="plain" class="hidden sm:inline-flex">{{ highProbText }}</el-tag>
-          <ThemeToggle/>
+        <!-- 右：三块 KPI -->
+        <div class="col-span-5">
+          <div class="grid grid-cols-3 gap-3">
+            <el-card shadow="never" class="kpi-card dark:bg-neutral-800">
+              <div class="kpi-label">健康度</div>
+              <div class="kpi-value text-sky-500 dark:text-sky-300">{{ dev.health_level ?? '—' }}</div>
+            </el-card>
+
+            <el-card shadow="never" class="kpi-card dark:bg-neutral-800">
+              <div class="kpi-label">剩余寿命 RUL</div>
+              <div class="kpi-value text-indigo-500 dark:text-indigo-300">
+                {{ dev.remaining_life ?? '—' }}<span class="kpi-unit">天</span>
+              </div>
+            </el-card>
+
+            <el-card shadow="never" class="kpi-card dark:bg-neutral-800">
+              <div class="kpi-label">置信度</div>
+              <div class="kpi-value text-emerald-500 dark:text-emerald-300">
+                {{ dev.confidence_level ?? '—' }}<span class="kpi-unit">%</span>
+              </div>
+            </el-card>
+          </div>
         </div>
-
       </div>
 
-
-      <div class="grid grid-cols-5 gap-3">
-        <el-card shadow="never" class="dark:bg-neutral-800">
-          <div class="text-sm font-medium text-neutral-800 dark:text-neutral-100">健康度</div>
-          <div class="mt-1 text-2xl font-semibold leading-snug text-sky-600 dark:text-sky-300">
-            {{ dev.health_level ?? '—' }}
-          </div>
-        </el-card>
-
-        <el-card shadow="never" class="dark:bg-neutral-800">
-          <div class="text-sm font-medium text-neutral-800 dark:text-neutral-100">剩余寿命 RUL</div>
-          <div class="mt-1 text-2xl font-semibold leading-snug text-indigo-600 dark:text-indigo-300">
-            {{ dev.remaining_life ?? '—' }}
-            <span class="ml-0.5 text-[12px] font-medium text-neutral-600 dark:text-neutral-300">天</span>
-          </div>
-        </el-card>
-
-        <el-card shadow="never" class="dark:bg-neutral-800">
-          <div class="text-sm font-medium text-neutral-800 dark:text-neutral-100">置信度</div>
-          <div class="mt-1 text-2xl font-semibold leading-snug text-emerald-600 dark:text-emerald-300">
-            {{ dev.confidence_level ?? '—' }}<span class="ml-0.5 text-[12px] font-medium">%</span>
-          </div>
-        </el-card>
-
-        <el-card shadow="never" class="dark:bg-neutral-800">
-          <div class="text-sm font-medium text-neutral-800 dark:text-neutral-100">最近诊断概率</div>
-          <div class="mt-1 text-2xl font-semibold leading-snug text-amber-600 dark:text-amber-300">
-            {{ snap?.probability != null ? (snap.probability + '%') : '—' }}
-          </div>
-        </el-card>
-
-        <el-card shadow="never" class="dark:bg-neutral-800">
-          <div class="text-sm font-medium text-neutral-800 dark:text-neutral-100">最近诊断时间</div>
-          <div class="mt-1 text-xl font-semibold leading-snug text-neutral-900 dark:text-neutral-100">
-            {{ snap?.diagnosis_time ? snap.diagnosis_time.replace('T',' ').slice(0,19) : '—' }}
-          </div>
-        </el-card>
+      <!-- 第二行：选择器 -->
+      <div class="mt-3 flex items-center gap-1">
+        <el-select v-model="baseId" style="width:150px" @change="onBaseChange" placeholder="选择基地">
+          <el-option v-for="base in baseList" :key="base.id" :label="base.name" :value="String(base.id)"/>
+        </el-select>
+        <el-select v-model="unitId" style="width:250px" @change="onUnitChange" placeholder="选择装置">
+          <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="String(unit.id)"/>
+        </el-select>
+        <el-select v-model="deviceId" style="width:250px" filterable @change="onDeviceChange" placeholder="选择设备">
+          <el-option v-for="device in deviceList" :key="device.id" :label="device.device_name" :value="String(device.id)"/>
+        </el-select>
       </div>
 
-
-
-
-      <!-- QA 拦截提示 -->
-      <div v-if="qa?.block" class="mt-2 text-sm text-amber-500">
-        关键特征质量未通过（{{ qa.msg }}），已禁用“开始诊断/趋势预测”。请先修复数据。
+      <!-- 第三行：信息胶囊 -->
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        <el-tag type="primary" effect="dark" size="default">
+          编号：{{ dev.component_code || '—' }}
+        </el-tag>
+        <el-tag type="success" effect="dark" size="default">
+          厂家：{{ dev.manufacturer || '—' }}
+        </el-tag>
+        <el-tag type="warning" effect="dark" size="default">
+          安装：{{ dev.install_date || '—' }}
+        </el-tag>
       </div>
+
     </div>
+
 
     <!-- 内容滚动区 -->
     <div class="flex-1 min-h-0 overflow-auto p-4 lg:p-6">
@@ -318,17 +309,17 @@ onMounted(loadAll)
             * 高概率阈值：{{ highProbText }}；每条诊断可作为故障证据挂载。
           </div>
           <div class="flex items-center gap-2">
-            <el-button size="small" type="primary" :icon="CircleCheck" @click="goDiagnose" :disabled="actionsDisabled">
+            <el-button size="large" type="primary" :icon="CircleCheck" @click="goDiagnose" :disabled="actionsDisabled">
               开始故障诊断
             </el-button>
-            <el-button size="small" type="primary" plain :icon="Upload" @click="goForecast" :disabled="actionsDisabled">
+            <el-button size="large" type="primary" plain :icon="Upload" @click="goForecast" :disabled="actionsDisabled">
               趋势预测
             </el-button>
-            <el-button size="small" type="success" @click="newOrLinkFault">
+            <el-button size="large" type="success" @click="newOrLinkFault">
               新建故障 / 关联
             </el-button>
             <!-- ✅ 新增：设备故障诊断操作面板入口 -->
-            <el-button size="small" type="primary" plain :icon="Document" @click="dialogFaultDiag = true">
+            <el-button size="large" type="primary" plain :icon="Document" @click="dialogFaultDiag = true">
               故障诊断面板
             </el-button>
           </div>
@@ -379,27 +370,29 @@ onMounted(loadAll)
             </el-card>
 
 
-            <el-card shadow="never" class="dark:bg-neutral-800">
+            <el-card shadow="never" class="dark:bg-neutral-800 snap-card">
               <div class="flex items-center justify-between mb-2">
-                <div class="font-medium">最新诊断快照</div>
+                <div class="font-medium text-lg">最新诊断快照</div>
                 <el-tag v-if="snap?.probability!=null" size="small"
                         :type="(snap.probability >= (data?.meta?.highProbThreshold||70)) ? 'danger':'info'">
                   {{ Math.round(snap.probability) }}%
                 </el-tag>
               </div>
-              <div class="text-sm mb-2">故障：{{ snap?.fault_name || '—' }}</div>
-              <div class="text-xs opacity-80 mb-2">
-                时间：{{ snap?.diagnosis_time ? snap.diagnosis_time.replace('T',' ').slice(0,19) : '—' }}
-              </div>
-              <div class="text-sm mb-2">
-                依据（摘要）：<span class="opacity-80">{{ snap?.diagnosis_basis_short || '—' }}</span>
+
+              <div class="snap-item">故障：{{ snap?.fault_name || '—' }}</div>
+              <div class="snap-item">时间：{{ snap?.diagnosis_time ? snap.diagnosis_time.replace('T',' ').slice(0,19) : '—' }}</div>
+
+              <div class="snap-item">
+                依据（摘要）：<span class="snap-sub">{{ snap?.diagnosis_basis_short || '—' }}</span>
                 <el-button v-if="snap" link size="small" @click="viewBasis(snap)">查看依据</el-button>
               </div>
-              <div class="text-sm">
-                原始文件：<span class="opacity-80">{{ snap?.raw_file_id || '—' }}</span>
+
+              <div class="snap-item">
+                原始文件：<span class="snap-sub">{{ snap?.raw_file_id || '—' }}</span>
                 <el-button v-if="snap?.raw_file_id" link size="small" @click="viewRaw(snap)">查看源数据</el-button>
               </div>
             </el-card>
+
 
             <el-card shadow="never" class="dark:bg-neutral-800">
               <div class="flex items-center justify-between mb-2">
@@ -415,12 +408,7 @@ onMounted(loadAll)
               </ul>
             </el-card>
 
-            <el-card shadow="never" class="dark:bg-neutral-800">
-              <div class="flex items-center justify-between mb-2">
-                <div class="font-medium">概率趋势（{{ days }}天）</div>
-              </div>
-              <div ref="elProb" class="h-[220px]"></div>
-            </el-card>
+
           </div>
 
           <!-- 右侧：诊断记录时间线/表格 -->
@@ -476,8 +464,17 @@ onMounted(loadAll)
                   <template #default><el-icon><ArrowRight/></el-icon></template>
                 </el-table-column>
               </el-table>
+
+              <el-card shadow="never" class="dark:bg-neutral-800">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="font-medium">概率趋势（{{ days }}天）</div>
+                </div>
+                <div ref="elProb" class="h-[220px]"></div>
+              </el-card>
             </div>
           </el-card>
+
+
         </div>
 
 
@@ -595,5 +592,86 @@ onMounted(loadAll)
 /* 图片等比填充 */
 .img-fill { width: 100%; height: 100%; object-fit: contain; }
 
+/* —— 图2强调点：超大设备名 + 状态牌 + 清晰边框 —— */
+
+/* 大标题：和截图同级的“视觉分量” */
+.device-title{
+  font-size: clamp(32px, 6vw, 60px); /* 1号主泵 的量级 */
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
+
+/* 状态牌：尺寸固定/圆角矩形/绿色为主，其他状态自动换色 */
+.status-board{
+  min-width: 160px;
+  height: 60px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.15);
+}
+.sb-text{
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+/* 颜色方案（跟随 statusInfo.type） */
+.sb-success{ background: #08af15; color: #f6f2f6; }  /* 正常：深绿底、荧绿字 */
+.sb-warning{ background: #ef9907; color: #f6f2f6; }  /* 预警 */
+.sb-danger { background: #7a0a0a; color: #ffb3b3; }  /* 故障 */
+.sb-info   { background: #3a3a3a; color: #dcdcdc; }  /* 停用/未知 */
+
+/* KPI 卡片：有“线条感”的边框与微渐变 */
+.kpi-card{
+  border: 1px solid rgba(0,0,0,.10);
+  background: linear-gradient(180deg, rgba(0,0,0,.02), rgba(0,0,0,.05));
+}
+.dark .kpi-card{
+  border-color: rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.05));
+}
+.kpi-label{ font-size: 13px; font-weight: 600; opacity: .9; }
+.kpi-value{ margin-top: 2px; font-size: 28px; font-weight: 800; line-height: 1; }
+.kpi-unit{ margin-left: 4px; font-size: 12px; font-weight: 700; opacity: .85; }
+
+/* 信息胶囊（编号/厂家/安装） */
+.meta-chip{
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1;
+  border: 1px solid rgba(0,0,0,.12);
+  background: rgba(0,0,0,.03);
+}
+.dark .meta-chip{
+  border-color: rgba(255,255,255,.16);
+  background: rgba(255,255,255,.04);
+}
+
+/* 维持你原来的卡片内边距 */
+:deep(.el-card__body){ padding: 12px; }
+/* 快照卡片：整体左对齐 */
+.snap-card {
+  text-align: left;
+}
+
+/* 主行字体 */
+.snap-item {
+  font-size: 15px;   /* 比原来大一号 */
+  margin-bottom: 8px;
+  font-weight: 500;
+  margin-left: 30px;
+}
+
+/* 辅助信息字体 */
+.snap-sub {
+  font-size: 13px;
+  opacity: 0.85;
+}
 
 </style>

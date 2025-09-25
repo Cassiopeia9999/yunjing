@@ -31,7 +31,6 @@
       </div>
     </header>
 
-
     <main class="relative z-20 w-full px-4 pb-8">
       <!-- KPI 霓虹卡片（保持原位，地图不会盖住这一条） -->
       <section class="mt-3 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
@@ -57,14 +56,12 @@
         </article>
       </section>
 
-
       <section class="content-area relative mt-4">
         <!-- 地图：作为内容区背景 -->
         <ChinaNeonMap class="content-map-bg pointer-events-none" :autoFit="true" />
 
         <!-- 两侧面板：分别靠左、靠右 -->
         <div class="relative z-10 flex flex-col lg:flex-row justify-between gap-4">
-
           <!-- 左列 -->
           <div class="w-full lg:w-[30%] space-y-4">
             <article class="panel">
@@ -112,14 +109,11 @@
               <div ref="lineEl" class="h-[260px]"></div>
             </article>
           </div>
-
         </div>
       </section>
-
     </main>
   </div>
 </template>
-
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
@@ -127,17 +121,19 @@ import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import ChinaNeonMap from '@/components/bigscreen/ChinaNeonMap.vue'
 
-import { getKpis, getTopProvinces, getAlarmTrend, getAlarmFeed, getHealthPie } from '@/mock/bigScreenMock'
+// 仍保留 KPI 与后端联动；其它模拟在 mock 里
+import { getKpis, getAlarmTrend, getAlarmFeed, getHealthPie } from '@/mock/bigScreenMock'
 import { getBaseList } from '@/mock/fetchDataApi.js'
 
 const router = useRouter()
 
 /* ---------- 数据 ---------- */
 const kpis        = ref([])
-const topProv     = ref([])
-const alarmTrend  = ref(getAlarmTrend())   // 先用占位即可
-const alarmFeed   = ref(getAlarmFeed())    // 先用占位即可
-const healthPie   = ref(getHealthPie?.() ?? [{ name:'正常', value:66 }, { name:'关注', value:22 }, { name:'故障', value:12 }])
+const alarmTrend  = ref(getAlarmTrend())
+const alarmFeed   = ref(getAlarmFeed())
+const healthPie   = ref(getHealthPie?.() ?? [
+  { name:'正常', value:66 }, { name:'关注', value:22 }, { name:'故障', value:12 }
+])
 
 const baseList    = ref([])
 const baseKw      = ref('')
@@ -153,66 +149,81 @@ const baseFiltered = computed(() => {
 
 /* ---------- 图表 ---------- */
 const pieEl  = ref(null)
-const barEl  = ref(null)
 const lineEl = ref(null)
-let pieChart, barChart, lineChart
+let pieChart, lineChart
 
 const levelClass = (lv)=>({
-  高:'text-rose-300 ring-rose-300/40', 中:'text-amber-300 ring-amber-300/40', 低:'text-teal-300 ring-teal-300/40'
+  高:'text-rose-300 ring-rose-300/40',
+  中:'text-amber-300 ring-amber-300/40',
+  低:'text-teal-300 ring-teal-300/40'
 }[lv] || 'text-cyan-300 ring-cyan-300/40')
+
+// 深蓝主题主色（可按需微调）
+const THEME = {
+  cyan:   '#4fd1ff',
+  blue:   '#2bb0ff',
+  deep:   '#0a1c33',
+  orange: '#ff9f43',
+  pink:   '#ff6b81',
+  grid:   'rgba(120,200,255,.12)',
+  split:  'rgba(120,200,255,.16)',
+  text:   '#e8f6ff'
+}
 
 const pieOpt = () => ({
   tooltip:{ trigger:'item' },
   series:[{
-    type:'pie', radius:['45%','70%'], center:['50%','52%'], startAngle:90,
-    itemStyle:{ borderColor:'#05101a', borderWidth:2 },
-    label:{ color:'#e7fdff', fontSize:12 },
+    type:'pie',
+    radius:['46%','72%'], center:['50%','54%'], startAngle:90,
+    itemStyle:{ borderColor:THEME.deep, borderWidth:2 },
+    label:{ color:THEME.text, fontSize:13 },
     data: (healthPie.value || []).map((d,i)=>({
       name:d.name, value:d.value,
-      itemStyle:{ color:['#22d3ee','#60a5fa','#f87171'][i%3],
-        shadowBlur:18, shadowColor:'rgba(34,211,238,.35)' }
+      itemStyle:{
+        // 正常-蓝青；关注-橙；故障-粉红
+        color:[THEME.cyan, THEME.orange, THEME.pink][i%3],
+        shadowBlur:18, shadowColor:'rgba(79,209,255,.35)'
+      }
     }))
   }]
 })
 
-const barOpt = () => ({
-  grid:{ left:8, right:10, top:6, bottom:8, containLabel:true },
-  xAxis:{ type:'value', axisLine:{show:false}, axisTick:{show:false}, axisLabel:{color:'#bfeaff'}, splitLine:{show:false}},
-  yAxis:{ type:'category', data: (topProv.value || []).map(d=>d.name),
-    axisLine:{show:false}, axisTick:{show:false}, axisLabel:{color:'#e6fbff'} },
-  series:[{
-    type:'bar', barWidth:12,
-    data: (topProv.value || []).map(d=>({ value:d.value, itemStyle:{
-        color: new echarts.graphic.LinearGradient(1,0,0,0,[
-          {offset:0,color:'#a7f3d0'},{offset:1,color:'#06b6d4'}]),
-        shadowBlur:16, shadowColor:'rgba(6,182,212,.45)'
-      }})),
-    label:{ show:true, position:'right', color:'#d7faff', fontWeight:'600' }
-  }]
-})
-
 const lineOpt = () => ({
-  grid:{ left:32, right:12, top:12, bottom:20 },
-  xAxis:{ type:'category', data: alarmTrend.value.x, axisTick:{show:false}, axisLabel:{color:'#c8f2ff'},
-    axisLine:{ lineStyle:{ color:'rgba(94,234,212,.28)'} } },
-  yAxis:{ type:'value', axisLine:{show:false}, axisLabel:{color:'#c8f2ff'}, splitLine:{ lineStyle:{ color:'rgba(94,234,212,.12)'} } },
+  grid:{ left:36, right:14, top:18, bottom:24 },
+  xAxis:{
+    type:'category', data: alarmTrend.value.x,
+    axisTick:{show:false},
+    axisLabel:{color:THEME.text, fontSize:12},
+    axisLine:{ lineStyle:{ color: THEME.grid } }
+  },
+  yAxis:{
+    type:'value', axisLine:{show:false},
+    axisLabel:{color:THEME.text, fontSize:12},
+    splitLine:{ lineStyle:{ color: THEME.split } }
+  },
   series:[{
     type:'line', smooth:true, data: alarmTrend.value.y, showSymbol:false,
-    lineStyle:{ width:3, color:'#67e8f9', shadowBlur:14, shadowColor:'rgba(103,232,249,.6)' },
-    areaStyle:{ color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(103,232,249,.32)'},{offset:1,color:'rgba(13,148,136,0)'}]) }
+    lineStyle:{ width:3, color: THEME.orange, shadowBlur:14, shadowColor:'rgba(255,159,67,.45)' },
+    areaStyle:{ color:new echarts.graphic.LinearGradient(0,0,0,1,[
+        {offset:0, color:'rgba(255,159,67,.32)'},
+        {offset:1, color:'rgba(255,159,67,0)'}
+      ]) }
   }]
 })
 
+
 function initCharts(){
-  pieChart  = echarts.init(pieEl.value)
-  barChart  = echarts.init(barEl.value)
-  lineChart = echarts.init(lineEl.value)
-  pieChart.setOption(pieOpt())
-  barChart.setOption(barOpt())
-  lineChart.setOption(lineOpt())
+  if (pieEl.value) {
+    pieChart = echarts.init(pieEl.value)
+    pieChart.setOption(pieOpt())
+  }
+  if (lineEl.value) {
+    lineChart = echarts.init(lineEl.value)
+    lineChart.setOption(lineOpt())
+  }
   window.addEventListener('resize', onResize)
 }
-function onResize(){ pieChart?.resize(); barChart?.resize(); lineChart?.resize() }
+function onResize(){ pieChart?.resize(); lineChart?.resize() }
 
 /* ---------- 跳转 ---------- */
 function goBase(b){
@@ -222,192 +233,203 @@ function goBase(b){
 
 /* ---------- 加载 ---------- */
 onMounted(async () => {
-  // KPI / TopN 异步来源
-  try { kpis.value    = await getKpis() } catch(e){ kpis.value = [] }
-  try { topProv.value = await getTopProvinces() } catch(e){ topProv.value = [] }
+  // KPI（后端）
+  try { kpis.value = await getKpis() } catch { kpis.value = [] }
 
-  // 基地列表（直接走后端）
-  try { baseList.value = (await getBaseList()) || [] } catch(e){ baseList.value = [] }
+  // 基地列表（后端）
+  try { baseList.value = (await getBaseList()) || [] } catch { baseList.value = [] }
 
   initCharts()
-  // 数据到位后刷新 bar
-  barChart?.setOption(barOpt(), true)
 })
 onBeforeUnmount(()=>window.removeEventListener('resize', onResize))
 </script>
 
 <style scoped>
-/* ===== 背景：深对比 + 网格 ===== */
-.screen-wrap{
+:root{
+  --bg-top:  #071427;
+  --bg-mid:  #081d36;
+  --bg-bot:  #0a1f3d;
+  --grid:    rgba(120,200,255,.12);
+  --glow:    rgba(0,170,255,.35);
+  --panel:   rgba(7,21,40,.60);
+  --panel-2: rgba(7,21,40,.42);
+  --stroke:  rgba(80,180,255,.30);
+  --white:   #e8f6ff;
+  --cyan:    #4fd1ff;
+  --blue:    #2bb0ff;
+  --orange:  #ff9f43;
+  --pink:    #ff6b81;
+}
+
+
+/* ===== 背景整体：深蓝色风格 ===== */
+.screen-wrap {
   @apply relative min-h-screen w-full;
-  background:
-      radial-gradient(1200px 500px at 50% -220px, rgba(34,211,238,.16), transparent 60%),
-      linear-gradient(180deg, #06131e 0%, #071a2a 55%, #081521 100%);
+  background: linear-gradient(180deg, #041229 0%, #061b35 50%, #020b1f 100%);
+  color: #eaf7ff;
 }
-.bg-grid{
-  position: fixed; inset: 0; z-index: 0; opacity: .20;
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; opacity: .16;
   background-image:
-      repeating-linear-gradient(0deg, rgba(148,163,184,.10) 0 1px, transparent 1px 42px),
-      repeating-linear-gradient(90deg, rgba(148,163,184,.10) 0 1px, transparent 1px 42px);
+      repeating-linear-gradient(0deg, rgba(0,246,255,.08) 0 1px, transparent 1px 40px),
+      repeating-linear-gradient(90deg, rgba(0,246,255,.08) 0 1px, transparent 1px 40px);
+  filter: drop-shadow(0 0 24px rgba(0,246,255,.2));
 }
 
-.bg-grid{
-  position: fixed; inset: 0; z-index: 0; opacity: .22;
-  background-image:
-      repeating-linear-gradient(0deg, rgba(148,163,184,.12) 0 1px, transparent 1px 40px),
-      repeating-linear-gradient(90deg, rgba(148,163,184,.12) 0 1px, transparent 1px 40px);
-  filter: drop-shadow(0 0 22px rgba(56,189,248,.18));
-}
-
-/* ===== 英雄标题：大字号 + 霓虹翼 + 双线下划光 ===== */
-.hero-title{ position:relative; text-align:center; padding: 6px 18px 12px; }
-.title-glow-neo{
+/* ===== 标题：高亮蓝色发光 ===== */
+.title-glow-neo {
   font-weight: 900;
-  font-size: clamp(28px, 3.6vw, 48px);
+  font-size: clamp(32px, 4vw, 56px);
   letter-spacing: .35em;
   text-transform: uppercase;
-
-  /* 提升本体亮度：更偏白的渐变 */
-  background: linear-gradient(
-      90deg,
-      #ffffff,
-      #f2feff,
-      #cfffff,
-      #9cf5ff,
-      #5fe6ff,
-      #ffffff
-  );
-  background-size: 260% 100%;
+  background: linear-gradient(90deg, #aefcff, #ffffff, #5ad9ff, #1ec8ff, #aefcff);
+  background-size: 280% 100%;
   -webkit-background-clip: text;
-  background-clip: text;
   color: transparent;
-
-  /* 收敛光影：缩小半径、降低强度，边缘更干净 */
   text-shadow:
-      0 0 6px rgba(210, 249, 255, .85),
-      0 0 14px rgba(56, 189, 248, .38);
-
-  /* 细描边让字更“挺”一些（可选，若不需要可删） */
-  -webkit-text-stroke: 0.5px rgba(255,255,255,.25);
-
-  animation: titleShine 7s linear infinite;
+      0 0 8px rgba(30,200,255,.9),
+      0 0 20px rgba(244, 248, 248, 0.6);
+  animation: titleShine 2s linear infinite;
 }
 
-@keyframes titleShine{ 0%{background-position:0%} 100%{background-position:300%} }
-
-/* 侧翼装饰 */
-.hero-title .wing{
-  position:absolute; top:50%; width:210px; height:18px; transform:translateY(-50%);
-  background: radial-gradient(closest-side, rgba(94,234,212,.85), transparent 70%);
-  filter: blur(1px) drop-shadow(0 0 10px rgba(34,211,238,.55));
-  opacity:.85; pointer-events:none;
+/* ===== Panel 面板：更亮的蓝色描边 ===== */
+.panel {
+  @apply relative rounded-xl p-3;
+  background: linear-gradient(180deg, rgba(4,18,41,.6), rgba(4,18,41,.4));
+  box-shadow: inset 0 0 40px rgba(30,200,255,.18), 0 12px 28px rgba(0,0,0,.5);
 }
-.hero-title .wing.left{ left:-16px; clip-path: polygon(0 50%,100% 0,100% 100%); }
-.hero-title .wing.right{ right:-16px; clip-path: polygon(0 0,100% 50%,0 100%); }
-
-/* 双层下划线 */
-.title-underline{ position:relative; height:10px; margin-top:6px; }
-.title-underline .bar{
-  position:absolute; left:50%; transform:translateX(-50%);
-  width:68%; height:2px; border-radius:9999px;
-  background: linear-gradient(90deg, transparent, #67e8f9, transparent);
-  box-shadow: 0 0 16px #22d3ee;
-}
-.title-underline .bar.glow{
-  top:4px; width:42%; height:6px; filter: blur(4px); opacity:.65;
-  background: radial-gradient(closest-side,#67e8f9, transparent 65%);
-}
-/* ===== 标题：更亮 + 流光 ===== */
-.title-wrap{ position:relative; text-align:center; z-index: 2; }
-.title-glow{
-  @apply text-[20px] md:text-[26px] font-extrabold tracking-[.55em] uppercase;
-  background: linear-gradient(90deg,#e0f2fe,#a7f3d0,#67e8f9,#22d3ee,#e0f2fe);
-  background-size: 300% 100%;
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  text-shadow: 0 0 12px rgba(125,211,252,.95), 0 0 36px rgba(34,211,238,.55);
-  animation: titleShine 8s linear infinite;
-}
-.title-strip{
-  position:absolute; left:50%; transform:translateX(-50%); bottom:-8px; width:66%;
-  height:2px; background: radial-gradient(closest-side,#67e8f9,transparent);
-  filter: drop-shadow(0 0 10px #22d3ee);
-}
-@keyframes titleShine{ 0%{background-position:0%} 100%{background-position:300%} }
-
-/* 内容区容器：提供定位上下文给背景地图 */
-.content-area{
-  position: relative;
-  min-height: 60vh;   /* 自行调大/调小，让地图区域更高或更矮 */
-  z-index: 1;         /* 低于上层卡片的 z-10 */
+.panel::before {
+  content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+  border:1.5px solid rgba(30,200,255,.85);
+  box-shadow: 0 0 20px rgba(30,200,255,.5), inset 0 0 16px rgba(30,200,255,.35);
 }
 
-/* 地图背景：只覆盖“内容区”，不影响标题和 KPI 带 */
-.content-map-bg{
+/* ===== KPI 卡片：亮蓝描边 + 数字更大 ===== */
+.kpi-card {
+  @apply relative overflow-hidden rounded-xl px-3 py-5;
+  background: linear-gradient(180deg, rgba(2,10,25,.55), rgba(2,10,25,.75));
+  box-shadow: inset 0 0 36px rgba(0,246,255,.2), 0 8px 20px rgba(0,0,0,.5);
+  text-align: center;
+}
+.kpi-num {
+  @apply text-[32px] md:text-[40px] font-black tracking-wide;
+  text-shadow: 0 0 12px rgba(0,246,255,.9), 0 0 32px rgba(0,246,255,.6);
+  color: #eaf7ff;
+  animation: numPulse 3s ease-in-out infinite;
+}
+
+/* ===== 图表：改用橙色线条点缀 ===== */
+.echarts-line .series-line {
+  color: #ffae3a;
+}
+
+
+/* ===== 顶部标题：干净锐利，无发光 ===== */
+.title-glow-neo {
+  font-weight: 900;
+  font-size: clamp(40px, 5vw, 72px);
+  letter-spacing: .28em;
+  line-height: 1.08;
+  text-transform: uppercase;
+
+  /* 白色到淡蓝渐变填充 */
+  background: linear-gradient(90deg, #ffffff 0%, #dff7ff 40%, #9edaff 70%, #ffffff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+
+  /* 清晰蓝色描边（非光效） */
+  -webkit-text-stroke: 1px #4fc3ff;
+
+  /* 去掉所有发光/阴影，保持干净 */
+  text-shadow: none;
+  filter: none;
+}
+
+/* 两侧装饰翼光（低调，避免喧宾夺主） */
+.hero-title .wing {
   position: absolute;
-  inset: 0;           /* 填满 content-area */
-  z-index: 0;
-  opacity: .95;
-  filter: drop-shadow(0 0 30px rgba(34,211,238,.15));
-  /* 不拦截鼠标事件，保证面板里的输入/滚动等可用 */
+  top: 50%;
+  width: 180px;
+  height: 10px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, transparent, rgba(79,195,255,.7), transparent);
+  opacity: .6;
+  pointer-events: none;
+}
+.hero-title .wing.left  { left: -14px; clip-path: polygon(0 50%,100% 0,100% 100%); }
+.hero-title .wing.right { right:-14px; clip-path: polygon(0 0,100% 50%,0 100%); }
+
+/* 下划线：细蓝线，保持锐利 */
+.title-underline {
+  position: relative;
+  height: 8px;
+  margin-top: 6px;
+}
+.title-underline .bar {
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  width: 65%; height: 2px; border-radius: 9999px;
+  background: linear-gradient(90deg, transparent, #4fc3ff, transparent);
+}
+.title-underline .bar.glow { display: none; }
+
+
+
+
+/* ===== 内容区容器与地图阴影 ===== */
+.content-area{ position: relative; min-height: 60vh; z-index: 1; }
+.content-map-bg{
+  position: absolute; inset: 0; z-index: 0; opacity: .96;
+  filter: drop-shadow(0 0 36px rgba(0,170,255,.18));
   pointer-events: none;
 }
 
-/* ===== 霓虹 Panel：亮边框 + 流光装饰 ===== */
+/* ===== 霓虹 Panel：深蓝玻璃 + 青色描边 ===== */
 .panel{
   @apply relative rounded-xl p-3;
-  background: linear-gradient(180deg, rgba(10,20,32,.45), rgba(10,20,32,.32)); /* 比原先更通透 */
-  box-shadow: inset 0 0 50px rgba(34,211,238,.10), 0 12px 32px rgba(0,0,0,.45);
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  box-shadow: inset 0 0 60px rgba(0,170,255,.10), 0 16px 40px rgba(0,0,0,.45);
 }
 .panel::before{
   content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-  border:1px solid rgba(34,211,238,.22);
-  box-shadow: 0 0 18px rgba(34,211,238,.22) inset;
+  border:1px solid var(--stroke);
+  box-shadow: 0 0 18px rgba(0,170,255,.22) inset, 0 0 14px rgba(0,170,255,.18);
 }
-/* 你已有的面板样式，补充 pointer-events:none */
 .panel::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  border-radius:inherit;
-  padding:1px;
-  background: conic-gradient(from var(--a,0deg), transparent 10%, rgba(56,189,248,.9) 18%, transparent 26%);
+  content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
+  background: conic-gradient(from var(--a,0deg), transparent 10%, rgba(0,170,255,.85) 18%, transparent 26%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: rotateBorder 6s linear infinite;
-  opacity:.55;
-
-  /* 🔧 关键：不要拦截鼠标/键盘事件 */
-  pointer-events: none;
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: rotateBorder 7s linear infinite; opacity:.5; pointer-events: none;
 }
-
 @keyframes rotateBorder{ to{ --a: 360deg; } }
-
 .panel-head{
-  @apply mb-2 flex items-center justify-between text-cyan-100;
-  letter-spacing:.06em; font-weight:700;
+  @apply mb-2 flex items-center justify-between;
+  color: var(--white);
+  letter-spacing:.06em; font-weight:800; font-size: 16px; /* ⬆️ */
 }
 .hud-dot{ width:8px; height:8px; border-radius:9999px;
-  background: radial-gradient(#67e8f9,#22d3ee); filter: drop-shadow(0 0 8px #22d3ee); }
-.lvl{ @apply text-[11px] rounded px-1.5 ring-1; }
+  background: radial-gradient(var(--cyan), var(--blue)); filter: drop-shadow(0 0 8px var(--blue)); }
 
-/* ===== KPI 卡片：角标 + 流光边框 + 扫描线 ===== */
+/* ===== KPI 卡片 ===== */
 .kpi-card {
-  @apply relative overflow-hidden rounded-xl px-3 py-4;
-  background: linear-gradient(180deg, rgba(2,6,23,.38), rgba(2,6,23,.6));
-  box-shadow: inset 0 0 40px rgba(34,211,238,.18), 0 8px 24px rgba(0,0,0,.4);
-  color: #eaffff; /* 让字体更亮 */
-  text-align: center;
+  @apply relative overflow-hidden rounded-xl px-3 py-5;
+  background: linear-gradient(180deg, rgba(5,13,28,.55), rgba(7,17,33,.72));
+  box-shadow: inset 0 0 44px rgba(0,170,255,.18), 0 10px 28px rgba(0,0,0,.42);
+  color: var(--white); text-align: center;
 }
-
-.kpi-num {
-  @apply text-[28px] md:text-[34px] font-black tracking-wide;
-  text-shadow: 0 0 12px rgba(34,211,238,.8), 0 0 28px rgba(34,211,238,.5);
+.kpi-num{
+  /* ⬆️ 整体加大 */
+  @apply text-[30px] md:text-[38px] font-black tracking-wide;
+  text-shadow: 0 0 12px rgba(0,170,255,.8), 0 0 30px rgba(0,170,255,.45);
+  animation: numPulse 3s ease-in-out infinite;
 }
+@keyframes numPulse{ 0%,100%{ filter:brightness(1)} 50%{ filter:brightness(1.18)} }
 .kpi-card .flow-border{
   position:absolute; inset:0; border-radius:inherit; pointer-events:none; padding:1px;
-  background: linear-gradient(90deg, rgba(34,211,238,.0), rgba(34,211,238,.8), rgba(34,211,238,0));
-  background-size: 200% 1px; background-repeat:no-repeat; background-position: -200% 0, 0 100%;
+  background: linear-gradient(90deg, rgba(0,170,255,0), rgba(0,170,255,.85), rgba(0,170,255,0));
+  background-size: 200% 1px; background-repeat:no-repeat;
+  background-position: -200% 0, 0 100%;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor; mask-composite: exclude;
   animation: flowRing 2.8s linear infinite;
@@ -415,21 +437,24 @@ onBeforeUnmount(()=>window.removeEventListener('resize', onResize))
 @keyframes flowRing{ to{ background-position: 0 0, 200% 100%; } }
 .kpi-card .scan-x{
   position:absolute; left:-40%; right:-40%; top:0; height:2px; opacity:.9;
-  background: linear-gradient(90deg, transparent, #67e8f9, transparent);
-  filter: drop-shadow(0 0 6px #22d3ee);
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  filter: drop-shadow(0 0 6px var(--cyan));
   animation: scanX 2.2s linear infinite;
 }
 @keyframes scanX{ 0%{transform:translateX(-40%)} 100%{transform:translateX(40%)} }
-.corner{ position:absolute; width:18px; height:18px; border:2px solid rgba(125,211,252,.7); border-radius:4px;
-  filter: drop-shadow(0 0 6px rgba(34,211,238,.45)); }
+.corner{ position:absolute; width:18px; height:18px; border:2px solid rgba(120,200,255,.65); border-radius:4px;
+  filter: drop-shadow(0 0 6px rgba(0,170,255,.45)); }
 .tl{ top:6px; left:8px; border-right:none; border-bottom:none }
 .tr{ top:6px; right:8px; border-left:none; border-bottom:none }
 .bl{ bottom:6px; left:8px; border-right:none; border-top:none }
 .br{ bottom:6px; right:8px; border-left:none; border-top:none }
-.kpi-num{
-  @apply text-[26px] md:text-[32px] font-black tracking-wide;
-  text-shadow: 0 0 10px rgba(34,211,238,.7), 0 0 26px rgba(34,211,238,.4);
-  animation: numPulse 3s ease-in-out infinite;
-}
-@keyframes numPulse{ 0%,100%{ filter:brightness(1)} 50%{ filter:brightness(1.22)} }
+
+/* 告警等级徽标：跟随新配色 */
+.lvl{ @apply text-[11px] rounded px-1.5 ring-1; }
+.lvl.text-rose-300{ color:var(--pink);    box-shadow:0 0 0 1px rgba(255,107,129,.4) inset; }
+.lvl.text-amber-300{ color:var(--orange); box-shadow:0 0 0 1px rgba(255,159,67,.4) inset; }
+.lvl.text-teal-300{  color:var(--cyan);   box-shadow:0 0 0 1px rgba(79,209,255,.4) inset; }
+
+/* 通用 */
+.title-wrap{ position:relative; text-align:center; z-index:2; }
 </style>

@@ -24,6 +24,23 @@ const emit = defineEmits<{
   (e: 'enter', item: any): void
 }>()
 
+
+
+// === 复用的临时对象，避免频繁 new ===
+const _tmpV2 = new THREE.Vector2();
+const _tmpV3a = new THREE.Vector3();
+const _tmpV3b = new THREE.Vector3();
+const _mat4   = new THREE.Matrix4();
+const _quatXDown = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+const _scale1 = new THREE.Vector3(1,1,1);
+
+// === 常量：地面平面（y=0）—— 点击拾取复用
+const GROUND_PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+// === 画布尺寸缓存（在 forceResize() 时更新；更新信息框/拾取用） ===
+let _canvasRect: DOMRect | null = null;
+
+
 /* ---------- DOM & 状态 ---------- */
 const wrapRef   = ref<HTMLDivElement | null>(null)
 const selected  = ref<any | null>(null)
@@ -34,8 +51,35 @@ let scene: THREE.Scene
 let camera: THREE.PerspectiveCamera
 let controls: OrbitControls
 let ro: ResizeObserver
-let raf = 0
 
+// === 渲染调度：按需渲染一帧 ===
+let raf = 0;
+function renderOnce() {
+  raf = 0;
+  controls?.update();
+  renderer?.render(scene, camera);
+  updateModelPop();
+}
+function requestRender() {
+  if (!raf) raf = requestAnimationFrame(renderOnce);
+}
+
+
+// === 顶部锚点缓存（最小侵入优化） ===
+const anchorCache = new WeakMap<THREE.Object3D, THREE.Vector3>();
+
+function buildAnchor(obj: THREE.Object3D) {
+  // 只在实例创建后算一次包围盒和顶部点
+  const box = new THREE.Box3().setFromObject(obj);
+  const c = box.getCenter(new THREE.Vector3());
+  const top = new THREE.Vector3(c.x, box.max.y + 10, c.z);
+  anchorCache.set(obj, top);
+  return top;
+}
+
+function getAnchor(obj: THREE.Object3D) {
+  return anchorCache.get(obj) ?? buildAnchor(obj);
+}
 
 // === 点击坐标显示 ===
 type ClickCoord = { px:number; py:number; wx:number; wy:number; wz:number }
@@ -88,13 +132,6 @@ const statusColor = (s:string|undefined) => {
 
 
 
-/** 取对象“顶部锚点”世界坐标：包围盒顶部再上抬 10 */
-function getAnchorWorldPosition(obj: THREE.Object3D) {
-  const box = new THREE.Box3().setFromObject(obj)
-  const center = box.getCenter(new THREE.Vector3())
-  return new THREE.Vector3(center.x, box.max.y + 10, center.z)
-}
-
 /** 更新信息框屏幕位置 */
 function updateModelPop() {
   if (!selected.value || !renderer || !camera) {
@@ -104,11 +141,13 @@ function updateModelPop() {
   const obj = idToObj.get(selected.value.id)
   if (!obj) { modelPopStyle.value = { display:'none' }; return }
 
-  const wp = getAnchorWorldPosition(obj)
-  const v = wp.clone().project(camera)
+  const wp = getAnchor(obj) // 已缓存的顶点
+  const v = _tmpV3a.copy(wp).project(camera) // ✅ 复用 Vector3
+
   if (v.z < -1 || v.z > 1) { modelPopStyle.value = { display:'none' }; return }
 
-  const rect = renderer.domElement.getBoundingClientRect()
+  // ✅ 使用缓存的 rect（若为空再读一次）
+  const rect = _canvasRect || renderer.domElement.getBoundingClientRect()
   const x = (v.x * 0.5 + 0.5) * rect.width
   const y = (-v.y * 0.5 + 0.5) * rect.height
 
@@ -119,6 +158,7 @@ function updateModelPop() {
 
   modelPopStyle.value = { display:'block', left:`${left}px`, top:`${y}px`, transform:`translate(${translateX}, -110%)` }
 }
+
 
 
 /** 弹窗字段白名单（只显示这些，按顺序渲染；可根据你后端字段自行调整） */
@@ -318,10 +358,20 @@ function forceResize() {
   renderer.setSize(w, h, false)
   camera.aspect = w / h
   camera.updateProjectionMatrix()
+
+  // ✅ 缓存画布 rect
+  _canvasRect = renderer.domElement.getBoundingClientRect()
+
+  requestRender();
 }
 
+
 async function buildScene() {
+  // 预建一次圆环几何与材质
+  const haloGeo = new THREE.CircleGeometry(18, 48);
+
   scene = new THREE.Scene()
+  scene.background = makeSkyTexture(); // ✅ 用背景纹理替代天空网格
 
   camera = new THREE.PerspectiveCamera(55, 1, 0.1, 20000)
   controls = new OrbitControls(camera, renderer.domElement)
@@ -330,13 +380,6 @@ async function buildScene() {
   controls.maxDistance = 8000
   controls.minPolarAngle = THREE.MathUtils.degToRad(10)
   controls.maxPolarAngle = THREE.MathUtils.degToRad(88)
-
-  // 天空
-  const sky = new THREE.Mesh(
-      new THREE.SphereGeometry(8000, 48, 24),
-      new THREE.MeshBasicMaterial({ map: makeSkyTexture(), side: THREE.BackSide })
-  )
-  scene.add(sky)
 
   // 光照
   const hemi = new THREE.HemisphereLight(0xEAF6FF, 0xBFDcff, 1.0)
@@ -372,8 +415,28 @@ async function buildScene() {
   clickable.clear()
   scene.add(clickable)
 
-  // 加载数据 + 实例化（**完全按后端字段**）
+  // 数据
   itemsData.value = await getItems()
+
+  // ✅ 1 个 InstancedMesh 承载所有 halo（减少 N 次 draw call）
+  const haloMat = new THREE.MeshBasicMaterial({
+    transparent: true,
+    opacity: 0.28,
+    depthWrite: false, // 避免写深度造成后续遮挡
+    vertexColors: true // 每实例单独颜色
+  });
+  const halos = new THREE.InstancedMesh(haloGeo, haloMat, itemsData.value.length);
+  halos.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  halos.renderOrder = -1;
+  if ((halos as any).instanceColor === null) {
+    // three r150+ 默认才有 instanceColor；如未开启可用 setColorAt 仍生效
+  }
+  scene.add(halos);
+
+  const _pos = _tmpV3b; // 复用
+  const _color = new THREE.Color();
+
+  let idx = 0;
   for (const it of itemsData.value) {
     const inst = await getModelByName(it.model_name)
 
@@ -387,30 +450,36 @@ async function buildScene() {
     clickable.add(inst)
     idToObj.set(it.id, inst)
 
-    const halo = new THREE.Mesh(
-        new THREE.CircleGeometry(18, 48),
-        new THREE.MeshBasicMaterial({ color: statusColor(it.system_status), transparent: true, opacity: 0.28 })
-    )
-    halo.rotation.x = -Math.PI / 2
-    halo.position.copy(inst.position).y = 0.02
-    scene.add(halo)
+    // ✅ 锚点缓存（信息框定位用）
+    buildAnchor(inst)
+
+    // ✅ 写入 halo 的实例矩阵 + 颜色
+    _pos.copy(inst.position).setY(0.02)
+    _mat4.compose(_pos, _quatXDown, _scale1)
+    halos.setMatrixAt(idx, _mat4)
+    _color.set(statusColor(it.system_status))
+    halos.setColorAt(idx, _color)
+    idx++
   }
+  halos.instanceMatrix.needsUpdate = true
+  if (halos.instanceColor) halos.instanceColor.needsUpdate = true
 
   await nextTick()
   forceResize()
   const focus = pickFocusObject()
   if (focus) {
-    fitCameraToObject(focus, 1.8)   // 默认对准一个模型，距离更贴近
+    fitCameraToObject(focus, 1.8)
   } else {
-    placeCameraToSeeGround(1.1)     // 兜底：无模型时看地面
+    placeCameraToSeeGround(1.1)
   }
-
+  requestRender();
 }
+
 
 async function init() {
   if (!wrapRef.value) return
   renderer = new THREE.WebGLRenderer({ antialias:true })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75)) // 或 1.5
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = props.exposure ?? 1.35
@@ -433,25 +502,33 @@ async function init() {
   ro = new ResizeObserver(() => forceResize())
   ro.observe(wrapRef.value!)
 
-  const loop = () => {
-    controls.update()
-    renderer.render(scene, camera)
-    updateModelPop()
-    raf = requestAnimationFrame(loop)
-  }
-  loop()
+  // 让 OrbitControls 在交互/阻尼时驱动渲染
+  controls.addEventListener('change', requestRender);
+
+// 首帧
+  requestRender();
+
 }
 
 function dispose() {
-  renderer?.domElement?.removeEventListener('pointerdown', onPointerDown)
-  ro?.disconnect()
-  cancelAnimationFrame(raf)
-  controls?.dispose()
-  renderer?.dispose?.()
-  idToObj.clear()
-  modelPopStyle.value = {display:'none'}
-  if (coordTimer) { clearTimeout(coordTimer); coordTimer = null }
+  try {
+    renderer?.domElement?.removeEventListener('pointerdown', onPointerDown)
+    controls?.removeEventListener?.('change', requestRender)
+    ro?.disconnect()
+    cancelAnimationFrame(raf)
+
+    if (scene) disposeScene(scene)   // ✅ 释放几何/材质
+    scene?.clear()
+
+    controls?.dispose()
+    renderer?.dispose?.()
+  } finally {
+    idToObj.clear()
+    modelPopStyle.value = {display:'none'}
+    if (coordTimer) { clearTimeout(coordTimer); coordTimer = null }
+  }
 }
+
 
 /* ---------- 交互 ---------- */
 function onPointerDown(e: PointerEvent) { downPos = { x: e.clientX, y: e.clientY } }
@@ -459,7 +536,7 @@ let downPos: {x:number;y:number} | null = null
 const DRAG_EPS = 5
 
 function handlePick(e: PointerEvent | MouseEvent) {
-  const rect = renderer.domElement.getBoundingClientRect()
+  const rect = _canvasRect || renderer.domElement.getBoundingClientRect()
   const x = ((e.clientX - rect.left) / rect.width) * 2 - 1
   const y = -((e.clientY - rect.top)  / rect.height) * 2 + 1
   mouseNDC.set(x, y)
@@ -467,16 +544,15 @@ function handlePick(e: PointerEvent | MouseEvent) {
   camera.updateMatrixWorld()
   raycaster.setFromCamera(mouseNDC, camera)
 
-  // A) 计算与 y=0 平面的交点 → 顶部显示点击坐标
-  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0) // y=0
-  const hitPoint = new THREE.Vector3()
-  if (raycaster.ray.intersectPlane(plane, hitPoint)) {
+  // A) 与地面平面交点（使用全局常量 GROUND_PLANE + 复用向量）
+  const hitPoint = _tmpV3a
+  if (raycaster.ray.intersectPlane(GROUND_PLANE, hitPoint)) {
     const { x: wx, y: wy, z: wz } = hitPoint
     const { x: px, y: py } = worldXZToPx(wx, wz)
     showClickCoord({ px, py, wx, wy, wz })
   }
 
-  // B) 原有 picking 逻辑（选中模型、弹出卡片）
+  // B) 原有 picking
   const hits = raycaster.intersectObjects(clickable.children, true)
   if (hits.length) {
     let obj: THREE.Object3D | null = hits[0].object
@@ -491,7 +567,10 @@ function handlePick(e: PointerEvent | MouseEvent) {
     selected.value = null
     modelPopStyle.value = { display: 'none' }
   }
+
+  requestRender();
 }
+
 
 
 /* ---------- 视角保存（localStorage） ---------- */
@@ -569,11 +648,26 @@ onBeforeUnmount(dispose)
 watch(() => props.items, async () => {
   if (!renderer) return
   cancelAnimationFrame(raf)
+
+  if (scene) disposeScene(scene) // ✅ 重建前释放
   scene?.clear()
+
   await buildScene()
-  const loop = () => { controls.update(); renderer.render(scene, camera); raf = requestAnimationFrame(loop) }
-  loop()
+  requestRender();
 })
+
+function disposeScene(root: THREE.Object3D) {
+  root.traverse((obj: any) => {
+    if (obj.isMesh || obj.isPoints || obj.isLine) {
+      // 几何
+      obj.geometry?.dispose?.()
+      // 材质（可能是数组）
+      const m = obj.material
+      if (Array.isArray(m)) m.forEach(mm => mm?.dispose?.())
+      else m?.dispose?.()
+    }
+  })
+}
 
 const rootStyle = computed(() => ({ height: props.height || '92vh' }))
 
