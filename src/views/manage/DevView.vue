@@ -64,6 +64,10 @@ const records = computed(() => {
 const tips = computed(() => data.value?.riskTips || [])
 const qa = computed(() => data.value?.qa || { passed: true, block: false, msg: '' })
 const actionsDisabled = computed(() => qa.value?.block === true)
+/** 固定字段：dev.dev_image 为 Array<{url,name,id}> 或空数组 */
+// 固定字段：dev.dev_image 是 [{url,name,id}] 或 []
+const devImages = computed(() => dev.value?.dev_image ?? []);
+const hasMultiImages = computed(() => devImages.value.length > 1);
 
 /** 图表 */
 const elProb = ref(null)
@@ -304,6 +308,44 @@ onMounted(loadAll)
         <div class="grid grid-cols-12 gap-4 min-h-0">
           <!-- 左侧：最新诊断快照 + 风险提示 -->
           <div class="col-span-4 min-w-0 flex flex-col gap-3">
+
+            <!-- 设备图片（放在左列顶部） -->
+            <el-card v-if="devImages.length" shadow="never" class="dark:bg-neutral-800">
+              <div class="flex items-center justify-between mb-2">
+                <div class="font-medium">设备图片</div>
+                <el-tag v-if="devImages.length>1" size="small" effect="plain">
+                  {{ devImages.length }} 张
+                </el-tag>
+              </div>
+
+              <!-- 多图：轮播 -->
+              <el-carousel
+                  v-if="hasMultiImages"
+                  height="220px"
+                  indicator-position="outside"
+                  trigger="click"
+                  :autoplay="false"
+              >
+                <el-carousel-item v-for="img in devImages" :key="img.id">
+                  <el-image
+                      :src="img.url"
+                      fit="cover"
+                      class="w-full h-[220px] rounded-md"
+                      :preview-src-list="devImages.map(i=>i.url)"
+                  />
+                </el-carousel-item>
+              </el-carousel>
+
+              <!-- 单图：直接展示 -->
+              <el-image
+                  v-else
+                  :src="devImages[0].url"
+                  fit="cover"
+                  class="w-full h-[220px] rounded-md"
+                  :preview-src-list="[devImages[0].url]"
+              />
+            </el-card>
+
             <el-card shadow="never" class="dark:bg-neutral-800">
               <div class="flex items-center justify-between mb-2">
                 <div class="font-medium">最新诊断快照</div>
@@ -503,5 +545,7 @@ onMounted(loadAll)
 /* 若面板内部使用了 <el-tabs>，让内容区可拉伸 */
 :deep(.fd-dlg .el-tabs){ height: 100%; display: flex; flex-direction: column; }
 :deep(.fd-dlg .el-tabs__content){ flex: 1 1 auto; min-height: 0; overflow: auto; }
+/* 你的 <style scoped> 末尾增加，可要可不要 */
+.dev-img-wrap { border-radius: 8px; overflow: hidden; }
 
 </style>
