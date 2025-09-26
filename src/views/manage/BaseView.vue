@@ -193,7 +193,7 @@ onMounted(() => {
 
 <template>
   <div
-      class="p-4 lg:p-6 bg-white dark:bg-neutral-900 min-h-screen text-neutral-900 dark:text-neutral-100 transition-colors">
+      class="p-1 lg:p-2 bg-white dark:bg-neutral-900 min-h-screen text-neutral-900 dark:text-neutral-100 transition-colors">
     <!-- 顶部条 -->
     <div class="px-4 lg:px-6 pt-4 pb-3 border-b border-neutral-200 dark:border-neutral-700">
       <!-- 第一行：左(基地名+状态牌) | 右(3个主KPI) -->
@@ -213,7 +213,8 @@ onMounted(() => {
               </div>
             </div>
 
-            <div class="grid grid-cols-6 gap-3">
+            <!-- 添加ml-auto使KPI部分右对齐 -->
+            <div class="grid grid-cols-5 gap-3 ml-auto">
               <el-card shadow="never" class="kpi-card dark:bg-neutral-800">
                 <div class="kpi-label">装置 / 设备</div>
                 <div class="kpi-value">{{ kpis.unitsCount || 0 }} / {{ kpis.devicesCount || 0 }}</div>
@@ -236,11 +237,6 @@ onMounted(() => {
               </el-card>
             </div>
           </div>
-        </div>
-
-        <!-- 右：3 个主 KPI（从你原来的 5 个里挑 3 个上墙） -->
-        <div class="col-span-6">
-
         </div>
       </div>
 
