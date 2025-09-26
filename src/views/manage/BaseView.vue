@@ -195,63 +195,72 @@ onMounted(() => {
   <div
       class="p-4 lg:p-6 bg-white dark:bg-neutral-900 min-h-screen text-neutral-900 dark:text-neutral-100 transition-colors">
     <!-- 顶部条 -->
-    <div class="flex items-center justify-between gap-4 mb-4">
-      <!-- 右：基地标题 + 状态牌 + 选择器 + 地址 -->
-      <div class="flex items-center gap-6">
-        <!-- 基地名称 -->
-        <h1 class="device-title truncate">{{ selectedBase?.name || '请选择基地' }}</h1>
+    <div class="px-4 lg:px-6 pt-4 pb-3 border-b border-neutral-200 dark:border-neutral-700">
+      <!-- 第一行：左(基地名+状态牌) | 右(3个主KPI) -->
+      <div class="grid grid-cols-12 gap-4 items-start">
+        <!-- 左：基地名 + 状态牌 + 评价时间 -->
+        <div class="col-span-12 min-w-0">
+          <div class="flex items-center gap-12">
+            <h1 class="device-title truncate">{{ selectedBase?.name || '请选择基地' }}</h1>
 
-        <!-- 状态牌 -->
-        <div class="status-board" :class="'sb-' + baseStatusInfo.type">
-          <span class="sb-text">{{ baseStatusInfo.label }}</span>
+            <!-- 状态牌 + 评价时间（与设备页一致） -->
+            <div class="flex flex-col items-center">
+              <div class="status-board" :class="'sb-' + baseStatusInfo.type">
+                <span class="sb-text">{{ baseStatusInfo.label }}</span>
+              </div>
+              <div class="mt-1 text-[14px] opacity-80 text-center" v-if="baseAssessTime">
+                评价时间：<span class="font-medium">{{ baseAssessTime.replace('T',' ').slice(0,19) }}</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-6 gap-3">
+              <el-card shadow="never" class="kpi-card dark:bg-neutral-800">
+                <div class="kpi-label">装置 / 设备</div>
+                <div class="kpi-value">{{ kpis.unitsCount || 0 }} / {{ kpis.devicesCount || 0 }}</div>
+              </el-card>
+              <el-card shadow="never" class="kpi-card dark:bg-neutral-800">
+                <div class="kpi-label">诊断次数（{{ days }}天）</div>
+                <div class="kpi-value">{{ kpis.diagnosisCount || 0 }}</div>
+              </el-card>
+              <el-card shadow="never" class="kpi-card dark:bg-neutral-800">
+                <div class="kpi-label">高概率诊断数</div>
+                <div class="kpi-value text-red-500 dark:text-red-400">{{ kpis.highProbCount || 0 }}</div>
+              </el-card>
+              <el-card shadow="never" class="kpi-card dark:bg-neutral-800">
+                <div class="kpi-label">高概率设备数</div>
+                <div class="kpi-value">{{ kpis.highProbDevices || 0 }}</div>
+              </el-card>
+              <el-card shadow="never" class="kpi-card dark:bg-neutral-800">
+                <div class="kpi-label">数据新鲜度（中位）</div>
+                <div class="kpi-value">{{ kpis.freshnessHours != null ? (kpis.freshnessHours + 'h') : '—' }}</div>
+              </el-card>
+            </div>
+          </div>
         </div>
 
-        <!-- 基地选择器（挪到标题和状态牌之后） -->
+        <!-- 右：3 个主 KPI（从你原来的 5 个里挑 3 个上墙） -->
+        <div class="col-span-6">
+
+        </div>
+      </div>
+
+      <!-- 第二行：基地选择器（弱化，放单独一行） -->
+      <div class="mt-3 flex items-center gap-1">
         <el-select v-model="selectedBaseId" placeholder="请选择基地" style="width:150px;" @change="load">
-          <el-option
-              v-for="base in baseList"
-              :key="base.id"
-              :label="base.name"
-              :value="String(base.id)"
-          />
+          <el-option v-for="base in baseList" :key="base.id" :label="base.name" :value="String(base.id)" />
         </el-select>
+      </div>
 
-        <!-- 地址 -->
-        <!-- 地址 -->
+      <!-- 第三行：信息 Tag（地址/经纬度/启用时间） -->
+      <div class="mt-2 flex flex-wrap items-center gap-2">
         <el-tag size="default" effect="plain">地址：{{ baseInfo.address || '—' }}</el-tag>
-
-        <!-- 经度 / 纬度 / 启用时间 -->
         <el-tag v-if="fmtLng" size="default" effect="plain">经度：{{ fmtLng }}</el-tag>
         <el-tag v-if="fmtLat" size="default" effect="plain">纬度：{{ fmtLat }}</el-tag>
         <el-tag v-if="fmtStartDate" size="default" effect="plain">启用：{{ fmtStartDate }}</el-tag>
-
       </div>
+
     </div>
 
-
-    <!-- KPI 带 -->
-    <div class="grid grid-cols-5 gap-3 mb-4">
-      <el-card shadow="never" class="dark:bg-neutral-800">
-        <div class="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">装置 / 设备</div>
-        <div class="text-2xl font-semibold">{{ kpis.unitsCount || 0 }} / {{ kpis.devicesCount || 0 }}</div>
-      </el-card>
-      <el-card shadow="never" class="dark:bg-neutral-800">
-        <div class="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">诊断次数（{{ days }}天）</div>
-        <div class="text-2xl font-semibold">{{ kpis.diagnosisCount || 0 }}</div>
-      </el-card>
-      <el-card shadow="never" class="dark:bg-neutral-800">
-        <div class="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">高概率诊断数</div>
-        <div class="text-2xl font-semibold text-red-500 dark:text-red-400">{{ kpis.highProbCount || 0 }}</div>
-      </el-card>
-      <el-card shadow="never" class="dark:bg-neutral-800">
-        <div class="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">高概率设备数</div>
-        <div class="text-2xl font-semibold">{{ kpis.highProbDevices || 0 }}</div>
-      </el-card>
-      <el-card shadow="never" class="dark:bg-neutral-800">
-        <div class="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">数据新鲜度（中位）</div>
-        <div class="text-2xl font-semibold">{{ kpis.freshnessHours != null ? (kpis.freshnessHours + 'h') : '—' }}</div>
-      </el-card>
-    </div>
 
     <el-skeleton :loading="loading" animated>
       <template #template>
@@ -262,12 +271,20 @@ onMounted(() => {
       <div class="grid grid-cols-12 gap-4">
         <!-- 左：装置风险榜 -->
         <el-card class="col-span-3 dark:bg-neutral-800" shadow="never" body-style="padding:0">
-          <div class="flex items-center justify-between p-3 border-b border-neutral-200 dark:border-neutral-700">
-            <div class="font-medium">装置风险榜</div>
-            <el-segmented v-model="rankTab"
-                          :options="[{label:'高概率设备',value:'devices'},{label:'高概率诊断',value:'diagnoses'},{label:'RUL短期',value:'rul'},{label:'覆盖滞后',value:'lag'}]"
-                          size="small"/>
+          <div class="p-3 border-b border-neutral-200 dark:border-neutral-700">
+            <div class="header-bar font-medium mb-2">装置风险榜</div>
+            <el-segmented
+                v-model="rankTab"
+                :options="[
+                    {label:'高概率设备',value:'devices'},
+                    {label:'高概率诊断',value:'diagnoses'},
+                    {label:'RUL短期',value:'rul'},
+                    {label:'覆盖滞后',value:'lag'}
+                  ]"
+                              size="small"
+                          />
           </div>
+
           <div class="max-h-[520px] overflow-auto">
             <el-table :data="rankRows" size="small" class="!bg-transparent" :row-class-name="()=>'cursor-pointer'"
                       @row-click="(row)=>goUnit(row)">
@@ -311,17 +328,18 @@ onMounted(() => {
 
         <!-- 中：装置卡片区（2×3） -->
         <div class="col-span-6">
-          <div class="flex items-center justify-between mb-2">
-            <div class="font-medium">装置概览</div>
-            <div class="flex items-center gap-2">
+          <div class="flex items-center justify-between mb-2 header-bar">
+            <div class="font-medium ">装置概览</div>
+            <div class="flex items-center gap-3"> <!-- gap 改大一点 -->
               <span class="text-xs opacity-70">排序</span>
-              <el-select v-model="sortKey" size="small" class="w-36">
+              <el-select v-model="sortKey" size="small" style="width: 150px" class="w-40">
                 <el-option label="高概率设备数" value="highDevices"/>
                 <el-option label="高概率诊断数" value="highCount"/>
                 <el-option label="风险评分" value="risk"/>
               </el-select>
             </div>
           </div>
+
 
           <div class="grid grid-cols-2 gap-3">
             <el-card v-for="card in unitCards.slice(0,6)" :key="card.unit.id" shadow="hover"
@@ -390,7 +408,7 @@ onMounted(() => {
         <!-- 右：设备统计（两张小图） -->
         <div class="col-span-3 flex flex-col gap-3">
           <el-card shadow="never" class="dark:bg-neutral-800">
-            <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center justify-between mb-2 header-bar">
               <div class="font-medium">设备健康度分布</div>
               <el-tag size="small" effect="plain">点击分档筛装置</el-tag>
             </div>
@@ -406,7 +424,7 @@ onMounted(() => {
           </el-card>
 
           <el-card shadow="never" class="dark:bg-neutral-800">
-            <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center justify-between mb-2 header-bar">
               <div class="font-medium">RUL 分布（天）</div>
               <el-tag size="small" effect="plain">点击分档筛装置</el-tag>
             </div>
@@ -447,6 +465,19 @@ onMounted(() => {
 :deep(.el-card__body) {
   padding: 12px;
 }
+
+/* KPI 卡片：有“线条感”的边框与微渐变 */
+.kpi-card{
+  border: 1px solid rgba(0,0,0,.10);
+  background: linear-gradient(180deg, rgba(0,0,0,.02), rgba(0,0,0,.05));
+}
+.dark .kpi-card{
+  border-color: rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.05));
+}
+.kpi-label{ font-size: 18px; font-weight: 500; opacity: .9; }
+.kpi-value{ margin-top: 2px; font-size: 22px; font-weight: 400; line-height: 1; }
+.kpi-unit{ margin-left: 4px; font-size: 12px; font-weight: 400; opacity: .85; }
 .status-board {
   min-width: 160px;
   height: 60px;
@@ -462,6 +493,20 @@ onMounted(() => {
   font-size: 28px;
   font-weight: 600;
   letter-spacing: 2px;
+}
+/* 标题栏背景：亮色模式浅灰、暗色模式深灰 */
+.header-bar {
+  background: linear-gradient(180deg, #f9fafb, #fdffff); /* 亮色：浅灰渐变 */
+  padding: 5px 10px;
+  margin: 5px 10px;
+
+}
+.dark .header-bar {
+  background: linear-gradient(180deg, #1f1f1f, #2a2a2a); /* 暗色：深灰渐变 */
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  padding: 5px 10px;
+  margin: 0;
 }
 
 /* 颜色方案（跟随 statusInfo.type） */
