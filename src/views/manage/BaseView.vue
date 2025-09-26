@@ -62,6 +62,33 @@ const baseStatusInfo = computed(() => {
   return BASE_STATUS_MAP[k1] || BASE_STATUS_MAP[k2] || BASE_STATUS_MAP[String(Number(k1))] || { label: '未知', type: 'info' };
 });
 
+// 小工具：数值转定点字符串
+// 小工具：数值转定点字符串（JS版，不带类型注解）
+const toFixedOrEmpty = (v, n = 6) => {
+  const num = Number(v)
+  return Number.isFinite(num) ? num.toFixed(n) : ''
+}
+
+// 兼容不同字段命名：longitude/lat/long/lat、start_date/startDate
+const rawLng = computed(() =>
+    baseInfo.value?.longitude ?? baseInfo.value?.lng ?? baseInfo.value?.long ?? ''
+)
+const rawLat = computed(() =>
+    baseInfo.value?.latitude ?? baseInfo.value?.lat ?? ''
+)
+const rawStartDate = computed(() =>
+    baseInfo.value?.start_date ?? baseInfo.value?.startDate ?? baseInfo.value?.startTime ?? ''
+)
+
+// 输出给模板用的格式化文本
+const fmtLng = computed(() => toFixedOrEmpty(rawLng.value))      // 例如 "104.061234"
+const fmtLat = computed(() => toFixedOrEmpty(rawLat.value))      // 例如 "30.658765"
+const fmtStartDate = computed(() => {
+  const s = String(rawStartDate.value || '')
+  // 兼容 "YYYY-MM-DD" 或 ISO 时间串，尽量取日期部分
+  if (!s) return ''
+  return s.includes('T') ? s.replace('T',' ').slice(0,19) : s.slice(0,10)
+})
 
 // 可选：评价时间兜底（有就显示）
 const baseAssessTime = computed(() => {
@@ -190,7 +217,14 @@ onMounted(() => {
         </el-select>
 
         <!-- 地址 -->
-        <el-tag size="small" effect="plain">地址：{{ baseInfo.address || '—' }}</el-tag>
+        <!-- 地址 -->
+        <el-tag size="default" effect="plain">地址：{{ baseInfo.address || '—' }}</el-tag>
+
+        <!-- 经度 / 纬度 / 启用时间 -->
+        <el-tag v-if="fmtLng" size="default" effect="plain">经度：{{ fmtLng }}</el-tag>
+        <el-tag v-if="fmtLat" size="default" effect="plain">纬度：{{ fmtLat }}</el-tag>
+        <el-tag v-if="fmtStartDate" size="default" effect="plain">启用：{{ fmtStartDate }}</el-tag>
+
       </div>
     </div>
 
