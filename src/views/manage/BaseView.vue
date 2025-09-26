@@ -161,16 +161,16 @@ onMounted(() => {
         </el-tag>
         <el-tag size="small" effect="plain">地址：{{ baseInfo.address || '—' }}</el-tag>
       </div>
-      <div class="flex items-center gap-3">
-        <el-segmented v-model="days" :options="[7,30]" size="small"/>
-        <el-tag size="small" effect="plain">{{ highProbText }}</el-tag>
-        <div class="text-xs opacity-70">
-          更新时间：{{ (baseInfo.time || '').replace('T', ' ').slice(0, 19) }}
-        </div>
-        <el-button size="small" @click="load">刷新</el-button>
-        <el-button size="small" type="primary" @click="dialogAssess = true">任务评估</el-button>
-        <ThemeToggle/>
-      </div>
+<!--      <div class="flex items-center gap-3">-->
+<!--        <el-segmented v-model="days" :options="[7,30]" size="small"/>-->
+<!--        <el-tag size="small" effect="plain">{{ highProbText }}</el-tag>-->
+<!--        <div class="text-xs opacity-70">-->
+<!--          更新时间：{{ (baseInfo.time || '').replace('T', ' ').slice(0, 19) }}-->
+<!--        </div>-->
+<!--        <el-button size="small" @click="load">刷新</el-button>-->
+<!--        <el-button size="small" type="primary" @click="dialogAssess = true">任务评估</el-button>-->
+<!--        <ThemeToggle/>-->
+<!--      </div>-->
     </div>
 
     <!-- KPI 带 -->

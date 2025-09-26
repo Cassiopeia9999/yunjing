@@ -222,28 +222,29 @@ onMounted(loadAll)
       <div class="grid grid-cols-12 gap-4 items-start">
         <!-- 左：大标题 + 状态牌 + 评价时间 -->
         <div class="col-span-7 min-w-0">
-          <div class="flex items-start gap-12">
+          <div class="flex items-center gap-12">
             <!-- 设备名（超大） -->
             <h1 class="device-title truncate">{{ dev.device_name || '—' }}</h1>
 
-            <!-- 状态牌（绿色/黄色/红色/灰色） -->
-            <div class="status-board" :class="'sb-'+statusInfo.type">
-              <span class="sb-text">{{ statusInfo.label }}</span>
+            <!-- 状态牌 + 评价时间（纵向居中） -->
+            <div class="flex flex-col items-center">
+              <div class="status-board" :class="'sb-'+statusInfo.type">
+                <span class="sb-text">{{ statusInfo.label }}</span>
+              </div>
+              <div class="mt-1 text-[14px] opacity-80 text-center">
+                评价时间 :
+                <span class="font-medium">
+                    {{
+                              assessTime
+                                  ? assessTime.replace('T',' ').slice(0,19)
+                                  : (snap?.diagnosis_time ? snap.diagnosis_time.replace('T',' ').slice(0,19) : '—')
+                            }}
+                  </span>
+              </div>
             </div>
           </div>
-
-          <!-- 评价时间（在状态牌正下方一行，小字） -->
-          <div class="mt-2 text-[14px] opacity-80">
-             评价时间 :
-             <span class="font-medium">
-              {{
-                    assessTime
-                        ? assessTime.replace('T',' ').slice(0,19)
-                        : (snap?.diagnosis_time ? snap.diagnosis_time.replace('T',' ').slice(0,19) : '—')
-                  }}
-              </span>
-          </div>
         </div>
+
 
         <!-- 右：三块 KPI -->
         <div class="col-span-5">
@@ -596,7 +597,7 @@ onMounted(loadAll)
 
 /* 大标题：和截图同级的“视觉分量” */
 .device-title{
-  font-size: clamp(32px, 6vw, 60px); /* 1号主泵 的量级 */
+  font-size: clamp(32px, 6vw, 52px); /* 1号主泵 的量级 */
   font-weight: 900;
   line-height: 1;
   letter-spacing: .5px;
@@ -606,7 +607,7 @@ onMounted(loadAll)
 /* 状态牌：尺寸固定/圆角矩形/绿色为主，其他状态自动换色 */
 .status-board{
   min-width: 160px;
-  height: 60px;
+  height: 48px;
   border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   padding: 0 12px;
@@ -614,8 +615,8 @@ onMounted(loadAll)
   box-shadow: inset 0 0 0 1px rgba(0,0,0,.15);
 }
 .sb-text{
-  font-size: 34px;
-  font-weight: 800;
+  font-size: 28px;
+  font-weight: 600;
   letter-spacing: 2px;
 }
 

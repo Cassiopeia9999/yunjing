@@ -41,6 +41,40 @@ const statusOptions = computed(()=> data.value?.enums?.status || [])
 const typeOptions   = computed(()=> data.value?.enums?.types || [])
 const modelOptions  = computed(()=> data.value?.enums?.models || [])
 const alarmLevelOptions = computed(()=> data.value?.enums?.alarmLevels || [])
+/** 装置状态映射（兼容字符串/数字/中英混用） */
+const UNIT_STATUS_MAP = {
+  // 数字编码（若后端用数字）
+  '1': { label: '正常', type: 'success' },
+  '2': { label: '预警', type: 'warning' },
+  '3': { label: '故障', type: 'danger'  },
+  '4': { label: '停用', type: 'info'    },
+
+  // 英文态（如果是字符串）
+  normal:   { label: '正常', type: 'success' },
+  warning:  { label: '预警', type: 'warning' },
+  fault:    { label: '故障', type: 'danger'  },
+  stopped:  { label: '停用', type: 'info'    },
+  stop:     { label: '停用', type: 'info'    },
+
+  // 中文直给
+  '正常':   { label: '正常', type: 'success' },
+  '预警':    { label: '预警', type: 'warning' },
+  '故障':    { label: '故障', type: 'danger'  },
+  '停用':    { label: '停用', type: 'info'    },
+};
+
+const unitStatusInfo = computed(() => {
+  const raw = unit.value?.system_status ?? unit.value?.status ?? '';
+  const key1 = String(raw).trim();
+  const key2 = key1.toLowerCase();
+  return UNIT_STATUS_MAP[key1] || UNIT_STATUS_MAP[key2] || UNIT_STATUS_MAP[String(Number(key1))] || { label: '未知', type: 'info' };
+});
+
+/** 评价时间兜底（兼容字段名差异） */
+const unitAssessTime = computed(() => {
+  const u = unit.value || {};
+  return u.evaluate_time || u.assess_time || u.assessTime || u.time || '';
+});
 
 /** 列表计算 */
 const devices = computed(() => {
@@ -222,99 +256,86 @@ function openDecision(){ dialogDecision.value = true }
   <div class="flex flex-col h-full overflow-hidden bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 transition-colors">
     <!-- 头部（固定区域，不滚动） -->
     <div class="p-4 lg:p-6 border-b border-neutral-200 dark:border-neutral-700">
-      <!-- 顶部条 -->
-      <!-- 顶部条 -->
-         <div class="flex items-center justify-between gap-4 mb-4">
-          <div class="flex items-center gap-3 flex-grow">
-            <!-- 基地选择器 -->
-            <el-select v-model="baseId" style="width: 150px;">
-              <el-option
-                  v-for="base in baseList"
-                  :key="base.id"
-                  :label="base.name"
-                  :value="String(base.id)"
-              />
-            </el-select>
+      <!-- 第一行：左(装置名+状态牌+评价时间) | 右(KPI三块) -->
+      <div class="grid grid-cols-12 gap-4 items-start">
+        <!-- 左：大标题 + 状态牌 + 评价时间 -->
+        <div class="col-span-7 min-w-0">
+          <div class="flex items-center gap-12">
+            <!-- 装置名（超大） -->
+            <h1 class="device-title truncate" :title="unit.system_name">
+              {{ unit.system_name || '—' }}
+            </h1>
 
-            <!-- 装置选择器 -->
-            <el-select v-model="unitId" style="width: 150px;" @change="load">
-              <el-option
-                  v-for="unit in unitList"
-                  :key="unit.id"
-                  :label="unit.name"
-                  :value="String(unit.id)"
-              />
-            </el-select>
+            <!-- 状态牌 + 评价时间（纵向居中） -->
+            <div class="flex flex-col items-center">
+              <!-- 状态牌 -->
+              <div class="status-board" :class="'sb-' + unitStatusInfo.type">
+                <span class="sb-text">{{ unitStatusInfo.label }}</span>
+              </div>
 
-            <!-- 装置信息展示 -->
-            <div class="flex flex-wrap gap-3 text-ellipsis whitespace-nowrap overflow-hidden flex-grow">
-              <div class="text-3xl font-semibold flex-shrink-0" :title="unit.system_name">{{ unit.system_name || '—' }}</div>
-              <el-tag size="small" :type="(unit.system_status==='Fault'?'danger':unit.system_status==='Warning'?'warning':'success')">
-                {{ unit.system_status || 'Unknown' }}
-              </el-tag>
-              <el-tag size="small" effect="plain" :title="unit.system_type">{{ unit.system_type || '—' }} · {{ unit.system_code || '—' }}</el-tag>
-              <el-tag size="small" effect="plain" :title="unit.system_model">{{ unit.system_model || '—' }}</el-tag>
-              <el-tag size="small" effect="plain" :title="unit.manufacturer">{{ unit.manufacturer || '—' }}</el-tag>
-              <el-tag size="small" effect="plain" :title="unit.install_date">{{ unit.install_date || '—' }}</el-tag>
+              <!-- 评价时间 -->
+              <div class="mt-1 text-[14px] opacity-80 text-center">
+                评价时间 :
+                <span class="font-medium">
+                    {{
+                                  unitAssessTime
+                                      ? unitAssessTime.replace('T',' ').slice(0,19)
+                                      : '—'
+                                }}
+                  </span>
+              </div>
             </div>
-          </div>
 
-          <div class="flex items-center gap-3">
-            <el-segmented v-model="days" :options="[7,30]" size="small" @change="load"/>
-            <el-tag size="small" effect="plain">{{ highProbText }}</el-tag>
-            <div class="text-xs opacity-70">更新时间：{{ (unit.time || '').replace('T',' ').slice(0,19) }}</div>
-            <el-button size="small" @click="load">刷新</el-button>
-            <ThemeToggle/>
           </div>
         </div>
 
+        <!-- 右：三块 KPI（与设备页风格一致） -->
+        <div class="col-span-5">
+          <div class="grid grid-cols-3 gap-3">
+            <el-card shadow="never" class="kpi-card dark:bg-neutral-800">
+              <div class="kpi-label">装置级 RUL</div>
+              <div class="kpi-value text-indigo-500 dark:text-indigo-300">
+                {{ unit.remaining_life ?? '—' }}<span class="kpi-unit">天</span>
+              </div>
+            </el-card>
 
+            <el-card shadow="never" class="kpi-card dark:bg-neutral-800">
+              <div class="kpi-label">置信度</div>
+              <div class="kpi-value text-emerald-500 dark:text-emerald-300">
+                {{ unit.confidence_level ?? '—' }}<span class="kpi-unit">%</span>
+              </div>
+            </el-card>
 
-
-        <!-- KPI 带 -->
-      <div class="grid grid-cols-5 gap-3">
-        <el-card shadow="never" class="dark:bg-neutral-800">
-          <div class="text-xs opacity-60 mb-1">装置级 RUL / Conf</div>
-          <div class="text-2xl font-semibold">{{ unit.remaining_life ?? '—' }}天 / {{ unit.confidence_level ?? '—' }}%</div>
-        </el-card>
-        <el-card shadow="never" class="dark:bg-neutral-800">
-          <div class="text-xs opacity-60 mb-1">设备均值（RUL / Conf）</div>
-          <div class="text-2xl font-semibold">{{ agg.avgRUL ?? '—' }} / {{ agg.avgConf ?? '—' }}%</div>
-        </el-card>
-        <el-card shadow="never" class="dark:bg-neutral-800">
-          <div class="text-xs opacity-60 mb-1">诊断次数（{{days}}天）</div>
-          <div class="text-2xl font-semibold">{{ kpis.diagCount ?? 0 }}</div>
-        </el-card>
-        <el-card shadow="never" class="dark:bg-neutral-800">
-          <div class="text-xs opacity-60 mb-1">高概率诊断数</div>
-          <div class="text-2xl font-semibold text-red-500 dark:text-red-400">{{ kpis.highCount ?? 0 }}</div>
-        </el-card>
-        <el-card shadow="never" class="dark:bg-neutral-800">
-          <div class="text-xs opacity-60 mb-1">未处理告警数</div>
-          <div class="text-2xl font-semibold">{{ kpis.alarmOpen ?? 0 }}</div>
-        </el-card>
+            <el-card shadow="never" class="kpi-card dark:bg-neutral-800">
+              <div class="kpi-label">诊断次数（{{ days }}天）</div>
+              <div class="kpi-value">
+                {{ kpis.diagCount ?? 0 }}
+              </div>
+            </el-card>
+          </div>
+        </div>
       </div>
 
-      <div class="mt-4 flex items-center justify-between gap-3">
-        <div class="text-xs opacity-70">
-          * 双击行进入设备页；{{ highProbText }} 用于高概率着色与统计
-        </div>
-        <div class="flex items-center gap-2">
-          <el-button size="small" type="primary" :icon="TrendCharts" plain :disabled="!selection.length" @click="openBatchDiagnose">
-            批量诊断（已选 {{ selection.length }}）
-          </el-button>
-          <el-button size="small" type="primary" :icon="TrendCharts" :disabled="!selection.length" @click="openBatchForecast">
-            批量趋势预测
-          </el-button>
-          <el-button size="small" type="warning" :icon="WarningFilled" plain @click="openAlarmCenter">
-            装置告警中心
-          </el-button>
-          <el-button size="small" type="success" :icon="Operation" @click="openDecision">
-            进入维修决策
-          </el-button>
-        </div>
+      <!-- 第二行：选择器 -->
+      <div class="mt-3 flex items-center gap-1">
+        <el-select v-model="baseId" style="width:150px" placeholder="选择基地" @change="load">
+          <el-option v-for="b in baseList" :key="b.id" :label="b.name" :value="String(b.id)" />
+        </el-select>
+        <el-select v-model="unitId" style="width:250px" placeholder="选择装置" @change="load">
+          <el-option v-for="u in unitList" :key="u.id" :label="u.name" :value="String(u.id)" />
+        </el-select>
+      </div>
+
+      <!-- 第三行：装置信息 Tag（有色） -->
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        <el-tag type="info"    effect="dark" size="default" :title="unit.system_type">类型：{{ unit.system_type || '—' }}</el-tag>
+        <el-tag type="primary" effect="dark" size="default" :title="unit.system_code">编码：{{ unit.system_code || '—' }}</el-tag>
+        <el-tag type="success" effect="dark" size="default" :title="unit.system_model">型号：{{ unit.system_model || '—' }}</el-tag>
+        <el-tag type="warning" effect="dark" size="default" :title="unit.manufacturer">厂家：{{ unit.manufacturer || '—' }}</el-tag>
+        <el-tag type="danger"  effect="dark" size="default" :title="unit.install_date">安装：{{ unit.install_date || '—' }}</el-tag>
       </div>
     </div>
+
 
     <!-- 内容（滚动区域）：只这一块会滚动 -->
     <div class="flex-1 min-h-0 overflow-auto p-4 lg:p-6">
@@ -542,4 +563,30 @@ function openDecision(){ dialogDecision.value = true }
 <style scoped>
 /* 与 Base 页一致的信息密度 */
 :deep(.el-card__body){ padding: 12px; }
+
+
+.status-board {
+  min-width: 160px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.15);
+}
+
+.sb-text {
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: 2px;
+}
+
+/* 不同状态的颜色方案 */
+.sb-success{ background: #08af15; color: #f6f2f6; }  /* 正常：深绿底、荧绿字 */
+.sb-warning{ background: #ef9907; color: #f6f2f6; }  /* 预警 */
+.sb-danger { background: #7a0a0a; color: #ffb3b3; }  /* 故障 */
+.sb-info   { background: #3a3a3a; color: #dcdcdc; }  /* 停用/未知 */
+
 </style>
