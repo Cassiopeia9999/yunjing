@@ -26,7 +26,6 @@ const BaseSceneView   = () => import('@/views/manage/BaseScenarioView.vue')
 
 const SysView    = () => import('@/views/manage/SysView.vue')
 const DevView    = () => import('@/views/manage/DevView.vue')
-const Maintain   = () => import('@/views/manage/Maintain.vue')
 const DecisionView   = () => import('@/views/manage/DecisionView.vue')
 const FaultCenterView   = () => import('@/views/manage/FaultCenter.vue')
 import FullscreenLayout from '@/components/layouts/FullscreenLayout.vue'
@@ -85,9 +84,7 @@ const routes = [
 
             // 其他管理功能视图
             { path: 'manage/decision', name: 'DecisionView', component: DecisionView, meta: { requiresAuth: true } },
-            { path: 'manage/faultcenter', name: 'FaultCenterView', component: FaultCenterView, meta: { requiresAuth: true } },
-            { path: 'manage/maintain', name: 'ManageMaintain', component: Maintain, meta: { requiresAuth: true } }
-
+            { path: 'manage/faultcenter', name: 'FaultCenterView', component: FaultCenterView, meta: { requiresAuth: true } }
         ]
     }
 ]
