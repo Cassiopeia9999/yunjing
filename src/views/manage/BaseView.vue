@@ -39,6 +39,35 @@ watch(
     { immediate: true } // 页面初始挂载时也执行一次
 )
 
+// 状态映射：与设备/装置一致风格，兼容数字/英文/中文
+const BASE_STATUS_MAP = {
+  '1': { label: '正常', type: 'success' },
+  '2': { label: '预警', type: 'warning' },
+  '3': { label: '故障', type: 'danger' },
+  '4': { label: '停用', type: 'info' },
+  normal:  { label: '正常', type: 'success' },
+  warning: { label: '预警', type: 'warning' },
+  fault:   { label: '故障', type: 'danger' },
+  stopped: { label: '停用', type: 'info' },
+  '正常':  { label: '正常', type: 'success' },
+  '预警':   { label: '预警', type: 'warning' },
+  '故障':   { label: '故障', type: 'danger' },
+  '停用':   { label: '停用', type: 'info' }
+};
+
+const baseStatusInfo = computed(() => {
+  const raw = baseInfo.value?.status ?? '';
+  const k1 = String(raw).trim();
+  const k2 = k1.toLowerCase();
+  return BASE_STATUS_MAP[k1] || BASE_STATUS_MAP[k2] || BASE_STATUS_MAP[String(Number(k1))] || { label: '未知', type: 'info' };
+});
+
+
+// 可选：评价时间兜底（有就显示）
+const baseAssessTime = computed(() => {
+  const b = baseInfo.value || {};
+  return b.evaluate_time || b.assess_time || b.assessTime || b.time || '';
+});
 
 const highProbText = computed(() => `Pθ=${data.value?.meta?.highProbThreshold || 70}%`)
 const kpis = computed(() => data.value?.kpis || {})
@@ -140,38 +169,31 @@ onMounted(() => {
       class="p-4 lg:p-6 bg-white dark:bg-neutral-900 min-h-screen text-neutral-900 dark:text-neutral-100 transition-colors">
     <!-- 顶部条 -->
     <div class="flex items-center justify-between gap-4 mb-4">
-      <!-- 基地选择器 -->
-      <div class=" gap-1">
-        <!-- 确保绑定的 selectedBase 是可以选中的 -->
+      <!-- 右：基地标题 + 状态牌 + 选择器 + 地址 -->
+      <div class="flex items-center gap-6">
+        <!-- 基地名称 -->
+        <h1 class="device-title truncate">{{ selectedBase?.name || '请选择基地' }}</h1>
+
+        <!-- 状态牌 -->
+        <div class="status-board" :class="'sb-' + baseStatusInfo.type">
+          <span class="sb-text">{{ baseStatusInfo.label }}</span>
+        </div>
+
+        <!-- 基地选择器（挪到标题和状态牌之后） -->
         <el-select v-model="selectedBaseId" placeholder="请选择基地" style="width:150px;" @change="load">
-          <el-option v-for="base in baseList"
-                     :key="base.id"
-                     :label="base.name"
-                     :value="String(base.id)" />
-
+          <el-option
+              v-for="base in baseList"
+              :key="base.id"
+              :label="base.name"
+              :value="String(base.id)"
+          />
         </el-select>
-      </div>
 
-      <div class="flex items-center gap-3">
-        <!-- 显示当前选中的基地名称 -->
-        <div class="text-3xl font-semibold">{{ selectedBase?.name || '请选择基地' }}</div>
-        <el-tag size="small"
-                :type="(baseInfo.status === 'Fault' ? 'danger' : baseInfo.status === 'Warning' ? 'warning' : 'success')">
-          {{ baseInfo.status || 'Unknown' }}
-        </el-tag>
+        <!-- 地址 -->
         <el-tag size="small" effect="plain">地址：{{ baseInfo.address || '—' }}</el-tag>
       </div>
-<!--      <div class="flex items-center gap-3">-->
-<!--        <el-segmented v-model="days" :options="[7,30]" size="small"/>-->
-<!--        <el-tag size="small" effect="plain">{{ highProbText }}</el-tag>-->
-<!--        <div class="text-xs opacity-70">-->
-<!--          更新时间：{{ (baseInfo.time || '').replace('T', ' ').slice(0, 19) }}-->
-<!--        </div>-->
-<!--        <el-button size="small" @click="load">刷新</el-button>-->
-<!--        <el-button size="small" type="primary" @click="dialogAssess = true">任务评估</el-button>-->
-<!--        <ThemeToggle/>-->
-<!--      </div>-->
     </div>
+
 
     <!-- KPI 带 -->
     <div class="grid grid-cols-5 gap-3 mb-4">
@@ -391,4 +413,26 @@ onMounted(() => {
 :deep(.el-card__body) {
   padding: 12px;
 }
+.status-board {
+  min-width: 160px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.15);
+}
+.sb-text{
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 2px;
+}
+
+/* 颜色方案（跟随 statusInfo.type） */
+.sb-success{ background: #08af15; color: #f6f2f6; }  /* 正常：深绿底、荧绿字 */
+.sb-warning{ background: #ef9907; color: #f6f2f6; }  /* 预警 */
+.sb-danger { background: #7a0a0a; color: #ffb3b3; }  /* 故障 */
+.sb-info   { background: #3a3a3a; color: #dcdcdc; }  /* 停用/未知 */
 </style>

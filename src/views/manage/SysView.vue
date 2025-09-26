@@ -399,7 +399,7 @@ function openDecision(){ dialogDecision.value = true }
                       </el-tag>
                     </div>
                     <div class="text-[12px] opacity-70 truncate" :title="row.component_code">
-                      {{ row.component_type }} · {{ row.component_model }} · {{ row.component_code }}
+                      {{ row.component_type.name }}  · {{ row.component_code }}
                     </div>
                   </template>
                 </el-table-column>
