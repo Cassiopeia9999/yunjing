@@ -1,57 +1,93 @@
+/* ---- Tailwind 注入 ---- */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 可选：切换时更顺滑 */
-html, body, #app { height: 100%; overflow: hidden; }
-:root, .dark { transition: background-color .2s ease, color .2s ease; }
+/* ---- 全局变量：字体 & 颜色（浅色 / 暗色） ---- */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #faf6f6;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  --app-font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC",
+  "Source Han Sans SC", "Helvetica Neue", Arial, sans-serif;
+
+  /* 文字基线 */
+  --app-text-primary: #1a1a1a;     /* 主文字 */
+  --app-text-regular: #555555;     /* 次要文字 */
+  --app-text-muted:   #888888;     /* 弱化文字 */
+
+  /* 背景基线（亮色） */
+  --app-bg: #f7f8fa;               /* 页面背景（亮） */
+  --app-header-bg: #f9fafb;        /* 顶栏/卡头背景（亮） */
+  --app-border: rgba(0,0,0,.08);
+
+  /* Element Plus 同步（亮色） */
+  --el-font-size-base: 15px;
+  --el-text-color-primary: var(--app-text-primary);
+  --el-text-color-regular: var(--app-text-regular);
+  --el-text-color-secondary: var(--app-text-muted);
+}
+
+.dark {
+  --app-text-primary: #eaeaea;
+  --app-text-regular: #c9c9c9;
+  --app-text-muted:   #a0a0a0;
+
+  --app-bg: #121212;               /* 页面背景（暗） */
+  --app-header-bg: #1f1f1f;        /* 顶栏/卡头背景（暗） */
+  --app-border: rgba(255,255,255,.12);
+
+  --el-text-color-primary: var(--app-text-primary);
+  --el-text-color-regular: var(--app-text-regular);
+  --el-text-color-secondary: var(--app-text-muted);
+}
+
+/* ---- 页面基础排版 ---- */
+html, body, #app { height: 100%; }
+
+html, body {
+  font-family: var(--app-font-family);
+  font-size: 15px;          /* 全局基础字号 */
+  line-height: 1.6;
+  color: var(--app-text-primary);
+  background: var(--app-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-
-
-/* 设置全局样式 */
+/* 不强制整体居中，不禁用滚动；由具体容器控制布局 */
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
-  min-height: 100vh;
-  background-color: #393838;  /* 设置背景颜色 */
-  width: 100%;  /* 确保页面宽度占满父容器 */
-  overflow: hidden; /* 防止页面出现滚动条 */
+  min-height: 100%;
 }
 
-/* 自定义头部 h1 样式 */
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-  text-align: center;  /* 让标题居中对齐 */
-}
-
-
+/* #app 只负责占位，不要强制居中或隐藏滚动 */
 #app {
-  margin: 0 auto;  /* 居中显示 */
-  width: 100%;  /* 保证内容的宽度占满父容器 */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  overflow: hidden; /* 防止页面出现滚动条 */
-  text-align: center;
+  width: 100%;
+  min-height: 100%;
 }
 
+/* ---- 常用文字层级 ---- */
+.text-secondary { color: var(--app-text-regular) !important; font-size: 14px !important; }
+.text-muted     { color: var(--app-text-muted)   !important; font-size: 13px !important; }
 
-/* 使用 TailwindCSS 类 */
-@tailwind components;
-@tailwind utilities;
+/* ---- 标题（让组件决定对齐方式，不全局强制居中） ---- */
+h1, .h1 { font-size: 26px; font-weight: 800; line-height: 1.25; color: var(--app-text-primary); }
+h2, .h2 { font-size: 20px; font-weight: 700; line-height: 1.35; color: var(--app-text-primary); }
+
+/* ---- 顶部标题栏（你之前想要的分区感） ---- */
+.header-bar {
+  background: var(--app-header-bg);
+  border-bottom: 1px solid var(--app-border);
+  box-shadow: 0 1px 3px rgba(0,0,0,.05);
+}
+.dark .header-bar {
+  box-shadow: 0 1px 3px rgba(0,0,0,.25);
+}
+
+/* ---- 卡片头统一风格（可选） ---- */
+.card-header {
+  background: var(--app-header-bg);
+  border-bottom: 1px solid var(--app-border);
+}
+
+/* ---- 细节优化：动画更顺滑 ---- */
+:root, .dark { transition: background-color .2s ease, color .2s ease; }

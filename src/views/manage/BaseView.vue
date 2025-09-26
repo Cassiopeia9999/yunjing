@@ -475,7 +475,7 @@ onMounted(() => {
   border-color: rgba(255,255,255,.12);
   background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.05));
 }
-.kpi-label{ font-size: 18px; font-weight: 500; opacity: .9; }
+.kpi-label{ font-size: 14px; font-weight: 500; opacity: .9; }
 .kpi-value{ margin-top: 2px; font-size: 22px; font-weight: 400; line-height: 1; }
 .kpi-unit{ margin-left: 4px; font-size: 12px; font-weight: 400; opacity: .85; }
 .status-board {
@@ -514,4 +514,14 @@ onMounted(() => {
 .sb-warning{ background: #ef9907; color: #f6f2f6; }  /* 预警 */
 .sb-danger { background: #7a0a0a; color: #ffb3b3; }  /* 故障 */
 .sb-info   { background: #3a3a3a; color: #dcdcdc; }  /* 停用/未知 */
+
+/* 大标题：和截图同级的“视觉分量” */
+.device-title{
+  font-size: clamp(32px, 6vw, 52px); /* 1号主泵 的量级 */
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
+
 </style>

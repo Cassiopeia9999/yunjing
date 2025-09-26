@@ -286,13 +286,13 @@ onMounted(loadAll)
 
       <!-- 第三行：信息胶囊 -->
       <div class="mt-2 flex flex-wrap items-center gap-2">
-        <el-tag type="primary" effect="dark" size="default">
+        <el-tag type="primary" effect="plain" size="default">
           编号：{{ dev.component_code || '—' }}
         </el-tag>
-        <el-tag type="success" effect="dark" size="default">
+        <el-tag type="success" effect="plain" size="default">
           厂家：{{ dev.manufacturer || '—' }}
         </el-tag>
-        <el-tag type="warning" effect="dark" size="default">
+        <el-tag type="warning" effect="plain" size="default">
           安装：{{ dev.install_date || '—' }}
         </el-tag>
       </div>
@@ -598,7 +598,7 @@ onMounted(loadAll)
 /* 大标题：和截图同级的“视觉分量” */
 .device-title{
   font-size: clamp(32px, 6vw, 52px); /* 1号主泵 的量级 */
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1;
   letter-spacing: .5px;
   white-space: nowrap;

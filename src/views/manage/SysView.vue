@@ -328,11 +328,11 @@ function openDecision(){ dialogDecision.value = true }
 
       <!-- 第三行：装置信息 Tag（有色） -->
       <div class="mt-2 flex flex-wrap items-center gap-2">
-        <el-tag type="info"    effect="dark" size="default" :title="unit.system_type">类型：{{ unit.system_type || '—' }}</el-tag>
-        <el-tag type="primary" effect="dark" size="default" :title="unit.system_code">编码：{{ unit.system_code || '—' }}</el-tag>
-        <el-tag type="success" effect="dark" size="default" :title="unit.system_model">型号：{{ unit.system_model || '—' }}</el-tag>
-        <el-tag type="warning" effect="dark" size="default" :title="unit.manufacturer">厂家：{{ unit.manufacturer || '—' }}</el-tag>
-        <el-tag type="danger"  effect="dark" size="default" :title="unit.install_date">安装：{{ unit.install_date || '—' }}</el-tag>
+        <el-tag type="primary" effect="plain" size="default"   :title="unit.system_type">类型：{{ unit.system_type || '—' }}</el-tag>
+        <el-tag type="primary" effect="plain" size="default" :title="unit.system_code">编码：{{ unit.system_code || '—' }}</el-tag>
+        <el-tag type="primary" effect="plain" size="default" :title="unit.system_model">型号：{{ unit.system_model || '—' }}</el-tag>
+        <el-tag type="primary" effect="plain" size="default" :title="unit.manufacturer">厂家：{{ unit.manufacturer || '—' }}</el-tag>
+        <el-tag type="primary"  effect="plain" size="default" :title="unit.install_date">安装：{{ unit.install_date || '—' }}</el-tag>
       </div>
     </div>
 
@@ -350,22 +350,42 @@ function openDecision(){ dialogDecision.value = true }
           <el-card class="col-span-8 min-w-0 dark:bg-neutral-800" shadow="never" body-style="padding:0">
             <div class="flex items-center justify-between p-3 border-b border-neutral-200 dark:border-neutral-700">
               <div class="font-medium">设备列表</div>
-              <div class="flex items-center gap-2">
-                <el-input v-model="keyword" size="small" placeholder="搜索设备/编码/型号" clearable class="w-56" />
-                <el-select v-model="filters.status" size="small" placeholder="状态" clearable class="w-28">
+
+              <!-- 右侧工具条：允许换行 + 控件不收缩 -->
+              <div class="flex items-center gap-3 flex-wrap justify-end">
+                <el-input
+                    v-model="keyword"
+                    size="small"
+                    placeholder="搜索设备/编码/型号"
+                    clearable
+                    style="width:180px"
+                    class="shrink-0"
+                />
+
+                <el-select v-model="filters.status" size="small" placeholder="状态" clearable
+                           style="width:102px" class="shrink-0">
                   <el-option v-for="s in statusOptions" :key="s" :label="s" :value="s" />
                 </el-select>
-                <el-select v-model="filters.type" size="small" placeholder="类型" clearable class="w-32">
+
+                <el-select v-model="filters.type" size="small" placeholder="类型" clearable
+                           style="width:108px" class="shrink-0">
                   <el-option v-for="t in typeOptions" :key="t" :label="t" :value="t" />
                 </el-select>
-                <el-select v-model="filters.model" size="small" placeholder="型号" clearable class="w-36">
+
+                <el-select v-model="filters.model" size="small" placeholder="型号" clearable
+                           style="width:120px" class="shrink-0">
                   <el-option v-for="m in modelOptions" :key="m" :label="m" :value="m" />
                 </el-select>
-                <el-select v-model="filters.alarmSeverity" size="small" placeholder="告警等级" clearable class="w-32">
+
+                <el-select v-model="filters.alarmSeverity" size="small" placeholder="告警等级" clearable
+                           style="width:118px" class="shrink-0">
                   <el-option v-for="lv in alarmLevelOptions" :key="lv" :label="lv" :value="lv" />
                 </el-select>
-                <span class="text-xs opacity-70">排序</span>
-                <el-select v-model="sortKey" size="small" class="w-32">
+
+                <span class="text-xs opacity-70 shrink-0">排序</span>
+
+                <!-- 排序下拉：给足宽度 + 禁止收缩 -->
+                <el-select v-model="sortKey" size="small" style="width:120px" class="shrink-0">
                   <el-option label="健康度" value="health"/>
                   <el-option label="RUL" value="rul"/>
                   <el-option label="置信度" value="conf"/>
@@ -374,6 +394,7 @@ function openDecision(){ dialogDecision.value = true }
                 </el-select>
               </div>
             </div>
+
 
             <!-- 这里不限制高度，让外层内容容器滚动即可 -->
             <div>
@@ -588,5 +609,13 @@ function openDecision(){ dialogDecision.value = true }
 .sb-warning{ background: #ef9907; color: #f6f2f6; }  /* 预警 */
 .sb-danger { background: #7a0a0a; color: #ffb3b3; }  /* 故障 */
 .sb-info   { background: #3a3a3a; color: #dcdcdc; }  /* 停用/未知 */
+/* 大标题：和截图同级的“视觉分量” */
+.device-title{
+  font-size: clamp(32px, 6vw, 52px); /* 1号主泵 的量级 */
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
 
 </style>
