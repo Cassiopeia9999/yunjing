@@ -33,7 +33,7 @@ const FORM_ID_MAP = {
     [Real_Time_Device_Data]: 42,
     [SERVICE_CONFIG_FORM_ID]: 52,
     [FAULT_CONFIG_FORM_ID]: 29,
-    [DIAGNOSIS_FORM_ID]: 30
+    [DIAGNOSIS_FORM_ID]: 49
 
 
 

@@ -137,40 +137,124 @@ function disposeCharts() {
   if (ecAlarm){ ecAlarm.dispose(); ecAlarm = null }
   if (ecTrend){ ecTrend.dispose(); ecTrend = null }
 }
-
 function renderCharts(){
   disposeCharts()
 
+  // 1) 主题适配（如果你有全局 isDark，就替换这行）
+  const isDark = document.documentElement.classList.contains('dark')
+
+  // 2) 颜色/样式基准
+  const labelColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--chart-label-color') || '#A3A3A3'
+  const subText    = isDark ? '#A3A3A3' : '#6B7280'     // 引导线/坐标轴文字
+  const axisLine   = isDark ? 'rgba(255,255,255,.15)' : 'rgba(0,0,0,.12)'
+  const splitLine  = isDark ? 'rgba(255,255,255,.10)' : 'rgba(0,0,0,.08)'
+  const tipBg      = isDark ? 'rgba(17,24,39,.95)' : 'rgba(255,255,255,.98)'
+  const tipText    = isDark ? '#F3F4F6' : '#111827'
+
+  // 3) 通用 label 样式：四个状态统一，避免被 ECharts 默认状态覆盖
+  const labelBase = {
+    show: true,
+    color: labelColor,
+    fontSize: 16,
+    fontWeight: 'normal',
+    opacity: 1,
+    textBorderColor: 'transparent',
+    textBorderWidth: 0
+  }
+  const emphLabel = { ...labelBase }
+  const blurLabel = { ...labelBase }
+  const selLabel  = { ...labelBase }
+  const labelLineBase = { lineStyle: { color: subText, opacity: 0.9, width: 1 } }
+
+  // =============== 故障知识分布（玫瑰图） ===============
   if (elDiagDist.value) {
     ecDiag = echarts.init(elDiagDist.value)
     const s = data.value?.charts?.diagDist || []
+
     ecDiag.setOption({
-      tooltip:{trigger:'item'},
-      series:[{ type:'pie', roseType:'area', radius:['20%','70%'],
-        data: s.map(d=>({ name:`${d.name} (${d.highShare}%)`, value:d.value })) }]
+      textStyle: { color: labelColor }, // 全局兜底，防主题反色
+      tooltip: { trigger: 'item', backgroundColor: tipBg, textStyle: { color: tipText } },
+      series: [{
+        type: 'pie',
+        roseType: 'area',
+        radius: ['20%', '70%'],
+        avoidLabelOverlap: false,
+        data: s.map(d => ({ name: `${d.name} (${d.highShare}%)`, value: d.value })),
+        label: labelBase,
+        labelLine: labelLineBase,
+        emphasis: { focus: 'none', label: emphLabel }, // 关闭下沉效果
+        blur:     { label: blurLabel },
+        select:   { label: selLabel }
+      }]
     })
-    ecDiag.on('click', p => { if(p?.name){ keyword.value = p.name.split(' (')[0] } })
+
+    ecDiag.on('click', p => { if (p?.name) { keyword.value = p.name.split(' (')[0] } })
   }
+
+  // =============== 告警等级占比（饼图） ===============
   if (elAlarmDist.value) {
     ecAlarm = echarts.init(elAlarmDist.value)
     const s = data.value?.charts?.alarmDist || []
+
     ecAlarm.setOption({
-      tooltip:{trigger:'item'},
-      series:[{ type:'pie', radius:'70%', data: s.map(d=>({ name:d.level, value:d.count })) }]
+      textStyle: { color: labelColor },
+      tooltip: { trigger: 'item', backgroundColor: tipBg, textStyle: { color: tipText } },
+      series: [{
+        type: 'pie',
+        radius: '70%',
+        avoidLabelOverlap: false,
+        data: s.map(d => ({ name: d.level, value: d.count })),
+        label: labelBase,
+        labelLine: labelLineBase,
+        emphasis: { focus: 'none', label: emphLabel },
+        blur:     { label: blurLabel },
+        select:   { label: selLabel }
+      }]
     })
+
     ecAlarm.on('click', p => { filters.value.alarmSeverity = p?.name || null })
   }
+
+  // =============== 诊断趋势（折线图） ===============
   if (elTrend.value) {
     ecTrend = echarts.init(elTrend.value)
-    const s = data.value?.charts?.diagTrend || { dates:[], counts:[] }
+    const s = data.value?.charts?.diagTrend || { dates: [], counts: [] }
+
     ecTrend.setOption({
-      tooltip:{trigger:'axis'},
-      xAxis:{ type:'category', data:s.dates },
-      yAxis:{ type:'value' },
-      series:[{ type:'line', smooth:true, data:s.counts }]
+      textStyle: { color: labelColor },
+      tooltip: { trigger: 'axis', backgroundColor: tipBg, textStyle: { color: tipText } },
+      grid: { left: 36, right: 16, top: 24, bottom: 28 },
+      xAxis: {
+        type: 'category',
+        data: s.dates,
+        axisLabel: { color: subText },
+        axisLine: { lineStyle: { color: axisLine } },
+        axisTick: { show: false }
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: { color: subText },
+        splitLine: { lineStyle: { color: splitLine } },
+        axisLine: { lineStyle: { color: axisLine } },
+        axisTick: { show: false }
+      },
+      series: [{
+        type: 'line',
+        smooth: true,
+        data: s.counts,
+        showSymbol: true,
+        symbolSize: 6,
+        lineStyle: { width: 2 },
+        label: { position: 'top', ...labelBase },
+        emphasis: { focus: 'none', label: emphLabel },
+        blur:     { label: blurLabel },
+        select:   { label: selLabel }
+      }]
     })
   }
 }
+
 
 onBeforeUnmount(disposeCharts)
 
@@ -616,6 +700,12 @@ function openDecision(){ dialogDecision.value = true }
   line-height: 1;
   letter-spacing: .5px;
   white-space: nowrap;
+}
+:root {
+  --chart-label-color: #111827; /* 深黑 */
+}
+.dark {
+  --chart-label-color: #E5E7EB; /* 灰白 */
 }
 
 </style>

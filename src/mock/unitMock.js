@@ -1,54 +1,73 @@
 import {
-    BASE_FORM_ID,
-    DEVICE_FORM_ID,
-    DIAGNOSIS_FORM_ID,
     getSysConfigFormId,
     UNIT_FORM_ID
 } from '@/api/constant/form_constant';
 import { fetchDataById, fetchTableData } from '@/api/querydata';
-import {bucketize, fetchDevices, fetchDiagnoses} from "@/mock/fetchDataApi.js";
+import { bucketize, fetchDevices /* , fetchDiagnoses */ } from "@/mock/fetchDataApi.js";
+import { mockDiagnoses } from "@/mock/diagnosisMock.js"; // ★ 使用 mock 诊断
+
+/** 工具函数 */
+function fmtDate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dd}`;
+}
+function groupBy(arr, keyFn) {
+    return arr.reduce((m, it) => {
+        const k = keyFn(it);
+        (m[k] ||= []).push(it);
+        return m;
+    }, {});
+}
+function mapProbToLevel(prob) {
+    if (prob == null) return 'Low';
+    if (prob >= 90) return 'Critical';
+    if (prob >= 70) return 'High';
+    if (prob >= 40) return 'Medium';
+    return 'Low';
+}
+
 /**
- * 获取装置页面数据，动态从服务端获取数据
+ * 获取装置页面数据（使用 mock 诊断数据）
  * @param {number|string} unitId
  * @param {{days:number, highProbThreshold:number}} opts
  * @returns {Promise<object>}
  */
 export async function getUnitPageData(unitId = 1, opts = { days: 7, highProbThreshold: 70 }) {
-    // 获取装置的基础信息
+    // 1) 装置信息
     const unit = await fetchDataById(getSysConfigFormId(UNIT_FORM_ID), unitId);
     if (!unit) {
         throw new Error(`装置ID ${unitId} 不存在`);
     }
 
-    // 获取装置的设备数据
-    const devices = await fetchDevices(unit.parent_site.value, [unitId]); // 根据装置ID获取设备数据
+    // 2) 设备列表
+    const devices = await fetchDevices(unit.parent_site.value, [unitId]); // 根据装置ID获取设备
+    const deviceIds = devices.map(d => String(d.id));
 
-    // 获取装置下的诊断数据
-    const diagnoses = await fetchDiagnoses(devices.map(d => d.id), opts.days); // 过滤出诊断时间在指定天数范围内的数据
+    // 3) 诊断（mock）
+    const diagnoses = await mockDiagnoses(deviceIds, opts.days);
 
-    // 获取装置下的所有设备，聚合设备数据
+    // 4) 聚合（基本保持你的写法）
     const deviceByUnit = devices.reduce((m, d) => {
         (m[d.parent_system] ||= []).push(d);
         return m;
     }, {});
 
     const diagByUnit = diagnoses.reduce((m, r) => {
-        const dev = devices.find(d => String(d.id) === r.component_id);
+        const dev = devices.find(d => String(d.id) === String(r.component_id));
         if (!dev) return m;
         (m[dev.parent_system] ||= []).push(r);
         return m;
     }, {});
 
-    // KPI 计算（单个装置级别）
     const devicesCount = devices.length;
-    const diagInWindow = diagnoses.filter(r => {
-        const dt = new Date(r.diagnosis_time);
-        return dt >= new Date(Date.now() - opts.days * 24 * 3600 * 1000);
-    });
-    const highProb = diagInWindow.filter(r => r.probability >= opts.highProbThreshold);
+    const since = new Date(Date.now() - opts.days * 24 * 3600 * 1000);
+
+    const diagInWindow = diagnoses.filter(r => new Date(r.diagnosis_time) >= since);
+    const highProb = diagInWindow.filter(r => (r.probability ?? 0) >= opts.highProbThreshold);
     const highProbDevices = Array.from(new Set(highProb.map(r => r.component_id))).length;
 
-    // 设备健康度分布
     const healthBuckets = bucketize(
         devices,
         d => d.health_level,
@@ -73,30 +92,64 @@ export async function getUnitPageData(unitId = 1, opts = { days: 7, highProbThre
         ]
     );
 
-    // 装置卡片聚合（诊断摘要 + 健康汇总）
     const aggHealth = devices.length
         ? {
-            avgHealth: +(devices.reduce((s, d) => s + d.health_level, 0) / devices.length).toFixed(2),
-            avgRUL: Math.round(devices.reduce((s, d) => s + d.remaining_life, 0) / devices.length),
-            avgConf: +(devices.reduce((s, d) => s + d.confidence_level, 0) / devices.length).toFixed(1),
+            avgHealth: +(devices.reduce((s, d) => s + (d.health_level ?? 0), 0) / devices.length).toFixed(2),
+            avgRUL: Math.round(devices.reduce((s, d) => s + (d.remaining_life ?? 0), 0) / devices.length),
+            avgConf: +(devices.reduce((s, d) => s + (d.confidence_level ?? 0), 0) / devices.length).toFixed(1),
         }
         : { avgHealth: 0, avgRUL: 0, avgConf: 0 };
 
-    // 获取诊断信息：计算高概率诊断设备数和设备的健康统计信息
     const rsIn = diagByUnit[unitId] || [];
-    const highIn = rsIn.filter(r => r.probability >= opts.highProbThreshold);
+    const highIn = rsIn.filter(r => (r.probability ?? 0) >= opts.highProbThreshold);
     const highDevices = new Set(highIn.map(r => r.component_id)).size;
-
     const lastDiag = rsIn[0]?.diagnosis_time || null;
 
-    // 简易风险分（仅演示）
     const riskScore = Math.min(
         100,
-        Math.round(highDevices * 10 + highIn.length * 2 + (unit.system_status === 'Fault' ? 15 : unit.system_status === 'Warning' ? 5 : 0))
+        Math.round(
+            highDevices * 10 + highIn.length * 2 + (unit.system_status === 'Fault' ? 15 : unit.system_status === 'Warning' ? 5 : 0)
+        )
     );
     const riskLevel = riskScore >= 60 ? 'high' : riskScore >= 30 ? 'mid' : 'low';
 
-    // 返回装置详细数据
+    // 5) charts（右侧三张图）
+    // 5.1 故障知识分布
+    const byFault = groupBy(diagInWindow, r => r.fault_knowledge_name || '未命名故障');
+    const diagDist = Object.keys(byFault)
+        .map(name => {
+            const arr = byFault[name];
+            const high = arr.filter(x => (x.probability ?? 0) >= opts.highProbThreshold).length;
+            const highShare = arr.length ? Math.round((high / arr.length) * 100) : 0;
+            return { name, value: arr.length, highShare };
+        })
+        .sort((a, b) => b.value - a.value);
+
+    // 5.2 告警等级占比（用概率 → 等级映射做演示）
+    const byLv = groupBy(diagInWindow, r => mapProbToLevel(r.probability));
+    const alarmDist = ['Critical', 'High', 'Medium', 'Low'].map(lv => ({
+        level: lv,
+        count: (byLv[lv] || []).length
+    }));
+
+    // 5.3 诊断趋势（按日统计）
+    const dayBuckets = {};
+    for (let i = opts.days - 1; i >= 0; i--) {
+        const d = new Date(Date.now() - i * 24 * 3600 * 1000);
+        dayBuckets[fmtDate(d)] = 0;
+    }
+    diagInWindow.forEach(r => {
+        const k = fmtDate(new Date(r.diagnosis_time));
+        if (Object.prototype.hasOwnProperty.call(dayBuckets, k)) {
+            dayBuckets[k] += 1;
+        }
+    });
+    const diagTrend = {
+        dates: Object.keys(dayBuckets),
+        counts: Object.values(dayBuckets)
+    };
+
+    // 6) 返回（尽量保持你原结构；修正 kpis 命名 diagCount 以匹配页面）
     return {
         unit,
         devices,
@@ -114,19 +167,15 @@ export async function getUnitPageData(unitId = 1, opts = { days: 7, highProbThre
         deviceStats: { healthBuckets, rulBuckets },
         kpis: {
             devicesCount,
-            diagnosisCount: diagInWindow.length,
+            diagCount: diagInWindow.length,     // ← 页面使用 {{ kpis.diagCount }}
             highProbCount: highProb.length,
             highProbDevices,
         },
-        rankings: {
-            byHighProbDevices: [unit].sort((a, b) => b.diagSummary.highDevices - a.diagSummary.highDevices),
-            byHighProbDiagnoses: [unit].sort((a, b) => b.diagSummary.highCount - a.diagSummary.highCount),
-            byShortRULShare: [unit].sort((a, b) => a.health.deviceAgg.avgRUL - b.health.deviceAgg.avgRUL),
+        charts: {
+            diagDist,     // [{ name, value, highShare }]
+            alarmDist,    // [{ level, count }]
+            diagTrend     // { dates:[], counts:[] }
         },
-        freshnessHours: highIn.length > 0 ? Math.round((Date.now() - new Date(lastDiag).getTime()) / 3600000) : null,
+        freshnessHours: lastDiag ? Math.round((Date.now() - new Date(lastDiag).getTime()) / 3600000) : null,
     };
 }
-
-
-
-

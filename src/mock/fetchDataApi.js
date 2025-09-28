@@ -27,8 +27,8 @@ export async function fetchDevices(baseId, unitIds) {
 export async function fetchDiagnoses(deviceIds, days) {
     const since = new Date(Date.now() - days * 86400000).toISOString();
     const res = await fetchTableData(1, 500, getSysConfigFormId(DIAGNOSIS_FORM_ID), [
-        { key: 'component_id', queryType: 'in', value: deviceIds },
-        { key: 'diagnosis_time', queryType: '>=', value: since },
+        { key: 'device_name', queryType: 'in', value: deviceIds },
+        { key: 'diagnose_time', queryType: '>=', value: since },
     ]);
     return res.data.list;
 }
