@@ -1,7 +1,7 @@
 <!-- src/components/layouts/SideMenu.vue -->
 <template>
   <aside
-      class="w-[286px] h-full shrink-0
+      class="w-[196px] h-full shrink-0
          backdrop-blur bg-white/60 dark:bg-[#0A0F1A]/90
          border-r border-white/20 dark:border-white/5
          shadow-[0_12px_32px_rgba(0,0,0,.25)]">

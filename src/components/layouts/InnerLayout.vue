@@ -8,7 +8,7 @@
     <!-- 左侧菜单（fixed） -->
     <SideMenu
         v-if="isMenuVisible"
-        class="fixed top-0 left-0 h-full w-[286px] z-50"
+        class="fixed top-0 left-0 h-full w-[196px] z-50"
         @toggle-menu="toggleMenu"
     />
 
@@ -17,7 +17,7 @@
         :class="[
         // ✅ 关键：允许子项收缩 + 自己不滚动
         'flex flex-col h-full min-h-0 overflow-hidden transition-all duration-300',
-        isMenuVisible ? 'ml-[286px]' : 'ml-0'
+        isMenuVisible ? 'ml-[196px]' : 'ml-0'
       ]"
     >
       <TopBar @toggle-menu="toggleMenu" />

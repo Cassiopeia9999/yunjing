@@ -12,7 +12,7 @@
           <!-- ⬇️ 新标题：更大、更亮、带装饰 -->
           <div class="hero-title mx-3">
             <div class="wing left"></div>
-            <h1 class="title-glow-neo">综合监测诊断平台 · 全局态势</h1>
+            <h1 class="title-glow-neo title-glow-neo--glow">综合监测诊断平台 · 全局态势</h1>
             <div class="wing right"></div>
             <div class="title-underline">
               <span class="bar"></span>
@@ -277,20 +277,7 @@ onBeforeUnmount(()=>window.removeEventListener('resize', onResize))
 }
 
 /* ===== 标题：高亮蓝色发光 ===== */
-.title-glow-neo {
-  font-weight: 900;
-  font-size: clamp(32px, 4vw, 56px);
-  letter-spacing: .35em;
-  text-transform: uppercase;
-  background: linear-gradient(90deg, #aefcff, #ffffff, #5ad9ff, #1ec8ff, #aefcff);
-  background-size: 280% 100%;
-  -webkit-background-clip: text;
-  color: transparent;
-  text-shadow:
-      0 0 8px rgba(30,200,255,.9),
-      0 0 20px rgba(244, 248, 248, 0.6);
-  animation: titleShine 2s linear infinite;
-}
+
 
 /* ===== Panel 面板：更亮的蓝色描边 ===== */
 .panel {
@@ -325,25 +312,55 @@ onBeforeUnmount(()=>window.removeEventListener('resize', onResize))
 
 
 /* ===== 顶部标题：干净锐利，无发光 ===== */
-.title-glow-neo {
+/* 基础款：干净锐利（无发光） */
+.title-glow-neo{
   font-weight: 900;
-  font-size: clamp(40px, 5vw, 72px);
+  font-size: clamp(32px, 4vw, 58px);
   letter-spacing: .28em;
   line-height: 1.08;
   text-transform: uppercase;
 
-  /* 白色到淡蓝渐变填充 */
-  background: linear-gradient(90deg, #ffffff 0%, #dff7ff 40%, #9edaff 70%, #ffffff 100%);
+  /* 白→淡蓝渐变填充 */
+  background: linear-gradient(90deg,#ffffff 0%,#dff7ff 40%,#9edaff 70%,#ffffff 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 
-  /* 清晰蓝色描边（非光效） */
+  /* 清晰描边 */
   -webkit-text-stroke: 1px #4fc3ff;
 
-  /* 去掉所有发光/阴影，保持干净 */
+  /* 关闭光效 */
   text-shadow: none;
   filter: none;
+  animation: none;
 }
+
+
+.title-glow-neo--glow{
+  /* 需要更紧凑一点可放开下一行（按第二版） */
+  /* font-size: clamp(32px, 3vw, 48px); */
+  letter-spacing: .30em;
+
+  background: linear-gradient(90deg, #d5eced,#ffffff,#5ad9ff,#1ec8ff,#aefcff);
+  background-size: 280% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+
+  text-shadow:
+      0 0 4px rgba(30,200,255,.9),
+      0 0 2px rgb(246, 242, 246);
+  animation: titleShine 4s linear infinite;
+}
+
+/* 发光动画 */
+@keyframes titleShine{
+  from { background-position:   0% 0; }
+  to   { background-position: 280% 0; }
+}
+
+/* 用法：
+   <h1 class="title-glow-neo">Clean Title</h1>
+   <h1 class="title-glow-neo title-glow-neo--glow">Glowing Title</h1>
+*/
 
 /* 两侧装饰翼光（低调，避免喧宾夺主） */
 .hero-title .wing {
