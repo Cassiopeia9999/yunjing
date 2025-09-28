@@ -362,36 +362,36 @@ onMounted(loadAll)
 
             <!-- 快照 -->
             <!-- 原“最新诊断快照”卡片，替换为下面这一整段 -->
-            <el-card shadow="never" class="dark:bg-neutral-800 snap-card">
-              <div class="flex items-center justify-between mb-2">
-                <div class="font-medium text-lg">最新诊断快照</div>
-                <div class="text-xs opacity-70">
-                  时间：{{ snap?.diagnosis_time ? snap.diagnosis_time.replace('T',' ').slice(0,19) : '—' }}
-                </div>
-              </div>
+<!--            <el-card shadow="never" class="dark:bg-neutral-800 snap-card">-->
+<!--              <div class="flex items-center justify-between mb-2">-->
+<!--                <div class="font-medium text-lg">最新诊断快照</div>-->
+<!--                <div class="text-xs opacity-70">-->
+<!--                  时间：{{ snap?.diagnosis_time ? snap.diagnosis_time.replace('T',' ').slice(0,19) : '—' }}-->
+<!--                </div>-->
+<!--              </div>-->
 
-              <div v-if="snap?.faults?.length" class="space-y-3">
-                <div v-for="f in snap.faults" :key="f.id" class="snap-row">
-                  <div class="row-top">
-                    <span class="fault-name" :title="f.fault_name">{{ f.fault_name || '—' }}</span>
-                    <el-tag
-                        size="small"
-                        :type="(f.probability ?? 0) >= (data?.meta?.highProbThreshold||70) ? 'danger' : 'info'"
-                    >{{ Math.round(f.probability ?? 0) }}%</el-tag>
-                  </div>
+<!--              <div v-if="snap?.faults?.length" class="space-y-3">-->
+<!--                <div v-for="f in snap.faults" :key="f.id" class="snap-row">-->
+<!--                  <div class="row-top">-->
+<!--                    <span class="fault-name" :title="f.fault_name">{{ f.fault_name || '—' }}</span>-->
+<!--                    <el-tag-->
+<!--                        size="small"-->
+<!--                        :type="(f.probability ?? 0) >= (data?.meta?.highProbThreshold||70) ? 'danger' : 'info'"-->
+<!--                    >{{ Math.round(f.probability ?? 0) }}%</el-tag>-->
+<!--                  </div>-->
 
-                  <div class="row-sub">
-                    <span class="snap-sub">{{ f.diagnosis_basis_short || '—' }}</span>
-                    <div class="row-actions">
-                      <el-button v-if="f.diagnosis_basis" link size="small" @click="viewBasis(f)">查看依据</el-button>
-                      <el-button v-if="f.raw_file_id" link size="small" @click="viewRaw(f)">原始文件</el-button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+<!--                  <div class="row-sub">-->
+<!--                    <span class="snap-sub">{{ f.diagnosis_basis_short || '—' }}</span>-->
+<!--                    <div class="row-actions">-->
+<!--                      <el-button v-if="f.diagnosis_basis" link size="small" @click="viewBasis(f)">查看依据</el-button>-->
+<!--                      <el-button v-if="f.raw_file_id" link size="small" @click="viewRaw(f)">原始文件</el-button>-->
+<!--                    </div>-->
+<!--                  </div>-->
+<!--                </div>-->
+<!--              </div>-->
 
-              <div v-else class="text-xs opacity-70">暂无故障</div>
-            </el-card>
+<!--              <div v-else class="text-xs opacity-70">暂无故障</div>-->
+<!--            </el-card>-->
 
 
             <!-- 最新特征值（两列卡片） -->
@@ -418,19 +418,19 @@ onMounted(loadAll)
             </el-card>
 
             <!-- 风险提示 -->
-            <el-card shadow="never" class="dark:bg-neutral-800">
-              <div class="flex items-center justify-between mb-2">
-                <div class="font-medium">风险提示与建议</div>
-                <el-tag size="small" effect="plain">规则提示</el-tag>
-              </div>
-              <ul class="space-y-2 text-sm">
-                <li v-for="(t,i) in tips" :key="i" class="flex items-start gap-2">
-                  <el-icon class="mt-[2px]"><WarningFilled/></el-icon>
-                  <span v-html="t"></span>
-                </li>
-                <li v-if="!tips?.length" class="text-xs opacity-70">暂无提示</li>
-              </ul>
-            </el-card>
+<!--            <el-card shadow="never" class="dark:bg-neutral-800">-->
+<!--              <div class="flex items-center justify-between mb-2">-->
+<!--                <div class="font-medium">风险提示与建议</div>-->
+<!--                <el-tag size="small" effect="plain">规则提示</el-tag>-->
+<!--              </div>-->
+<!--              <ul class="space-y-2 text-sm">-->
+<!--                <li v-for="(t,i) in tips" :key="i" class="flex items-start gap-2">-->
+<!--                  <el-icon class="mt-[2px]"><WarningFilled/></el-icon>-->
+<!--                  <span v-html="t"></span>-->
+<!--                </li>-->
+<!--                <li v-if="!tips?.length" class="text-xs opacity-70">暂无提示</li>-->
+<!--              </ul>-->
+<!--            </el-card>-->
           </div>
 
           <!-- 右列：记录 + 趋势 -->
