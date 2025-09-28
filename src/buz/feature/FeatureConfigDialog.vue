@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { loadFeaturePanelCfg, saveFeaturePanelCfg } from '@/utils/featurePanelCfg'  // ← 新增
+import { loadFeaturePanelCfg, saveFeaturePanelCfg } from '@/utils/featurePanelCfg.js'  // ← 新增
 
 const props = defineProps({
   visible:       { type: Boolean, default: false },
@@ -49,7 +49,7 @@ function save(){
 </script>
 
 <template>
-  <el-dialog :model-value="visible" title="最新特征值（配置）" width="720px" @close="close">
+  <el-dialog :model-value="visible" title="最新特征值（配置）" width="920px" @close="close">
     <div class="mb-3 flex items-center gap-4">
       <span class="text-sm opacity-80">面板显示数量：</span>
       <el-input-number v-model="localCount" :min="1" :max="maxCount" size="small" />

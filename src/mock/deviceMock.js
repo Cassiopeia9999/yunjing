@@ -57,15 +57,15 @@ export async function getDevicePageData(deviceId = 1, { days = 365 } = {}) {
         raw_file_id: d.raw_file_id || ''
     }));
 
-    const snapshot = { diagnosis_time: snapshotTime, faults };
+    const snapshot = { diagnose_time: snapshotTime, faults };
 
     // 诊断记录列表（仍然按天倒序渲染）
     const records = diagnoses.map((diag, i) => {
         const d = new Date(now.getTime() - i * 86400000);
         return {
             id: 10000 + i,
-            diagnosis_time: fmt(d),
-            fault_name: diag.fault_name || '未定义故障',
+            diagnose_time: diag.diagnose_time,
+            fault_name: diag.fault_type.name || '未定义故障',
             probability: diag.probability || 0,
             description:
                 (diag.probability || 0) > 85 ? '建议尽快检修'

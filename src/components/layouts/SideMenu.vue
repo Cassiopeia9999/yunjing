@@ -90,9 +90,10 @@
 import { defineEmits, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Grid } from '@element-plus/icons-vue'
-import { getToken, getTenantId } from '@/utils/auth'
+import { getToken, getTenantId, setTenantId } from '@/utils/auth'
 import {
-  getSysConfigFormId
+  FAULT_CONFIG_FORM_ID,
+  getSysConfigFormId, REPAIR_RECORD_FORM_ID
 } from '@/api/constant/form_constant.js'
 
 const emit = defineEmits(['toggle-menu'])
@@ -125,11 +126,14 @@ const menuItems = [
 
   // 分析 & 测试
   { name: '特征分析', icon: 'DataAnalysis', link: '/inner/featuredemo' },
+  { name: '测点数据', icon: 'Drizzling', link: '/inner/pointRawData' },
   { name: '接口测试', icon: 'Link',         link: '/inner/py_interface_test' },
 
   // 外部入口
   { name: '数据后台', icon: 'Operation', link: '/index/workbench',                 external: true },
-  { name: '故障管理',           icon: 'Warning',   link: buildLowcodeUrl(getSysConfigFormId("FAULT_CONFIG_FORM_ID")),     external: true, openInFrame: true }
+  { name: '故障管理', icon: 'Warning',   link: buildLowcodeUrl(getSysConfigFormId(FAULT_CONFIG_FORM_ID)),     external: true, openInFrame: true },
+  { name: '维修记录', icon: 'Warning',   link: buildLowcodeUrl(getSysConfigFormId(REPAIR_RECORD_FORM_ID)),     external: true, openInFrame: true }
+
 ]
 
 
@@ -140,15 +144,32 @@ const handleMenuClick = (item) => {
     router.push(item.link)
     return
   }
-  const token  = getToken()
-  const tenant = getTenantId()
-  const fullUrl = `${BASE_EXTERNAL_URL}${item.link}?token=${encodeURIComponent(token)}&tenant-id=${encodeURIComponent(tenant)}`
+
+  const token  = getToken?.() || ''        // 避免 undefined
+  let tenant   = getTenantId?.()
+  if (!tenant) {                           // 兜底租户
+    try { setTenantId && setTenantId('180') } catch (e) {}
+    tenant = '180'
+  }
+
+  // 只拼有值的参数，避免出现 token=undefined 或 tenant-id=undefined
+  const qs = new URLSearchParams()
+  if (token) qs.set('token', token)
+  if (tenant) qs.set('tenant-id', String(tenant))
+
   if (item.openInFrame) {
-    router.push({ path: '/inner/lowcodeframe', query: { url: item.link } })
+    // 把 token/tenant 一并传给低代码内嵌页，由该页决定是否再拼接
+    router.push({
+      path: '/inner/lowcodeframe',
+      query: { url: item.link, token: token || '', tenantId: String(tenant) }
+    })
   } else {
+    const fullUrl = `${BASE_EXTERNAL_URL}${item.link}${qs.toString() ? `?${qs.toString()}` : ''}`
     window.open(fullUrl, '_blank')
   }
 }
+
+
 </script>
 
 <!-- 纯 Tailwind，这里无需样式 -->

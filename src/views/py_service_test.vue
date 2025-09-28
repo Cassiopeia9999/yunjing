@@ -274,7 +274,7 @@ function copyText(val) {
 </script>
 
 <style scoped>
-:root { --primary-color: #165DFF; }
+:root { --primary-color: #36c9ea; }
 
 /* JSON 视图滚动/字体 */
 .vue-json-pretty { max-height: 360px; overflow: auto; }

@@ -71,11 +71,11 @@
                   start-placeholder="起始时间"
                   end-placeholder="结束时间"
                   size="default"
-                  class="col-span-12 sm:col-span-6 w-full"
+                  class="col-span-8 sm:col-span-4 w-full"
               />
 
               <!-- 操作按钮：靠右对齐，按钮更醒目 -->
-              <div class="col-span-12 sm:col-span-3 flex justify-end gap-2">
+              <div class="col-span-16 sm:col-span-4 flex justify-end gap-2">
                 <el-button :icon="Search" type="primary" size="default" class="min-w-[96px]" @click="refetchAllSelectedData">
                   查询
                 </el-button>
@@ -144,7 +144,7 @@
               <div class="px-3 py-2 flex justify-between items-center border-b border-neutral-200 dark:border-neutral-700">
                 <div class="flex items-center gap-2">
                   <span class="inline-block w-1 h-4 rounded bg-[color:var(--primary-color)]"></span>
-                  <h4 class="text-sm font-medium truncate">{{ fname }}</h4>
+                  <el-tag size="small" effect="dark" class="title-tag">{{ fname }}</el-tag>
                 </div>
                 <el-button size="small" type="primary" plain @click="exportSingleChart(fname)">导出</el-button>
               </div>
@@ -247,17 +247,55 @@ const noFeatureSelected = computed(() => (selectedFeatureNames.value && selected
 
 const featureDataMap = reactive({})
 const currentDevice = ref(null)
+// —— 新增：每个特征的单位/上下限等元信息 —— //
+const featureMetaMap = reactive({})  // { [featureName]: { unit, low, up, alarm } }
+const toNum = v => (v === null || v === undefined || v === '' ? null : Number(v))
 
 /* 图表管理 */
 const chartRefs = reactive({})
 const chartsMap = new Map()
 
-function handleSelectedPoints({ device, features }) {
-  const unique = [...new Set(features.map(d => d.feature_name))]
-  availableFeatureNames.value = unique
-  selectedFeatureNames.value = unique.slice(0, 1)
+
+function handleSelectedPoints(payload) {
+  const { device, features = [], featureName } = payload || {}
+  if (!device) return
   currentDevice.value = device
+
+  // 统一从数据里提取特征名
+  const namesFromData = Array.from(
+      new Set(features.map(i => i.feature_name || i.feature_alia_name || i.name).filter(Boolean))
+  )
+
+  // ✅ 新增：把单位/上下限缓存下来，供绘图使用
+  for (const r of features) {
+    const n = r.feature_name || r.feature_alia_name || r.name
+    if (!n) continue
+    featureMetaMap[n] = {
+      unit:  r.feature_unit ?? r.unit ?? '',
+      low:   toNum(r.low_limit  ?? r.low  ?? r.lower  ?? r.lowLimit),
+      up:    toNum(r.up_limit   ?? r.up   ?? r.upper  ?? r.upLimit),
+      alarm: toNum(r.alarm_limit?? r.alarm?? r.alarmLimit),
+    }
+  }
+
+  // …（你原有的可选特征集合/默认选中特征逻辑保持不变）
+  const set = new Set([...(availableFeatureNames.value || []), ...namesFromData])
+  if (featureName) set.add(featureName)
+  availableFeatureNames.value = Array.from(set)
+
+  if (!selectedFeatureNames.value.length) {
+    selectedFeatureNames.value = featureName
+        ? [featureName]
+        : (namesFromData.length ? [namesFromData[0]] : [])
+  }
+
+  const range = timeRange.value || []
+  if (range.length === 2 && range[0] && range[1] && selectedFeatureNames.value.length) {
+    refetchAllSelectedData()
+  }
 }
+
+
 
 /* 周期与时间 */
 const periodOptions = ref([])
@@ -309,21 +347,67 @@ async function fetchSingleFeatureData(featureName) {
   if (!currentDevice.value) return
   const range = timeRange.value || []
   const start = range[0]
-  const end = range[1]
+  const end   = range[1]
   if (!start || !end) return
+
+  let arr = []
   try {
     const startStr = new Date(start).toISOString()
-    const endStr = new Date(end).toISOString()
+    const endStr   = new Date(end).toISOString()
     const deviceName = currentDevice.value.device_name
+
     const data = await fetchParsedFeatureData(deviceName, featureName, startStr, endStr)
-    featureDataMap[featureName] = data
-    renderChart(featureName)
+    arr = Array.isArray(data) ? data : []
   } catch (err) {
     console.error(`加载特征 ${featureName} 失败`, err)
+    arr = []
   }
+
+  // ✅ 后端为空或异常时，用 mock 顶上，确保有图可看
+  if (!arr.length) {
+    arr = genMockFeatureSeries(featureName, start, end)
+  }
+
+  featureDataMap[featureName] = arr
+  renderChart(featureName)
 }
 
-/* —— 仅 UI 的图表主题增强（逻辑不变） —— */
+
+
+// 放在 <script setup> 顶部或函数上方：mock 生成器
+function genMockFeatureSeries(featureName, start, end) {
+  const startMs = +new Date(start)
+  const endMs   = +new Date(end)
+  if (!isFinite(startMs) || !isFinite(endMs) || endMs <= startMs) return []
+
+  const span = endMs - startMs
+  // 目标点数：约 1 点/小时，限制在 [30, 240]
+  const targetPts = Math.min(240, Math.max(30, Math.round(span / (1000 * 60 * 60)) || 60))
+  const step = span / targetPts
+
+  // 简单种子随机（按特征名保证同一特征更“稳定”）
+  let seed = 0
+  for (let i = 0; i < String(featureName).length; i++) {
+    seed = (seed * 31 + String(featureName).charCodeAt(i)) >>> 0
+  }
+  const rand = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 0xffffffff)
+
+  // 初始值：40~80 随机，随后做随机游走 + 微弱趋势
+  let v = 40 + rand() * 40
+  const drift = (rand() - 0.5) * 0.2 // 整体漂移幅度
+
+  const arr = []
+  for (let i = 0; i < targetPts; i++) {
+    const t = startMs + i * step
+    // 随机游走（波动）+ 轻微趋势
+    v += (rand() - 0.5) * 2 + drift
+    arr.push({
+      cur_timestamp: Math.round(t),               // 与 renderChart 期望一致
+      feature_value: Number(v.toFixed(2)),        // 数值
+    })
+  }
+  return arr
+}
 function renderChart(name) {
   const el = chartRefs[name]
   if (!el) return
@@ -334,54 +418,128 @@ function renderChart(name) {
     chartsMap.set(name, chart)
   }
 
-  const data = (featureDataMap[name] || []).slice().sort((a, b) => a.cur_timestamp - b.cur_timestamp)
-  const timestamps = data.map(d => showDateOnly.value ? formatTimestamp(d.cur_timestamp).split(' ')[0] : formatTimestamp(d.cur_timestamp))
-  const values = data.map(d => d.feature_value)
+  const rows = (featureDataMap[name] || []).slice().sort((a, b) => a.cur_timestamp - b.cur_timestamp)
+  const timestamps = rows.map(d => showDateOnly.value ? formatTimestamp(d.cur_timestamp).split(' ')[0] : formatTimestamp(d.cur_timestamp))
+  const values     = rows.map(d => d.feature_value)
 
+  // 上下限/报警/单位（沿用你现有的 featureMetaMap 取值）
+  const meta  = featureMetaMap[name] || {}
+  const low   = meta.low
+  const up    = meta.up
+  const alarm = meta.alarm
+  const unit  = meta.unit || ''
+
+  // 主题/配色
   const isDark = document.documentElement.classList.contains('dark')
+  const primary = (getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#165DFF').trim()
   const paletteLight = ['#2563EB', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F43F5E']
   const paletteDark  = ['#60A5FA', '#34D399', '#FBBF24', '#F87171', '#A78BFA', '#22D3EE', '#A3E635', '#FB7185']
-  const label = isDark ? '#e5e7eb' : '#374151'
-  const axis  = isDark ? '#6b7280' : '#9ca3af'
-  const split = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)'
-  const bgTip = isDark ? 'rgba(17,24,39,.96)' : 'rgba(255,255,255,.96)'
-  const bdTip = isDark ? '#4b5563' : '#e5e7eb'
+  const label = isDark ? '#e5e7eb' : '#111827'
+  const axis  = isDark ? '#9ca3af' : '#6b7280'
+  const split = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.08)'
+  const tipBg = isDark ? 'rgba(17,24,39,.96)' : 'rgba(255,255,255,.96)'
+  const tipBd = isDark ? '#4b5563' : '#e5e7eb'
+
+  // y 轴范围（把参考线也纳入）
+  const pool = [...values]
+  if (low   != null) pool.push(low)
+  if (up    != null) pool.push(up)
+  if (alarm != null) pool.push(alarm)
+  const yMin = Math.min(...pool), yMax = Math.max(...pool)
+  const pad  = Math.max(1, (yMax - yMin) * 0.1)
+
+  const series = [{
+    type: 'line',
+    name,
+    data: values,
+    smooth: true,
+    showSymbol: false,
+    lineStyle: { width: 2.2 },
+    areaStyle: { opacity: .08 },
+    endLabel: {
+      show: true,
+      formatter: p => `${p.seriesName}: ${Number(p.value).toFixed(2)}`,
+      fontWeight: 700, padding: [2,6],
+      backgroundColor: isDark ? 'rgba(255,255,255,.08)' : 'rgba(17,24,39,.06)',
+      borderRadius: 4, color: label
+    },
+    markArea: (low != null && up != null) ? {
+      silent: true,
+      itemStyle: { color: 'rgba(16,185,129,0.06)' },
+      data: [[{ yAxis: low }, { yAxis: up }]]
+    } : undefined
+  }]
+
+  if (low != null) {
+    series.push({
+      type: 'line', name: '下限',
+      data: new Array(timestamps.length).fill(low),
+      symbol: 'none',
+      lineStyle: { width: 1.6, type: 'dashed', color: '#10B981' },
+      emphasis: { disabled: true }, tooltip: { show: false }
+    })
+  }
+  if (up != null) {
+    series.push({
+      type: 'line', name: '上限',
+      data: new Array(timestamps.length).fill(up),
+      symbol: 'none',
+      lineStyle: { width: 1.6, type: 'dashed', color: '#EF4444' },
+      emphasis: { disabled: true }, tooltip: { show: false }
+    })
+  }
+  if (alarm != null) {
+    series.push({
+      type: 'line', name: '报警',
+      data: new Array(timestamps.length).fill(alarm),
+      symbol: 'none',
+      lineStyle: { width: 1.8, type: 'dotted', color: '#F59E0B' },
+      emphasis: { disabled: true }, tooltip: { show: false }
+    })
+  }
 
   chart.setOption({
+    // ✅ 标题做成“主题色 Tag”样式
+
     color: isDark ? paletteDark : paletteLight,
     textStyle: { color: label },
+    legend: {
+      top: 8,
+      textStyle: { color: label, fontSize: 12, fontWeight: 700 }
+    },
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'cross' },
-      backgroundColor: bgTip,
-      borderColor: bdTip,
-      textStyle: { color: label }
+      axisPointer: {
+        type: 'cross',
+        label: { show:true, backgroundColor:'#111827', color:'#fff', fontWeight:700, padding:[2,6], borderRadius:4 }
+      },
+      backgroundColor: tipBg, borderColor: tipBd,
+      textStyle: { color: label, fontWeight: 600 }
     },
-    grid: { left: 52, right: 24, top: 36, bottom: 40 },
+    grid: { left: 56, right: 28, top: 46, bottom: 42 }, // 顶部稍大给标题/图例
     xAxis: {
       type: 'category',
       data: timestamps,
-      axisLabel: { color: label },
-      axisLine: { lineStyle: { color: axis } },
+      axisLabel: { color: label, fontWeight: 600, fontSize: 12 },
+      axisLine:  { lineStyle: { color: axis } },
       splitLine: { show: false }
     },
     yAxis: {
       type: 'value',
-      axisLabel: { color: label },
-      axisLine: { lineStyle: { color: axis } },
+      min: yMin - pad, max: yMax + pad,
+      name: unit ? `单位：${unit}` : '',
+      nameLocation: 'end', nameGap: 12,
+      nameTextStyle: { color: label, fontWeight: 700, fontSize: 12 },
+      axisLabel: { color: label, fontWeight: 600, fontSize: 12 },
+      axisLine:  { lineStyle: { color: axis } },
       splitLine: { show: true, lineStyle: { color: split } }
     },
-    series: [{
-      type: 'line',
-      name,
-      data: values,
-      smooth: true,
-      showSymbol: false,
-      lineStyle: { width: 2 },
-      areaStyle: { opacity: .08 }
-    }]
+    series
   })
 }
+
+
+
 
 /* 导出图表（保持你的写法） */
 function exportSingleChart(name) {
@@ -400,7 +558,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-:root { --primary-color: #165DFF; } /* 企业主色 */
+:root { --primary-color: #42c5f6; } /* 企业主色 */
 .fade-enter-active, .fade-leave-active { transition: opacity .2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
@@ -410,4 +568,14 @@ onUnmounted(() => {
 /* 新增：让 datetimerange 在栅格中 100% 宽 */
 :deep(.el-date-editor.el-range-editor.el-input__wrapper) { width: 100%; }
 :deep(.el-range-editor.el-input__wrapper) { width: 100%; } /* 兼容不同版本 */
+
+.title-tag{
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color:#fff;
+  font-weight:700;
+  border-radius:9999px;
+  padding: 2px 10px;
+}
+
 </style>

@@ -220,7 +220,8 @@ function onDeviceChange(deviceId) {
         if (!props.showFeatureSelector) {
           emit('data-ready', {
             device: selectedDevice.value,
-            features: featureDataList
+            features: featureDataList,
+            featureName: null
           })
         }
       })
@@ -240,7 +241,11 @@ async function loadFeatureData() {
 
   try {
     const res = await fetchTableData(1, 1000, getSysConfigFormId("FEATURE_DATA_FORM_ID"), queryParams);
-    emit('data-ready', res.data.list || []);
+    emit('data-ready', {
+         device: selectedDevice.value,
+         features: res.data.list || [],
+         featureName: selectedFeatureName.value
+    });
   } catch (error) {
     console.error('加载特征数据失败:', error);
   }

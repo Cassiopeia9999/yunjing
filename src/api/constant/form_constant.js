@@ -15,6 +15,8 @@ export const Real_Time_Device_Data = 'Real_Time_Device_Data';
 export const SERVICE_CONFIG_FORM_ID = 'SERVICE_CONFIG_FORM_ID';
 export const FAULT_CONFIG_FORM_ID = 'FAULT_CONFIG_FORM_ID';
 export const DIAGNOSIS_FORM_ID = 'DIAGNOSIS_FORM_ID';
+export const REPAIR_RECORD_FORM_ID = 'REPAIR_RECORD_FORM_ID';
+
 
 
 
@@ -31,6 +33,7 @@ const FORM_ID_MAP = {
     [PERIOD_FORM_ID]: 39,
     [Equipment_Characteristic_Data]: 44,
     [Real_Time_Device_Data]: 42,
+    [REPAIR_RECORD_FORM_ID]: 51,
     [SERVICE_CONFIG_FORM_ID]: 52,
     [FAULT_CONFIG_FORM_ID]: 29,
     [DIAGNOSIS_FORM_ID]: 49

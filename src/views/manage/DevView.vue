@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, nextTick, watch, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, nextTick, watch, onBeforeUnmount, reactive } from 'vue'
 import * as echarts from 'echarts'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -11,7 +11,7 @@ import FaultDiagnosisPanel from '@/components/alg/FaultDiagnosisPanel.vue'
 import { getDevicePageData } from '@/mock/deviceMock'
 import { fetchDevices, getBaseList, getAssessmentUnits } from '@/mock/fetchDataApi'
 import { getLatestFeatures } from '@/mock/featureMock.js'
-import FeatureConfigDialog from "@/components/scene/FeatureConfigDialog.vue";
+import FeatureConfigDialog from "@/buz/feature/FeatureConfigDialog.vue";
 import { loadFeaturePanelCfg as readFeaturePanelCfg } from '@/utils/featurePanelCfg'
 
 /** 新增：特征配置对话框（独立组件） */
@@ -51,6 +51,40 @@ const recordsRaw = computed(() => data.value?.records || [])
 const selectedRows = ref([])
 const keyword = ref('')
 const onlyHigh = ref(false)
+
+
+
+// 按“同一时间点(到秒)”分组，产出父表数据
+const recordGroups = computed(() => {
+  const list = records.value || []
+  const map = new Map()
+  for (const r of list) {
+    const key = fmtDT(r.diagnose_time)
+    if (!map.has(key)) map.set(key, [])
+    map.get(key).push(r)
+  }
+  const rows = []
+  for (const [time, arr] of map.entries()) {
+    const names = arr.map(a => a.fault_name || '—')
+    // 可能的文件字段：raw_file_name / raw_file_id / file_name / raw_file
+    const files = Array.from(
+        new Set(arr.map(a => a.raw_file_name || a.raw_file_id || a.file_name || a.raw_file).filter(Boolean))
+    )
+    rows.push({
+      id: time,                   // 父行 id
+      time,                       // 时间（到秒）
+      namesText: names.join('，'),
+      filesText: files.length ? files.join('，') : '—',
+      count: arr.length,
+      children: arr               // 展开表用原始行
+    })
+  }
+  // 倒序（新到旧）
+  rows.sort((a,b) => b.time.localeCompare(a.time))
+  return rows
+})
+
+
 const records = computed(() => {
   let list = [...recordsRaw.value]
   if (keyword.value?.trim()) {
@@ -93,6 +127,20 @@ function renderCharts(){
   })
 }
 onBeforeUnmount(disposeCharts)
+
+
+// 每个分组一份勾选集：{ [groupId]: Row[] }
+const groupSelections = reactive({})
+
+// 子表 selection-change 回调：汇总到 selectedRows
+function onSubSelChange(groupRow, rows) {
+  groupSelections[groupRow.id] = rows || []
+  const all = Object.values(groupSelections).flat()
+  selectedRows.value = all
+}
+
+
+const fmtDT = (s) => (s || '').replace('T',' ').slice(0,19)
 
 /** 状态盘映射 */
 const STATUS_MAP = {
@@ -360,38 +408,6 @@ onMounted(loadAll)
               </div>
             </el-card>
 
-            <!-- 快照 -->
-            <!-- 原“最新诊断快照”卡片，替换为下面这一整段 -->
-<!--            <el-card shadow="never" class="dark:bg-neutral-800 snap-card">-->
-<!--              <div class="flex items-center justify-between mb-2">-->
-<!--                <div class="font-medium text-lg">最新诊断快照</div>-->
-<!--                <div class="text-xs opacity-70">-->
-<!--                  时间：{{ snap?.diagnosis_time ? snap.diagnosis_time.replace('T',' ').slice(0,19) : '—' }}-->
-<!--                </div>-->
-<!--              </div>-->
-
-<!--              <div v-if="snap?.faults?.length" class="space-y-3">-->
-<!--                <div v-for="f in snap.faults" :key="f.id" class="snap-row">-->
-<!--                  <div class="row-top">-->
-<!--                    <span class="fault-name" :title="f.fault_name">{{ f.fault_name || '—' }}</span>-->
-<!--                    <el-tag-->
-<!--                        size="small"-->
-<!--                        :type="(f.probability ?? 0) >= (data?.meta?.highProbThreshold||70) ? 'danger' : 'info'"-->
-<!--                    >{{ Math.round(f.probability ?? 0) }}%</el-tag>-->
-<!--                  </div>-->
-
-<!--                  <div class="row-sub">-->
-<!--                    <span class="snap-sub">{{ f.diagnosis_basis_short || '—' }}</span>-->
-<!--                    <div class="row-actions">-->
-<!--                      <el-button v-if="f.diagnosis_basis" link size="small" @click="viewBasis(f)">查看依据</el-button>-->
-<!--                      <el-button v-if="f.raw_file_id" link size="small" @click="viewRaw(f)">原始文件</el-button>-->
-<!--                    </div>-->
-<!--                  </div>-->
-<!--                </div>-->
-<!--              </div>-->
-
-<!--              <div v-else class="text-xs opacity-70">暂无故障</div>-->
-<!--            </el-card>-->
 
 
             <!-- 最新特征值（两列卡片） -->
@@ -417,20 +433,6 @@ onMounted(loadAll)
               <div v-if="!featureCards.length" class="text-xs opacity-70">暂无特征</div>
             </el-card>
 
-            <!-- 风险提示 -->
-<!--            <el-card shadow="never" class="dark:bg-neutral-800">-->
-<!--              <div class="flex items-center justify-between mb-2">-->
-<!--                <div class="font-medium">风险提示与建议</div>-->
-<!--                <el-tag size="small" effect="plain">规则提示</el-tag>-->
-<!--              </div>-->
-<!--              <ul class="space-y-2 text-sm">-->
-<!--                <li v-for="(t,i) in tips" :key="i" class="flex items-start gap-2">-->
-<!--                  <el-icon class="mt-[2px]"><WarningFilled/></el-icon>-->
-<!--                  <span v-html="t"></span>-->
-<!--                </li>-->
-<!--                <li v-if="!tips?.length" class="text-xs opacity-70">暂无提示</li>-->
-<!--              </ul>-->
-<!--            </el-card>-->
           </div>
 
           <!-- 右列：记录 + 趋势 -->
@@ -445,35 +447,47 @@ onMounted(loadAll)
             </div>
 
             <div class="max-h-full">
-              <el-table :data="records" size="small" class="!bg-transparent" :row-class-name="()=>'cursor-default'"
-                        @selection-change="onSelChange" :row-key="r=>r.id">
-                <el-table-column type="selection" width="40"/>
-                <el-table-column label="时间" width="170">
-                  <template #default="{row}">{{ row.diagnosis_time.replace('T',' ').slice(0,19) }}</template>
-                </el-table-column>
-                <el-table-column label="故障名称" min-width="180" show-overflow-tooltip prop="fault_name"/>
-                <el-table-column label="概率" width="90">
-                  <template #default="{row}">
-                    <el-tag :type="row.probability >= (data?.meta?.highProbThreshold||70) ? 'danger':'info'" size="small">
-                      {{ Math.round(row.probability) }}%
-                    </el-tag>
+              <!-- 父表：按时间点聚合 -->
+              <el-table :data="recordGroups" size="small" class="!bg-transparent" row-key="id">
+                <!-- 展开列：嵌套子表 -->
+                <el-table-column type="expand">
+                  <template #default="{ row }">
+                    <!-- 子表：就是你现在的明细表结构 -->
+                    <el-table :data="row.children" size="small" class="!bg-transparent"
+                              :row-key="r=>r.id" @selection-change="rows => onSubSelChange(row, rows)">
+                      <el-table-column type="selection" width="40"/>
+                      <el-table-column label=" " width="150">
+<!--                        <template #default="{row}">{{ fmtDT(row.diagnose_time) }}</template>-->
+                      </el-table-column>
+                      <el-table-column label="故障名称" min-width="180" show-overflow-tooltip prop="fault_name"/>
+                      <el-table-column label="概率" width="90">
+                        <template #default="{row}">
+                          <el-tag :type="row.probability >= (data?.meta?.highProbThreshold||70) ? 'danger':'info'" size="small">
+                            {{ Math.round(row.probability) }}%
+                          </el-tag>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="备注" min-width="200" show-overflow-tooltip prop="description"/>
+                      <el-table-column label="操作" width="280" align="center">
+                        <template #default="{row}">
+                          <el-button size="small" type="primary" plain @click="markConfirmed(row)" :disabled="row.confirmed">
+                            {{ row.confirmed ? '已确认' : '标记已确认' }}
+                          </el-button>
+                        </template>
+                      </el-table-column>
+                    </el-table>
                   </template>
                 </el-table-column>
-                <el-table-column label="备注" min-width="200" show-overflow-tooltip prop="description"/>
-                <el-table-column label="操作" width="280" align="center">
-                  <template #default="{row}">
-                    <el-button size="small" type="primary" plain @click="markConfirmed(row)" :disabled="row.confirmed">
-                      {{ row.confirmed ? '已确认' : '标记已确认' }}
-                    </el-button>
-                    <el-button size="small" type="warning" @click="upgradeToFault(row)">升级为故障</el-button>
-                    <el-button size="small" link type="primary" @click="viewBasis(row)">查看依据</el-button>
-                    <el-button size="small" link type="primary" @click="viewRaw(row)">原始文件</el-button>
-                  </template>
-                </el-table-column>
-                <el-table-column width="44" align="center">
-                  <template #default><el-icon><ArrowRight/></el-icon></template>
+
+                <!-- 父行列：聚合后的摘要 -->
+                <el-table-column label="时间" width="250" prop="time"/>
+                <el-table-column label="故障名称（合并）" min-width="260" show-overflow-tooltip prop="namesText"/>
+                <el-table-column label="来源文件" min-width="220" show-overflow-tooltip prop="filesText"/>
+                <el-table-column label="数量" width="80" align="center">
+                  <template #default="{ row }"><el-tag size="small">{{ row.count }}</el-tag></template>
                 </el-table-column>
               </el-table>
+
 
               <el-card shadow="never" class="dark:bg-neutral-800">
                 <div class="flex items-center justify-between mb-2"><div class="font-medium">概率趋势（{{ days }}天）</div></div>

@@ -29,6 +29,7 @@ const DevView    = () => import('@/views/manage/DevView.vue')
 const DecisionView   = () => import('@/views/manage/DecisionView.vue')
 const FaultCenterView   = () => import('@/views/manage/FaultCenter.vue')
 import FullscreenLayout from '@/components/layouts/FullscreenLayout.vue'
+import PointDataView from "@/views/analysis/PointDataView.vue";
 
 
 const routes = [
@@ -72,6 +73,7 @@ const routes = [
             { path: 'system',           name: 'system',          component: system,                  meta: { requiresAuth: true } },
             { path: 'device',           name: 'device',          component: device,                  meta: { requiresAuth: true } },
             { path: 'repair',           name: 'repair',          component: repair,                  meta: { requiresAuth: true } },
+            { path: 'pointRawData',     name: 'pointRawData', component: PointDataView,              meta: { requiresAuth: true } },
 
             // 🔥 新增四个管理视图（与你菜单的链接一致）
             // 基地视图（可以选择三维场景或普通列表视图）

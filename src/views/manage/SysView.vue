@@ -7,6 +7,9 @@ import { getUnitPageData } from '@/mock/unitMock'
 import { ArrowRight, WarningFilled, TrendCharts, Operation } from '@element-plus/icons-vue'
 import { getAssessmentUnits, getBaseList } from "@/mock/fetchDataApi.js";
 import { ElMessage } from 'element-plus'
+import { getLatestFeatures } from '@/mock/featureMock.js'
+import FeatureConfigDialog from '@/buz/feature/FeatureConfigDialog.vue'
+import { loadFeaturePanelCfg as readFeaturePanelCfg } from '@/utils/featurePanelCfg'
 
 /** 路由 */
 const route = useRoute()
@@ -29,6 +32,47 @@ const sortKey = ref('health') // health/rul/conf/diagTime/alarm
 const filters = ref({
   status: null, type: null, model: null, alarmSeverity: null
 })
+
+
+// 设备特征值
+
+/** ───── 装置特征值（与设备页一致，可配置） ───── */
+const featureAllUnit = ref([])              // 全量特征
+const featureOrderUnit = ref([])            // 排序 key 列表
+const featureDisplayCountUnit = ref(8)      // 面板显示数量
+const featureDialogVisibleUnit = ref(false) // 配置对话框显隐
+
+const makeFeatKeyUnit = f => `${f.name}|${f.source}`
+
+async function loadUnitFeatures () {
+  if (!unitId.value) { featureAllUnit.value = []; return }
+  // mock：直接用现有 getLatestFeatures，传 unitId 即可
+  featureAllUnit.value = await getLatestFeatures(unitId.value)
+
+  // 每个装置独立配置：key 使用 unit-<unitId>
+  const saved = readFeaturePanelCfg(`unit-${unitId.value}`)
+
+  const validKeys = new Set(featureAllUnit.value.map(makeFeatKeyUnit))
+  const savedOrder = (saved?.order || []).filter(k => validKeys.has(k))
+  const newOnes = featureAllUnit.value.map(makeFeatKeyUnit).filter(k => !savedOrder.includes(k))
+  featureOrderUnit.value = [...savedOrder, ...newOnes]
+  featureDisplayCountUnit.value = saved?.count ?? 8
+}
+
+const featureAllSortedUnit = computed(() => {
+  const map = new Map(featureAllUnit.value.map(f => [makeFeatKeyUnit(f), f]))
+  const ordered = []
+  featureOrderUnit.value.forEach(k => { if (map.has(k)) { ordered.push(map.get(k)); map.delete(k) } })
+  return ordered.concat([...map.values()])
+})
+const featureCardsUnit = computed(() => featureAllSortedUnit.value.slice(0, featureDisplayCountUnit.value))
+
+function openFeatureDialogUnit(){ featureDialogVisibleUnit.value = true }
+function onFeatureApplyUnit(cfg){
+  featureOrderUnit.value = cfg.order ?? []
+  featureDisplayCountUnit.value = cfg.count ?? 8
+}
+
 
 /** 阈值与派生 */
 const highProbText = computed(() => `Pθ=${data.value?.meta?.highProbThreshold ?? 70}%`)
@@ -267,6 +311,10 @@ async function load() {
     days: days.value,
     highProbThreshold: highProb.value
   })
+
+  // ★ 加载装置特征（与设备页一致的卡片数据）
+  await loadUnitFeatures()
+
   loading.value = false
   await nextTick()
   renderCharts()
@@ -560,13 +608,37 @@ function openDecision(){ dialogDecision.value = true }
 
           <!-- 右：分析图表 -->
           <div class="col-span-4 min-w-0 flex flex-col gap-3">
+
             <el-card shadow="never" class="dark:bg-neutral-800">
               <div class="flex items-center justify-between mb-2">
-                <div class="font-medium">故障知识分布</div>
-                <el-tag size="small" effect="plain">点击联动列表</el-tag>
+                <div class="font-medium">装置特征值</div>
+                <el-button size="small" type="primary" link @click="openFeatureDialogUnit">更多</el-button>
               </div>
-              <div ref="elDiagDist" class="h-[220px]"></div>
+
+              <div class="feat-grid">
+                <div v-for="f in featureCardsUnit" :key="makeFeatKeyUnit(f)" class="feat-card">
+                  <div class="feat-name" :title="f.name">{{ f.name }}</div>
+                  <div class="feat-val">
+                    <span class="feat-num">{{ f.value }}</span>
+                    <span class="feat-unit">{{ f.unit }}</span>
+                  </div>
+                  <div class="feat-time">{{ f.ts?.replace('T',' ').slice(0,19) || '—' }}</div>
+                  <el-tag size="small" :type="f.source==='parsed' ? 'success' : 'info'">
+                    {{ f.source==='parsed' ? '解析' : '上报' }}
+                  </el-tag>
+                </div>
+              </div>
+              <div v-if="!featureCardsUnit.length" class="text-xs opacity-70">暂无特征</div>
             </el-card>
+
+
+<!--            <el-card shadow="never" class="dark:bg-neutral-800">-->
+<!--              <div class="flex items-center justify-between mb-2">-->
+<!--                <div class="font-medium">故障知识分布</div>-->
+<!--                <el-tag size="small" effect="plain">点击联动列表</el-tag>-->
+<!--              </div>-->
+<!--              <div ref="elDiagDist" class="h-[220px]"></div>-->
+<!--            </el-card>-->
 
             <el-card shadow="never" class="dark:bg-neutral-800">
               <div class="flex items-center justify-between mb-2">
@@ -660,6 +732,18 @@ function openDecision(){ dialogDecision.value = true }
             <el-button type="success" @click="dialogDecision=false">生成决策草案</el-button>
           </template>
         </el-dialog>
+
+
+        <FeatureConfigDialog
+            v-model:visible="featureDialogVisibleUnit"
+            :device-id="`unit-${unitId}`"
+            :features="featureAllUnit"
+            :default-count="featureDisplayCountUnit"
+            :makeKey="makeFeatKeyUnit"
+            :maxCount="24"
+            @apply="onFeatureApplyUnit"
+        />
+
       </el-skeleton>
     </div>
   </div>
@@ -707,5 +791,31 @@ function openDecision(){ dialogDecision.value = true }
 .dark {
   --chart-label-color: #E5E7EB; /* 灰白 */
 }
+
+
+/* 特征小卡片网格，与设备页一致 */
+.feat-grid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.feat-card{
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 6px;
+  padding: 5px 6px;
+  background: rgba(0,0,0,.02);
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  row-gap: 6px;
+}
+.dark .feat-card{
+  border-color: rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+}
+.feat-name{ font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.feat-val{ display: flex; align-items: baseline; gap: 6px; }
+.feat-num{ font-size: 22px; font-weight: 800; line-height: 1; }
+.feat-unit{ font-size: 12px; opacity: .75; }
+.feat-time{ font-size: 12px; opacity: .7; }
 
 </style>

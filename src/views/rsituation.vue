@@ -8,68 +8,96 @@
           <div class="text-xs text-neutral-500">实时</div>
         </div>
 
-        <div v-if="diagnosis" class="space-y-3">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 text-sm">
-            <div class="truncate"><span class="text-neutral-500">故障设备：</span>{{ diagnosis.device }}</div>
-            <div class="truncate"><span class="text-neutral-500">诊断时间：</span>{{ diagnosis.diagnose_time }}</div>
-            <div class="truncate"><span class="text-neutral-500">故障类型：</span>{{ diagnosis.fault_type }}</div>
-            <div class="truncate"><span class="text-neutral-500">置信度：</span>{{ diagnosis.confidence }}</div>
-            <div class="truncate"><span class="text-neutral-500">状态甄别：</span>{{ diagnosis.eva_status }}</div>
-            <div class="truncate"><span class="text-neutral-500">故障等级：</span>{{ diagnosis.fault_level }}</div>
-          </div>
+        <!-- 基础信息行 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 text-sm mb-3">
+          <div class="truncate"><span class="text-neutral-500">故障设备：</span>{{ baseInfo.device || currentDeviceName || '—' }}</div>
+          <div class="truncate"><span class="text-neutral-500">最新诊断时间：</span>{{ baseInfo.latest_time || '—' }}</div>
+          <div class="truncate"><span class="text-neutral-500">故障条数：</span>{{ diagnoses.length }}</div>
+          <div class="truncate"><span class="text-neutral-500">最高置信度：</span>{{ baseInfo.max_confidence ?? '—' }}</div>
+          <div class="truncate"><span class="text-neutral-500">最近状态甄别：</span>{{ baseInfo.latest_status || '—' }}</div>
+          <div class="truncate"><span class="text-neutral-500">最近故障等级：</span>{{ baseInfo.latest_level || '—' }}</div>
+        </div>
 
-          <div class="bg-neutral-50 dark:bg-neutral-800 text-sm p-3 rounded border border-dashed border-neutral-300 dark:border-neutral-600 whitespace-pre-line">
-            <span class="text-neutral-500">详情：</span>{{ diagnosis.description || '无' }}
+        <!-- 故障列表 -->
+        <!-- 故障列表：轻量一行条目 + 可展开详情 -->
+        <div v-if="diagnoses.length" class="divide-y divide-neutral-200 dark:divide-neutral-700">
+          <div
+              v-for="(f, idx) in diagnoses"
+              :key="f.id || idx"
+              class="px-2 sm:px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 transition-colors"
+          >
+            <!-- 第一行：精简信息 -->
+            <div class="flex items-center gap-3 text-sm">
+              <span class="text-neutral-400 w-8 shrink-0">#{{ idx + 1 }}</span>
+
+              <span class="shrink-0">
+        <span class="text-neutral-500">类型：</span>{{ f.fault_type || '—' }}
+      </span>
+
+<!--              <span class="shrink-0">-->
+<!--        <span class="text-neutral-500">等级：</span>-->
+<!--        <span :class="levelClass(f.fault_level)">{{ f.fault_level || '—' }}</span>-->
+<!--      </span>-->
+
+<!--              <span class="shrink-0">-->
+<!--        <span class="text-neutral-500">置信度：</span>-->
+<!--        <span :class="confidenceClass(f.confidence)">{{ f.confidence ?? '—' }}</span>-->
+<!--      </span>-->
+
+<!--              <span class="hidden md:inline truncate">-->
+<!--        <span class="text-neutral-500">甄别：</span>{{ f.eva_status || '—' }}-->
+<!--      </span>-->
+
+              <span class="ml-auto text-xs text-neutral-500">
+        {{ f.diagnose_time || '—' }}
+      </span>
+
+              <button
+                  class="ml-2 text-xs px-2 py-1 rounded border border-neutral-300 dark:border-neutral-600
+               hover:bg-neutral-100 dark:hover:bg-neutral-700"
+                  @click="toggleExpand(idx)"
+              >
+                {{ expandedIndex === idx ? '收起' : '更多' }}
+              </button>
+            </div>
+
+            <!-- 第二行：展开的更多信息（可选） -->
+            <div v-if="expandedIndex === idx" class="mt-2 text-sm">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div><span class="text-neutral-500">故障代码：</span>{{ f.fault_code || '—' }}</div>
+                <div><span class="text-neutral-500">创建人：</span>{{ f.creator || '—' }}</div>
+                <div><span class="text-neutral-500">更新人：</span>{{ f.updater || '—' }}</div>
+                <div><span class="text-neutral-500">设备：</span>{{ f.device || baseInfo.device || '—' }}</div>
+              </div>
+              <div class="mt-2 bg-neutral-50 dark:bg-neutral-800 text-sm p-3 rounded border border-dashed
+                  border-neutral-300 dark:border-neutral-600 whitespace-pre-line">
+                <span class="text-neutral-500">详情：</span>{{ f.description || '无' }}
+              </div>
+            </div>
           </div>
         </div>
+
         <div v-else class="text-sm text-neutral-500">暂无故障信息</div>
+
+
       </div>
     </section>
+
 
     <!-- 内容滚动区 -->
     <section class="flex-1 min-h-0 overflow-auto p-2">
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <!-- 实时数据卡 -->
-        <div class="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm p-4">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-base font-semibold">
-              {{ currentDeviceName || '—' }} 实时数据
-            </h3>
-            <div class="text-xs text-neutral-500">更新于：{{ latestUpdateTime }}</div>
-          </div>
+        <!-- 替换后的左侧：质量散点图 -->
+        <DeviceQualityScatter
+            :device-key="currentDeviceName || '未知设备'"
+            :default-days="100"
+            :k-sigma="2"
+            :conf-min="0.35"
+            :conf-max="0.95"
+            :title-prefix="currentDeviceName ? `${currentDeviceName} ` : ''"
+        />
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            <div
-                v-for="(item, index) in featureBlocks"
-                :key="item.id || index"
-                class="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 p-3 hover:shadow transition-shadow"
-            >
-              <div class="text-[12px] font-medium text-neutral-500 dark:text-neutral-400 mb-1 truncate" :title="item.feature_alias">
-                {{ item.feature_alias }}
-              </div>
-              <div class="text-2xl font-semibold leading-tight">
-                {{ item.value }}<span class="text-sm ml-1 opacity-70">{{ item.feature_unit }}</span>
-              </div>
-              <div
-                  class="inline-flex items-center gap-1 mt-2 text-[12px] font-medium"
-                  :class="{
-                  'text-emerald-600': item.change_rate > 0,
-                  'text-rose-600': item.change_rate < 0,
-                  'text-neutral-500': item.change_rate === 0
-                }"
-              >
-                <i
-                    :class="{
-                    'fa fa-arrow-up': item.change_rate > 0,
-                    'fa fa-arrow-down': item.change_rate < 0,
-                    'fa fa-minus': item.change_rate === 0
-                  }"
-                ></i>
-                <span>{{ item.change_rate }}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
 
         <!-- 右侧：ECharts 图表 -->
         <div class="lg:col-span-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm overflow-hidden">
@@ -229,6 +257,7 @@ import * as echarts from 'echarts'
 import { fetchTableData } from '@/api/querydata.js'
 import { getSysConfigFormId } from "@/api/constant/form_constant.js";
 import { useRouter } from 'vue-router';
+import DeviceQualityScatter from "@/buz/device/DeviceQualityScatter.vue";
 
 // 实时特征数据
 const featureBlocks = reactive([])
@@ -264,19 +293,54 @@ const fetchDeviceData = async () => {
     console.error('设备数据加载失败:', error)
   }
 }
-const diagnosis = reactive({
-  device: '',
-  diagnose_time: '',
-  fault_type: '',
-  fault_code: '',
-  fault_level: '',
-  description: '',
-  confidence: '',
-  eva_status: '',
-  creator: '',
-  updater: '',
-  id: null
+// ▼ 新增：存放多条故障
+const diagnoses = ref([])
+// 展开/收起控制
+const expandedIndex = ref(-1)
+const toggleExpand = (idx) => {
+  expandedIndex.value = (expandedIndex.value === idx ? -1 : idx)
+}
+
+// 你之前已定义的 levelClass / confidenceClass 可复用；若未引入，参考：
+// const levelClass = (lvl) => { ... }
+// const confidenceClass = (c) => { ... }
+
+// ▼ 新增：顶部基础信息（由多条故障汇总）
+const baseInfo = computed(() => {
+  if (!diagnoses.value.length) {
+    return { device: currentDeviceName.value || '', latest_time: '', max_confidence: null, latest_status: '', latest_level: '' }
+  }
+  // 取最新时间与最高置信度
+  const latest = [...diagnoses.value].sort((a,b) => new Date(b.diagnose_time||0) - new Date(a.diagnose_time||0))[0]
+  const maxc  = diagnoses.value.reduce((m, x) => {
+    const c = typeof x.confidence === 'number' ? x.confidence : parseFloat(x.confidence)
+    return isNaN(c) ? m : Math.max(m, c)
+  }, -Infinity)
+  return {
+    device: latest?.device || currentDeviceName.value || '',
+    latest_time: latest?.diagnose_time || '',
+    max_confidence: (maxc === -Infinity ? null : maxc),
+    latest_status: latest?.eva_status || '',
+    latest_level: latest?.fault_level || ''
+  }
 })
+
+// ▼ 新增：标签着色
+const levelClass = (lvl) => {
+  const cls = 'px-2 py-0.5 text-xs rounded-full'
+  if (['紧急','P1','高'].includes(lvl)) return `${cls} bg-red-100 text-red-800`
+  if (['中','P2'].includes(lvl)) return `${cls} bg-amber-100 text-amber-800`
+  if (['低','P3'].includes(lvl)) return `${cls} bg-green-100 text-green-800`
+  return `${cls} bg-gray-100 text-gray-800`
+}
+const confidenceClass = (c) => {
+  const v = typeof c === 'number' ? c : parseFloat(c)
+  const cls = 'px-2 py-0.5 text-xs rounded-full'
+  if (!isNaN(v) && v >= 0.8) return `${cls} bg-indigo-100 text-indigo-800`
+  if (!isNaN(v) && v >= 0.6) return `${cls} bg-blue-100 text-blue-800`
+  if (!isNaN(v))            return `${cls} bg-gray-100 text-gray-800`
+  return `${cls} bg-gray-100 text-gray-800`
+}
 
 
 
@@ -333,7 +397,25 @@ const connectWebSocket = () => {
 
         case 'FAULT_STATE':
           if (data.fault_state) {
-            Object.assign(diagnosis, data.fault_state)
+            const arr = Array.isArray(data.fault_state) ? data.fault_state : [data.fault_state]
+            // 只保留必要字段，避免脏数据导致显示异常；并限制 2~5 条（有更多时截取最新）
+            const list = arr
+                .filter(Boolean)
+                .map(x => ({
+                  device: x.device ?? currentDeviceName.value ?? '',
+                  diagnose_time: x.diagnose_time ?? x.time ?? '',
+                  fault_type: x.fault_type ?? '',
+                  fault_code: x.fault_code ?? '',
+                  fault_level: x.fault_level ?? '',
+                  description: x.description ?? '',
+                  confidence: x.confidence ?? '',
+                  eva_status: x.eva_status ?? '',
+                  creator: x.creator ?? '',
+                  updater: x.updater ?? '',
+                  id: x.id ?? undefined
+                }))
+                .sort((a,b) => new Date(b.diagnose_time||0) - new Date(a.diagnose_time||0))
+            diagnoses.value = list.slice(0, 5) // 只展示前 5 条
           }
           break
 
@@ -444,6 +526,24 @@ onMounted(() => {
   connectWebSocket()
   initChart()
   fetchDeviceData() // 初始化加载设备数据
+
+  // mock 示例（可注释/删除）
+  if (!diagnoses.value.length) {
+    diagnoses.value = Array.from({length: Math.floor(Math.random()*3)+2}).map((_,i)=>({
+      device: currentDeviceName.value || '设备A',
+      diagnose_time: new Date(Date.now()-i*3600*1000).toISOString(),
+      fault_type: ['过热','振动','电流异常'][i%3],
+      fault_code: `F-${100+i}`,
+      fault_level: ['高','中','低'][i%3],
+      description: '示例：请检查轴承温度与润滑状态。',
+      confidence: (0.55 + 0.1*i).toFixed(2),
+      eva_status: ['疑似','确认','复现'][i%3],
+      creator: '系统',
+      updater: '系统',
+      id: i+1
+    }))
+  }
+
   window.addEventListener('resize', handleResize)
 })
 

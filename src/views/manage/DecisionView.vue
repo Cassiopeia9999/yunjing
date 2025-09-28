@@ -1,5 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import {
   getDecisionPageData,
   postMaintenanceDecision,
@@ -8,11 +10,21 @@ import {
   createWorkOrder
 } from '@/mock/maintenanceMock'
 import { Document, Download, Tickets } from '@element-plus/icons-vue'
+import { getSysConfigFormId, REPAIR_RECORD_FORM_ID } from '@/api/constant/form_constant.js'
+
+// 路由 & 外部页跳转
+const router = useRouter()
+const buildLowcodeUrl = (formId) => `/lowcode/dynamicInfo/index/${formId}`
+function goRepairRecord () {
+  const url = buildLowcodeUrl(getSysConfigFormId(REPAIR_RECORD_FORM_ID))
+  router.push({ path: '/inner/lowcodeframe', query: { url } })
+}
 
 // 状态
 const loading = ref(true)
 const submitting = ref(false)
 const exporting = ref(false)
+const workOrderCreated = ref(true) // 生成工单后显示“填写维修记录”按钮
 
 const unitId = ref('U-001') // 可从路由或上页传入
 const data = ref(null)
@@ -72,13 +84,19 @@ async function onExport(type){
 }
 async function onCreateWO(){
   const res = await createWorkOrder({ unitId: unitId.value, strategies: strategies.value })
-  if (res?.ok) ElMessage.success(`工单已创建：${res.id}（mock）`)
+  if (res?.ok) {
+    workOrderCreated.value = true
+    ElMessage.success(`工单已创建：${res.id}（mock）`)
+  }
 }
 
 // 行为：生成任务（单策略）
 async function createTaskForStrategy(s){
   const res = await createWorkOrder({ unitId: unitId.value, strategy: s })
-  if (res?.ok) ElMessage.success(`已为该策略创建工单：${res.id}（mock）`)
+  if (res?.ok) {
+    workOrderCreated.value = true
+    ElMessage.success(`已为该策略创建工单：${res.id}（mock）`)
+  }
 }
 
 onMounted(init)
@@ -196,6 +214,7 @@ onMounted(init)
             <el-button :icon="Document" :loading="exporting" @click="onExport('word')">导出 Word</el-button>
             <el-button :icon="Download" :loading="exporting" @click="onExport('pdf')">导出 PDF</el-button>
             <el-button type="primary" :icon="Tickets" @click="onCreateWO">生成工单</el-button>
+            <el-button v-if="workOrderCreated" type="success" @click="goRepairRecord">填写维修记录</el-button>
             <el-button @click="$router.back()">关闭</el-button>
           </div>
         </div>
