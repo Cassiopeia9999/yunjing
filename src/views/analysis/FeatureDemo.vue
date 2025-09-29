@@ -163,6 +163,7 @@
         v-model="forecastDialogVisible"
         :featureDataMap="featureDataMap"
         :deviceName="currentDevice ? currentDevice.device_name : ''"
+        :featureMetaMap="featureMetaMap"
         @complete="handleForecastResult"
     />
 

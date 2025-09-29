@@ -100,8 +100,10 @@ import { commonServiceClient } from '@/api/commonServiceClient'
 const props = defineProps({
   modelValue: Boolean,
   deviceName: String,
-  featureDataMap: Object // { featureName: [{cur_timestamp, feature_value}] }
+  featureDataMap: Object,      // { featureName: [{cur_timestamp, feature_value}] }
+  featureMetaMap: Object       // ✅ 新增：{ [featureName]: { unit, low, up, alarm } }
 })
+
 
 const emit = defineEmits(['update:modelValue', 'complete'])
 
@@ -249,23 +251,114 @@ function renderChart() {
   if (!chartRef.value || !selectedFeatureName.value) return
   if (!chartInstance) chartInstance = echarts.init(chartRef.value)
 
-  const history = props.featureDataMap[selectedFeatureName.value] || []
+  const fname = selectedFeatureName.value
+  const history = props.featureDataMap[fname] || []
   const sorted = history.slice().sort((a, b) => a.cur_timestamp - b.cur_timestamp)
 
   const x1 = sorted.map(d => new Date(d.cur_timestamp).toLocaleString())
   const y1 = sorted.map(d => d.feature_value)
-  const x2 = predictedPoints.value.map(d => new Date(d.cur_timestamp).toLocaleString())
-  const y2 = predictedPoints.value.map(d => d.feature_value)
+  const x2 = (predictedPoints.value || []).map(d => new Date(d.cur_timestamp).toLocaleString())
+  const y2 = (predictedPoints.value || []).map(d => d.feature_value)
+
+  // ✅ 读取阈值与单位
+  const meta  = (props.featureMetaMap && props.featureMetaMap[fname]) || {}
+  const low   = meta.low
+  const up    = meta.up
+  const alarm = meta.alarm
+  const unit  = meta.unit || ''
 
   const isDark = document.documentElement.classList.contains('dark')
-  // 更清晰的配色：历史=琥珀，预测=品牌蓝
-  const cHistory = isDark ? '#FBBF24' : '#F59E0B'
-  const cForecast = isDark ? '#60A5FA' : '#2563EB'
+  const cHistory  = isDark ? '#FBBF24' : '#F59E0B'  // 历史
+  const cForecast = isDark ? '#60A5FA' : '#2563EB'  // 预测
   const label = isDark ? '#e5e7eb' : '#374151'
   const axis  = isDark ? '#6b7280' : '#9ca3af'
   const split = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)'
   const bgTip = isDark ? 'rgba(17,24,39,.96)' : 'rgba(255,255,255,.96)'
   const bdTip = isDark ? '#4b5563' : '#e5e7eb'
+
+  // ✅ y 轴范围：把阈值也纳入，避免被裁
+  const pool = [...y1, ...y2]
+  if (low   != null) pool.push(low)
+  if (up    != null) pool.push(up)
+  if (alarm != null) pool.push(alarm)
+  const yMin = pool.length ? Math.min(...pool) : 0
+  const yMax = pool.length ? Math.max(...pool) : 1
+  const pad  = Math.max(1, (yMax - yMin) * 0.1)
+
+  // ✅ 拼接统一 X 轴（历史 + 预测）
+  const xAll = [...x1, ...x2]
+
+  // ✅ 主体两条（保持你原有的“不断线拼 null”的做法）
+  const series = [
+    {
+      name: '历史数据',
+      type: 'line',
+      data: y1.concat(Array(x2.length).fill(null)),
+      showSymbol: false,
+      smooth: true,
+      lineStyle: { width: 2, color: cHistory },
+      areaStyle: { opacity: .08, color: cHistory }
+    },
+    {
+      name: '预测结果',
+      type: 'line',
+      data: Array(x1.length).fill(null).concat(y2),
+      showSymbol: true,
+      symbolSize: 3,
+      smooth: true,
+      lineStyle: { width: 2, type: 'dashed', color: cForecast },
+      areaStyle: { opacity: .08, color: cForecast }
+    }
+  ]
+
+  // ✅ 阈值线（常数线）与正常区间底色
+  const lenAll = xAll.length
+  if (low != null) {
+    series.push({
+      name: '下限',
+      type: 'line',
+      data: new Array(lenAll).fill(low),
+      symbol: 'none',
+      lineStyle: { width: 1.6, type: 'dashed', color: '#10B981' },
+      emphasis: { disabled: true },
+      tooltip: { show: false }
+    })
+  }
+  if (up != null) {
+    series.push({
+      name: '上限',
+      type: 'line',
+      data: new Array(lenAll).fill(up),
+      symbol: 'none',
+      lineStyle: { width: 1.6, type: 'dashed', color: '#EF4444' },
+      emphasis: { disabled: true },
+      tooltip: { show: false }
+    })
+  }
+  if (alarm != null) {
+    series.push({
+      name: '报警',
+      type: 'line',
+      data: new Array(lenAll).fill(alarm),
+      symbol: 'none',
+      lineStyle: { width: 1.8, type: 'dotted', color: '#F59E0B' },
+      emphasis: { disabled: true },
+      tooltip: { show: false }
+    })
+  }
+
+  // ✅ 正常区间高亮（low+up 同时存在）
+  const markArea =
+      (low != null && up != null)
+          ? {
+            silent: true,
+            itemStyle: { color: 'rgba(16,185,129,0.06)' },
+            data: [[{ yAxis: low }, { yAxis: up }]]
+          }
+          : undefined
+
+  // 把 markArea 挂到“历史数据”这条（或任意一条主系列上）
+  if (markArea) series[0].markArea = markArea
 
   chartInstance.setOption({
     textStyle: { color: label },
@@ -277,46 +370,33 @@ function renderChart() {
       textStyle: { color: label }
     },
     legend: {
-      data: ['历史数据', '预测结果'],
+      data: ['历史数据', '预测结果', ...(low!=null?['下限']:[]), ...(up!=null?['上限']:[]), ...(alarm!=null?['报警']:[])],
       textStyle: { color: label }
     },
     grid: { left: 52, right: 24, top: 36, bottom: 40 },
     xAxis: {
       type: 'category',
-      data: [...x1, ...x2],
+      data: xAll,
       axisLabel: { color: label },
       axisLine: { lineStyle: { color: axis } },
       splitLine: { show: false }
     },
     yAxis: {
       type: 'value',
+      min: yMin - pad,
+      max: yMax + pad,
+      name: unit ? `单位：${unit}` : '',
+      nameLocation: 'end',
+      nameGap: 12,
+      nameTextStyle: { color: label, fontWeight: 700, fontSize: 12 },
       axisLabel: { color: label },
       axisLine: { lineStyle: { color: axis } },
       splitLine: { show: true, lineStyle: { color: split } }
     },
-    series: [
-      {
-        name: '历史数据',
-        type: 'line',
-        data: y1.concat(Array(x2.length).fill(null)), // 让历史与预测在同一 X 轴上不连线
-        showSymbol: false,
-        smooth: true,
-        lineStyle: { width: 2, color: cHistory },
-        areaStyle: { opacity: .08, color: cHistory }
-      },
-      {
-        name: '预测结果',
-        type: 'line',
-        data: Array(x1.length).fill(null).concat(y2),
-        showSymbol: true,
-        symbolSize: 3,
-        smooth: true,
-        lineStyle: { width: 2, type: 'dashed', color: cForecast },
-        areaStyle: { opacity: .08, color: cForecast }
-      }
-    ]
+    series
   })
 }
+
 
 onMounted(() => {
   // 自适应：窗口尺寸变化
