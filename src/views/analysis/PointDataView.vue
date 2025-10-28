@@ -4,108 +4,132 @@
       <!-- 左侧：选择区 -->
       <aside class="w-full lg:w-[340px] shrink-0 h-full overflow-y-auto space-y-3">
 
+        <div class="p-3 left-body">
+          <!-- 行1：周期 -->
+          <div class="grid grid-cols-12 gap-2 items-center">
+            <el-select
+                v-model="selectedPeriodName"
+                class="col-span-12"
+                placeholder="选择周期（特征分析）"
+                clearable
+                @change="onPeriodChange"
+            >
+              <el-option
+                  v-for="p in periodOptions"
+                  :key="p.period_name"
+                  :label="p.period_name"
+                  :value="p.period_name"
+              />
+            </el-select>
+          </div>
 
-          <!-- 让卡片内容可伸缩：flex-col + min-h-0 -->
-          <div class="p-3 left-body">
-            <!-- 行1：周期 + 操作 -->
-            <div class="grid grid-cols-12 gap-2 items-center">
-              <el-select
-                  v-model="selectedPeriodName"
-                  class="col-span-12"
-                  placeholder="选择周期（特征分析）"
-                  clearable
-                  @change="onPeriodChange"
-              >
-                <el-option v-for="p in periodOptions" :key="p.period_name" :label="p.period_name" :value="p.period_name" />
-              </el-select>
+          <!-- 行1.5：设备 -->
+          <div class="grid grid-cols-12 gap-2 items-center">
+            <el-select
+                v-model="selectedDeviceId"
+                class="col-span-12"
+                filterable
+                clearable
+                placeholder="选择设备（支持搜索）"
+                :loading="deviceLoading"
+                @visible-change="onDeviceDropdownVisible"
+                @change="onDeviceChange"
+            >
+              <el-option
+                  v-for="d in deviceOptions"
+                  :key="d.id"
+                  :label="formatDeviceLabel(d)"
+                  :value="d.id"
+              />
+            </el-select>
+          </div>
 
-            </div>
+          <!-- 行2：操作按钮 -->
+          <div class="flex gap-2 justify-end">
+            <el-button :icon="Search" type="primary" @click="queryRawFiles">查询</el-button>
+            <el-button :icon="Refresh" @click="resetRange">重置</el-button>
+          </div>
 
+          <!-- 行3：时间范围 -->
+          <el-date-picker
+              v-model="timeRange"
+              type="datetimerange"
+              range-separator="至"
+              start-placeholder="起始时间"
+              end-placeholder="结束时间"
+          />
 
+          <!-- 原始数据文件 -->
+          <div class="flex flex-col gap-2">
+            <div class="sec-title">原始数据文件（{{ filteredRawFiles.length }}）</div>
 
-              <div class="flex gap-2 justify-end">
-                <el-button :icon="Search" type="primary" @click="queryRawFiles">查询</el-button>
-                <el-button :icon="Refresh" @click="resetRange">重置</el-button>
-              </div>
-
-
-            <!-- 行2：时间范围 -->
-            <el-date-picker
-                v-model="timeRange"
-                type="datetimerange"
-                range-separator="至"
-                start-placeholder="起始时间"
-                end-placeholder="结束时间"
+            <!-- 过滤输入框 -->
+            <el-input
+                v-model="rawKeyword"
+                size="small"
+                class="w-full"
+                clearable
+                :prefix-icon="Search"
+                placeholder="过滤：文件名 / 时间"
             />
 
-            <!-- 原始数据文件 -->
-            <div class="flex flex-col gap-2">
-              <div class="sec-title">原始数据文件（{{ filteredRawFiles.length }}）</div>
-
-              <!-- 过滤输入框 -->
-              <el-input
-                  v-model="rawKeyword"
-                  size="small"
-                  class="w-full"
-                  clearable
-                  :prefix-icon="Search"
-                  placeholder="过滤：文件名 / 时间"
-              />
-
-              <!-- 列表：竖向，一行一个 -->
-              <el-scrollbar max-height="280">
-                <div class="list-box">
-                  <div
-                      v-for="f in filteredRawFiles"
-                      :key="f.id"
-                      class="file-row"
-                      :class="{ active: selectedRawId === f.id }"
-                      @click="selectRaw(f.id)"
-                  >
-                    <div class="file-title truncate">{{ f.file_name }}</div>
-                    <div class="file-sub">
-                      <span class="time-pill">{{ formatTime(f.collect_time) }}</span>
-                    </div>
+            <!-- 列表：竖向，一行一个 -->
+            <el-scrollbar max-height="280">
+              <div class="list-box">
+                <div
+                    v-for="f in filteredRawFiles"
+                    :key="f.id"
+                    class="file-row"
+                    :class="{ active: selectedRawId === f.id }"
+                    @click="selectRaw(f.id)"
+                >
+                  <div class="file-title truncate">{{ f.file_name }}</div>
+                  <div class="file-sub">
+                    <span class="time-pill">{{ formatTime(f.collect_time) }}</span>
                   </div>
                 </div>
-              </el-scrollbar>
-
-              <div v-if="!filteredRawFiles.length" class="hint">暂无原始数据</div>
-            </div>
-
-            <!-- 测点：占据剩余空间 -->
-            <div class="points-section">
-              <div class="sec-title">测点（{{ points.length }}）</div>
-              <el-scrollbar class="points-scroll">
-                <div class="list-box">
-                  <div
-                      v-for="p in points"
-                      :key="p.id"
-                      class="list-row"
-                      :class="{ active: selectedPointId === p.id }"
-                      @click="selectPoint(p.id)"
-                  >
-                    <div class="truncate">{{ p.point_name }}</div>
-                    <div class="badge">{{ formatSamplePeriod(p.sample_rate) }}</div>
-                  </div>
-                </div>
-              </el-scrollbar>
-
-              <div v-if="selectedPointMeta" class="meta">
-                采样间隔：<b>{{ sampleIntervalSec }}</b> 秒 ｜ 点数：<b>{{ selectedPointMeta.length }}</b> ｜ 时长：<b>{{ durationSec }} s</b>
               </div>
+            </el-scrollbar>
+
+            <div v-if="!filteredRawFiles.length" class="hint">暂无原始数据</div>
+          </div>
+
+          <!-- 通道（替换原“测点”） -->
+          <div class="points-section">
+            <div class="sec-title">通道（{{ channelsList.length }}）</div>
+            <el-scrollbar class="points-scroll">
+              <div class="list-box">
+                <div
+                    v-for="ch in channelsList"
+                    :key="ch.id"
+                    class="list-row"
+                    :class="{ active: selectedChannelName === ch.id }"
+                    @click="selectChannel(ch.id)"
+                >
+                  <!-- 通道名 -->
+                  <div class="truncate">{{ ch.ch_name }}</div>
+                  <!-- 通道右侧badge：这里我们先展示“CH”，也可以放 channel_count/质量标记 -->
+                  <div class="badge">CH</div>
+                </div>
+              </div>
+            </el-scrollbar>
+
+            <div v-if="channelMeta" class="meta">
+              <!-- 这块原来展示采样间隔/长度/时长。
+                   现在我们还是保留，来源是 loadWaveform() 里拿到的波形信息 -->
+              采样间隔：<b>{{ sampleIntervalSec }}</b> 秒 ｜ 点数：<b>{{ channelMeta.length }}</b> ｜ 时长：<b>{{ durationSec }} s</b>
             </div>
           </div>
+        </div>
       </aside>
 
-
-      <!-- 右侧：图表（你的现有逻辑保持不变） -->
+      <!-- 右侧图表 -->
       <section class="flex-1 min-h-0 flex flex-col overflow-hidden">
         <div class="sticky top-0 z-10 bg-white/90 dark:bg-neutral-900/90 backdrop-blur border-b border-neutral-200 dark:border-neutral-700">
           <div class="px-3 pt-2 pb-3 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span class="inline-block w-1.5 h-4 rounded bg-[color:var(--primary-color)]"></span>
-              <el-tag size="small" effect="dark" class="title-tag">{{ currentPointTitle }}</el-tag>
+              <el-tag size="small" effect="dark" class="title-tag">{{ currentChannelTitle }}</el-tag>
             </div>
             <div class="flex items-center gap-2">
               <el-button size="small" :icon="Download" @click="exportPng" :disabled="!chartInstance">导出图像</el-button>
@@ -129,17 +153,18 @@ import { ref, computed, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import * as echarts from 'echarts'
 import { Search, Refresh, Download, Document } from '@element-plus/icons-vue'
 
-// ① 周期：优先从“特征分析”的周期表获取；失败再用 mock 兜底
 import { fetchTableData } from '@/api/querydata.js'
 import { getSysConfigFormId } from '@/api/constant/form_constant.js'
+import { fetchChannelWaveData } from '@/api/featureService.js' // 确保已在脚本顶部引入
+
 import {
-  mockListPeriods,            // 兜底：本地 mock
-  mockFetchRawFiles,
-  mockFetchPointsInRaw,
-  mockFetchPointSeries
+  mockListPeriods,
+  fetchRawFiles,           // ← 已经是真后端查询 online_table_42
+  mockFetchPointSeries,   // ← 我们会当成按(文件+通道)取波形
+  fetchDevices            // ← 设备列表后端查询
 } from '@/mock/pointRowData'
 
-// ====== 左侧：周期/时间 ======
+// ====== 周期/时间 ======
 const periodOptions = ref([])
 const selectedPeriodName = ref(null)
 const timeRange = ref([])
@@ -149,15 +174,50 @@ function setRange(start, end){
 }
 function onPeriodChange(name){
   const p = periodOptions.value.find(i => i.period_name === name)
-  if (p) setRange(p.start_time, p.end_time)     // 周期只负责回填时间
+  if (p) setRange(p.start_time, p.end_time)
 }
 function resetRange(){
   const now = Date.now()
-  setRange(now - 7*24*3600*1000, now)           // 默认近7天
+  setRange(now - 7*24*3600*1000, now)
   selectedPeriodName.value = null
 }
 
-// ① 新增：过滤关键字 + 过滤后的文件列表
+// ====== 设备下拉 ======
+const deviceOptions = ref([])
+const selectedDeviceId = ref(null)
+const deviceLoading = ref(false)
+
+function formatDeviceLabel(d){
+  const name = d.component_code
+  const model = d.component_model ? `(${d.component_model})` : ''
+  const st = d.status ? ` · ${d.status}` : ''
+  return `${name}${model}${st}`
+}
+
+async function onDeviceDropdownVisible(show){
+  if (!show) return
+  if (deviceOptions.value.length) return
+  await loadDevices()
+}
+
+function onDeviceChange(){
+  queryRawFiles()
+}
+
+// 实际后端拉设备列表（online_table_24）
+async function loadDevices(){
+  deviceLoading.value = true
+  try {
+    deviceOptions.value = await fetchDevices()
+  } finally {
+    deviceLoading.value = false
+  }
+}
+
+// ====== 原始数据文件区 ======
+const rawFiles = ref([])            // 当前时间段 + 设备 筛出来的文件列表
+const selectedRawId = ref(null)     // 当前选中的文件ID
+
 const rawKeyword = ref('')
 
 const filteredRawFiles = computed(() => {
@@ -170,101 +230,134 @@ const filteredRawFiles = computed(() => {
   )
 })
 
-// 采样间隔格式化：把 Hz 改成人能读的“每 N 秒/分钟/小时/天”
-function formatSamplePeriod(sr) {
-  const n = Number(sr)
-  if (!Number.isFinite(n) || n <= 0) return '—'
-  const sec = 1 / n
+// ====== 通道区（替换原“测点”） ======
+const channelsList = ref([])            // [{ id: 'EVAE', ch_name: 'EVAE' }, ...]
+const selectedChannelName = ref(null)   // 当前选中的通道名（字符串）
 
-  // 可读化（优先用更大的单位）
-  if (sec >= 86400) return `每 ${Math.round(sec / 86400)} 天`
-  if (sec >= 3600)  return `每 ${Math.round(sec / 3600)} 小时`
-  if (sec >= 60)    return `每 ${Math.round(sec / 60)} 分钟`
-  return `每 ${Math.round(sec)} 秒`
-}
+// 采样/波形相关元信息（原来的 selectedPointMeta）
+const channelMeta = ref(null)           // { sample_rate, length, unit }
+const waveform = ref({ sample_rate: 0, unit: '', values: [] })
 
-// 选中测点的采样间隔（秒，整数）
+// 采样间隔(秒)
 const sampleIntervalSec = computed(() => {
-  const sr = Number(selectedPointMeta.value?.sample_rate)
+  const sr = Number(channelMeta.value?.sample_rate)
   if (!Number.isFinite(sr) || sr <= 0) return 0
   return Math.round(1 / sr)
 })
 
-// 真正使用的查询，**始终**以 timeRange 为准
-async function queryRawFiles(){
-  const [start, end] = timeRange.value || []
-  if(!start || !end) return
-  rawFiles.value = await mockFetchRawFiles({ start, end })
-  selectedRawId.value = rawFiles.value[0]?.id ?? null
-  await loadPoints()
-}
-
-// ====== 原始数据文件 & 测点 ======
-const rawFiles = ref([])
-const selectedRawId = ref(null)
-
-const points = ref([])
-const selectedPointId = ref(null)
-
-const selectedPointMeta = ref(null) // { sample_rate, length, unit }
-const waveform = ref({ sample_rate: 0, unit: '', values: [] })
-
-async function loadPoints(){
-  points.value = selectedRawId.value ? await mockFetchPointsInRaw(selectedRawId.value) : []
-  selectedPointId.value = points.value[0]?.id ?? null
-  await loadWaveform()
-}
-
-function selectRaw(id){
-  if (selectedRawId.value === id) return
-  selectedRawId.value = id
-  loadPoints()
-}
-
-function selectPoint(id){
-  if (selectedPointId.value === id) return
-  selectedPointId.value = id
-  loadWaveform()
-}
-
-const currentPointTitle = computed(()=>{
-  const f = rawFiles.value.find(i=>i.id===selectedRawId.value)
-  const p = points.value.find(i=>i.id===selectedPointId.value)
-  return p ? `${p.point_name} @ ${f?.file_name ?? '—'}` : '未选择测点'
-})
-
+// 波形总时长
 const durationSec = computed(()=>{
-  if(!selectedPointMeta.value) return 0
-  const { sample_rate, length } = selectedPointMeta.value
+  if(!channelMeta.value) return 0
+  const { sample_rate, length } = channelMeta.value
   return sample_rate ? (length / sample_rate).toFixed(3) : 0
 })
 
-// ====== 波形 & 图表（保持你原先实现） ======
+// 选择文件 -> 更新通道列表 -> 自动选第一个通道 -> 拉波形
+function selectRaw(id){
+  if (selectedRawId.value === id) return
+  selectedRawId.value = id
+  loadChannelsForFile()
+}
+
+function loadChannelsForFile(){
+  // 找到被选中的文件对象
+  const fileObj = rawFiles.value.find(f => f.id === selectedRawId.value)
+  if (!fileObj) {
+    channelsList.value = []
+    selectedChannelName.value = null
+    return
+  }
+
+  // fileObj.channels 是我们在 fetchRawFiles() 里解析出来的数组
+  const arr = Array.isArray(fileObj.channels) ? fileObj.channels : []
+
+  // 转成 [{id,ch_name}]
+  channelsList.value = arr.map(chName => ({
+    id: chName,
+    ch_name: chName
+  }))
+
+  selectedChannelName.value = channelsList.value[0]?.id || null
+
+  // 拉这个通道的波形
+  loadWaveform()
+}
+
+// 选择通道 -> 拉波形
+function selectChannel(chName){
+  if (selectedChannelName.value === chName) return
+  selectedChannelName.value = chName
+  loadWaveform()
+}
+
+// ====== 查询文件列表（后端） ======
+async function queryRawFiles(){
+  const [start, end] = timeRange.value || []
+  if(!start || !end) return
+
+  rawFiles.value = await fetchRawFiles({
+    start,
+    end,
+    deviceId: selectedDeviceId.value || null
+  })
+
+  // 默认选中最新一条文件
+  selectedRawId.value = rawFiles.value[0]?.id ?? null
+
+  // 基于该文件刷新通道列表并加载第一条波形
+  loadChannelsForFile()
+}
+
+// ====== 波形 & 图表 ======
 const chartRef = ref(null)
 let chartInstance = null
 
-async function loadWaveform(){
-  if(!selectedRawId.value || !selectedPointId.value) return
-  const series = await mockFetchPointSeries(selectedRawId.value, selectedPointId.value)
-  waveform.value = series
-  selectedPointMeta.value = {
-    sample_rate: series.sample_rate,
-    length: series.values.length,
-    unit: series.unit
+
+async function loadWaveform() {
+  if (!selectedRawId.value || !selectedChannelName.value) return
+
+  const fileObj = rawFiles.value.find(f => f.id === selectedRawId.value)
+  if (!fileObj) return
+
+  const deviceName  = fileObj.device_id.name
+  const collectTime = fileObj.collect_time
+  const channelName = selectedChannelName.value
+
+  // 🔹 调用真实接口，只关心样本数组
+  const wave = await fetchChannelWaveData(deviceName, collectTime, channelName)
+
+  // wave.samples: Float64[]
+  // wave.points:  [{idx,value}...]
+  // 我们以前的 waveform.value 约定了 { sample_rate, unit, values }
+  // 采样率 sample_rate 暂时没有后端字段，先用 1Hz 占位
+  waveform.value = {
+    sample_rate: 1,
+    unit: '',               // 暂无物理单位
+    values: wave.samples
   }
+
+  channelMeta.value = {
+    sample_rate: 1,
+    length: wave.samples.length,
+    unit: ''
+  }
+
   await nextTick()
   renderChart()
 }
+
+
+
 function renderChart(){
   if (!chartRef.value) return
   if (chartInstance){ chartInstance.dispose(); chartInstance = null }
   chartInstance = echarts.init(chartRef.value)
 
   const sr = Number(waveform.value.sample_rate) || 1      // Hz
-  const stepSec = 1 / sr                                   // 每点对应的秒数
+  const stepSec = 1 / sr
   const values  = waveform.value.values || []
   const unit    = waveform.value.unit || ''
-  const xData   = Array.from({ length: values.length }, (_, i) => i)  // [0..N-1]
+  const xData   = Array.from({ length: values.length }, (_, i) => i)
 
   const pad2 = n => String(n).padStart(2,'0')
   const formatRel = (sec) => {
@@ -285,14 +378,14 @@ function renderChart(){
         type: 'cross',
         label: {
           formatter: p => p.axisDimension === 'x'
-              ? formatRel(Number(p.value) * stepSec)   // ✅ 用 value
+              ? formatRel(Number(p.value) * stepSec)
               : p.value
         }
       },
       formatter: list => {
         if (!list?.length) return ''
         const d = list[0]
-        const tSec = Number(d.axisValue) * stepSec    // ✅ 用 axisValue
+        const tSec = Number(d.axisValue) * stepSec
         return `${formatRel(tSec)}<br/>${d.marker} ${d.seriesName}&nbsp;<b>${d.value} ${unit}</b>`
       }
     },
@@ -303,9 +396,8 @@ function renderChart(){
     xAxis: {
       type: 'category',
       boundaryGap: false,
-      data: xData,                                     // ✅ 首次就带上
+      data: xData,
       axisLabel: {
-        // ✅ 用“类目值”换算，不用 index
         formatter: (value) => formatRel(Number(value) * stepSec)
       }
     },
@@ -321,17 +413,17 @@ function renderChart(){
       lineStyle: { width: 1.5 }
     }]
   })
-
-  // ❌ 不再二次 setOption 去补 xAxis.data
 }
-
-
 
 function exportPng(){
   if(!chartInstance) return
   const url = chartInstance.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#fff' })
-  const a = document.createElement('a'); a.href = url; a.download = `point_wave_${Date.now()}.png`; a.click()
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `channel_wave_${Date.now()}.png`
+  a.click()
 }
+
 function exportCsv(){
   const sr = Number(waveform.value.sample_rate) || 1
   const stepSec = 1 / sr
@@ -344,12 +436,13 @@ function exportCsv(){
   const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = url; a.download = `point_wave_${Date.now()}.csv`; a.click()
+  a.href = url
+  a.download = `channel_wave_${Date.now()}.csv`
+  a.click()
   URL.revokeObjectURL(url)
 }
 
-
-// 加载“特征分析”的周期；失败时用 mock 兜底
+// ====== 周期初始化 ======
 async function loadFeaturePeriods(){
   try{
     const res = await fetchTableData(1, 1000, getSysConfigFormId("PERIOD_FORM_ID"), {})
@@ -361,7 +454,7 @@ async function loadFeaturePeriods(){
   }catch(e){
     periodOptions.value = await mockListPeriods()
   }
-  // 默认：选最后一条周期并回填时间
+
   if(periodOptions.value.length){
     const last = periodOptions.value[periodOptions.value.length - 1]
     selectedPeriodName.value = last.period_name
@@ -371,19 +464,34 @@ async function loadFeaturePeriods(){
   }
 }
 
+// 页面挂载
 onMounted(async ()=>{
   await loadFeaturePeriods()
   await queryRawFiles()
 })
 
-onBeforeUnmount(()=>{ if(chartInstance){ chartInstance.dispose(); chartInstance = null } })
+onBeforeUnmount(()=>{
+  if(chartInstance){
+    chartInstance.dispose()
+    chartInstance = null
+  }
+})
 
-// 小工具
+// 工具：时间格式化
 function formatTime(ts){
   if(!ts) return '—'
   const d = new Date(ts); const p = n => String(n).padStart(2,'0')
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
+
+// 右上角标题用“通道名 @ 文件名”
+const currentChannelTitle = computed(()=>{
+  const f = rawFiles.value.find(i=>i.id===selectedRawId.value)
+  const ch = selectedChannelName.value
+  return ch
+      ? `${ch} @ ${f?.file_name ?? '—'}`
+      : '未选择通道'
+})
 </script>
 
 <style scoped>
@@ -409,13 +517,12 @@ function formatTime(ts){
 .list-row.active{ @apply bg-sky-50 dark:bg-sky-900/40; box-shadow: inset 3px 0 0 0 var(--primary-color); }
 .badge{ @apply text-[11px] px-1.5 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-700; }
 
-
-/* 让左侧卡片内容可拉伸，测点占满剩余空间 */
+/* 让左侧卡片内容可拉伸，通道占满剩余空间 */
 .left-body{
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 0;        /* very important: 允许子元素滚动 */
+  min-height: 0;
 }
 
 /* 通用列表框 */
@@ -454,13 +561,13 @@ function formatTime(ts){
 }
 .dark .time-pill{ background: #3b3b3b; color: #ddd; }
 
-/* 测点区域：占据剩余空间并可滚动 */
+/* 通道区域：占据剩余空间并可滚动 */
 .points-section{
   display: flex; flex-direction: column; min-height: 0; flex: 1;
 }
 .points-scroll{ flex: 1; min-height: 0; }
 
-/* 通用一行项（测点） */
+/* 通道项 */
 .list-row{
   padding: 8px 10px;
   display: flex; align-items: center; justify-content: space-between;

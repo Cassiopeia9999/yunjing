@@ -33,21 +33,6 @@
               <span class="shrink-0">
         <span class="text-neutral-500">类型：</span>{{ f.fault_type || '—' }}
       </span>
-
-<!--              <span class="shrink-0">-->
-<!--        <span class="text-neutral-500">等级：</span>-->
-<!--        <span :class="levelClass(f.fault_level)">{{ f.fault_level || '—' }}</span>-->
-<!--      </span>-->
-
-<!--              <span class="shrink-0">-->
-<!--        <span class="text-neutral-500">置信度：</span>-->
-<!--        <span :class="confidenceClass(f.confidence)">{{ f.confidence ?? '—' }}</span>-->
-<!--      </span>-->
-
-<!--              <span class="hidden md:inline truncate">-->
-<!--        <span class="text-neutral-500">甄别：</span>{{ f.eva_status || '—' }}-->
-<!--      </span>-->
-
               <span class="ml-auto text-xs text-neutral-500">
         {{ f.diagnose_time || '—' }}
       </span>

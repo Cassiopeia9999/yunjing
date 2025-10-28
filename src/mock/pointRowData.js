@@ -1,4 +1,10 @@
 // 简单种子随机，保证同条件下稳定复现
+
+// pointRowData.js (节选/新增)
+
+import { getSysConfigFormId, DEVICE_FORM_ID } from '@/api/constant/form_constant.js'
+import {fetchTableData} from "@/api/querydata.js";
+
 function makeRand(seed = 1){
     let s = seed >>> 0
     return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 0xffffffff)
@@ -19,24 +25,92 @@ export async function mockListPeriods(){
     return [mk(7), mk(30), mk(90)]
 }
 
-// 查询时间段内的“原始数据文件”
-export async function mockFetchRawFiles({ start, end }){
-    const rnd = makeRand(+new Date(start) ^ +new Date(end))
-    const count = 6 + Math.floor(rnd()*6)      // 6~11 个
-    const list = []
-    const span = (+new Date(end)) - (+new Date(start))
-    for (let i=0;i<count;i++){
-        const t = +new Date(start) + rnd()*span
-        const ts = new Date(t).toISOString().replace(/[:\-T]/g,'').slice(0,14)
-        list.push({
-            id: `raw_${ts}_${i}`,
-            file_name: `RAW_${ts}_${i}.bin`,
-            collect_time: new Date(t).toISOString(),
-            point_count: 4 + Math.floor(rnd()*8)
+
+
+/**
+ * 拉取指定设备、时间范围内的文件记录（online_table_42: 设备实时数据）
+ * 返回结构中会包含 channels 数组，来源于 channel_names 字段(JSON字符串)
+ *
+ * @param {Object} params
+ * @param {Date}   params.start
+ * @param {Date}   params.end
+ * @param {String|null} params.deviceId
+ */
+export async function fetchRawFiles({ start, end, deviceId }) {
+    const filters = []
+
+    if (deviceId) {
+        filters.push({
+            key: 'device_id',
+            value: deviceId,
+            queryType: '='
         })
     }
-    return list.sort((a,b)=>new Date(b.collect_time)-new Date(a.collect_time))
+
+    if (start instanceof Date) {
+        filters.push({
+            key: 'collect_time',
+            value: start.toISOString(),
+            queryType: '>='
+        })
+    }
+    if (end instanceof Date) {
+        filters.push({
+            key: 'collect_time',
+            value: end.toISOString(),
+            queryType: '<='
+        })
+    }
+
+    // online_table_42 / "设备实时数据"
+    // 你说它在系统里对应 Real_Time_Device_Data；我们就用这个 key
+    const formId = getSysConfigFormId('Real_Time_Device_Data')
+
+    const res = await fetchTableData(
+        1,      // pageNo
+        1000,   // pageSize
+        formId,
+        filters
+    )
+
+    const list = res?.data?.list || []
+
+    // 统一结构给前端用
+    return list.map(row => {
+        // channel_names 是后端的 text 字段，JSON 字符串，比如 '["EVAE","EVA","EVC"]'
+        let channels = []
+        if (row.channel_names) {
+            try {
+                const parsed = JSON.parse(row.channel_names)
+                if (Array.isArray(parsed)) {
+                    channels = parsed
+                }
+            } catch (e) {
+                console.warn('channel_names 不是合法JSON:', row.channel_names, e)
+            }
+        }
+
+        return {
+            id: row.id,
+            device_id: row.device_id,
+            file_name: row.file_name,
+            file_path: row.file_path,
+            file_size: row.file_size,
+            collect_time: row.collect_time,
+            parse_status: row.parse_status,
+            feature_count: row.feature_count,
+            work_situation: row.work_situation,
+            file_quality: row.file_quality,
+            feature_quality: row.feature_quality,
+            // 通道相关
+            channel_count: row.channel_count,
+            channel_names_raw: row.channel_names, // 原始字符串
+            channels // 解析后的数组，前端直接拿这个渲染列表
+        }
+    })
 }
+
+
 
 // 某个原始文件内的测点（5 分钟采 1 点）
 export async function mockFetchPointsInRaw(rawId){
@@ -137,3 +211,39 @@ export async function mockFetchPointSeries(rawId, pointId){
 
     return { sample_rate, unit, values }
 }
+
+
+
+/**
+ * 获取设备下拉用的全部设备列表（分页获取）
+ * 实际从后端接口 /api/onlinecode/queryListPage 获取
+ *
+ * 返回数组：每条记录至少包含
+ *   - id
+ *   - component_code (设备名称)
+ *   - component_model (型号规格)
+ *   - status (运行状态)
+ *   - ... 其他字段保持原样
+ */
+export async function fetchDevices () {
+    const formId = getSysConfigFormId(DEVICE_FORM_ID)
+
+    // 设备列表是标准的“分页数据列表”
+    // 我们这里直接拉第1页，size=1000，足够下拉使用
+    const res = await fetchTableData(
+        1,            // pageNo
+        1000,         // pageSize
+        formId,       // formId => online_table_24
+        []            // filters，无筛选条件，拿全部
+    )
+
+    // 正常情况下 res.data.list 已经 strip 掉系统字段
+    const list = res?.data?.list || []
+
+    // 返回前可以确保每个元素至少有 id，以防 UI 报错
+    return list.map(row => ({
+        id: row.id,
+        ...row
+    }))
+}
+
