@@ -1,12 +1,13 @@
 <template>
   <div class="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm overflow-hidden">
     <!-- 头部 -->
-    <div class="px-4 py-3 bg-primary text-white flex items-center justify-between">
+    <div class="px-4 py-3 bg-primary text-white flex flex-wrap items-center justify-between gap-2">
       <h3 class="text-sm font-semibold">
         {{ titlePrefix }}设备数据质量散点图
       </h3>
-      <div class="flex items-center gap-2">
-        <!-- 快捷时间范围 -->
+
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- 时间范围 -->
         <select
             v-model="days"
             class="px-2 py-1 rounded text-neutral-900 dark:text-neutral-900 bg-white border border-white/30 focus:outline-none"
@@ -18,20 +19,37 @@
           <option :value="365">近 365 天</option>
         </select>
 
-        <!-- 导出/刷新 -->
+        <!-- 过滤正常/异常 -->
+        <select
+            v-model="filterMode"
+            class="px-2 py-1 rounded text-neutral-900 dark:text-neutral-900 bg-white border border-white/30 focus:outline-none"
+        >
+          <option value="all">全部</option>
+          <option value="normal">只看正常</option>
+          <option value="abnormal">只看异常</option>
+        </select>
+
         <button class="btn-ghost-white" @click="exportPng"><i class="fa fa-download mr-1"></i>导出</button>
         <button class="btn-ghost-white" @click="reload"><i class="fa fa-refresh mr-1"></i>刷新</button>
       </div>
     </div>
 
-    <!-- 次标题+统计 -->
-    <div class="px-4 py-2 text-xs text-neutral-600 dark:text-neutral-200 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-700">
+    <!-- 次标题 -->
+    <div class="px-4 py-2 text-xs text-neutral-600 dark:text-neutral-200 flex flex-wrap gap-2 items-center justify-between border-b border-neutral-200 dark:border-neutral-700">
       <div>
-        时间范围：{{ dateRangeText }} ｜ 点数：{{ total }} ｜ 正常：
-        <span :style="{ color: normalColor }" class="font-medium">{{ normalCount }}</span> ｜ 异常：
-        <span :style="{ color: abnormalColor }" class="font-medium">{{ abnormalCount }}</span>
+        时间范围：{{ dateRangeText }}
+        ｜点数：{{ filteredPoints.length }}
+        ｜正常：<span class="text-green-600 font-semibold">{{ normalPoints.length }}</span>
+        ｜异常：<span class="text-red-600 font-semibold">{{ abnormalPoints.length }}</span>
       </div>
 
+      <div class="flex items-center gap-2">
+        <span>阈值矩形:</span>
+        <span class="rounded px-2 py-[2px] text-[10px] font-mono bg-white/20 border border-white/30 text-white"
+              style="background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.4);color:#10b981;">
+          x∈[{{ xMin.toFixed(2) }}, {{ xMax.toFixed(2) }}], y∈[{{ yMin.toFixed(2) }}, {{ yMax.toFixed(2) }}]
+        </span>
+      </div>
     </div>
 
     <!-- 图表 -->
@@ -44,37 +62,25 @@
 <script setup>
 import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import * as echarts from 'echarts'
-import { genQualityPoints } from '@/mock/deviceQualityMock'
+import { fetchTableData } from '@/api/querydata.js'
+import { getSysConfigFormId } from '@/api/constant/form_constant.js'
 
-// === Props ===
+// ===================== Props =====================
 const props = defineProps({
-  deviceKey: { type: [String, Number], default: '' },  // 外部设备标识（设备名或ID）
-  defaultDays: { type: Number, default: 100 },         // 默认天数
-  // 评估：超出范围视为异常（可在父级按需覆盖）
-  kSigma: { type: Number, default: 2.0 },              // x/y 按均值±kσ
-  confMin: { type: Number, default: 0.35 },
-  confMax: { type: Number, default: 0.95 },
-  titlePrefix: { type: String, default: '' }           // 自定义标题前缀
+  deviceKey: { type: [String, Number], default: '' }, // 设备ID / 名称（和 online_table_42.device_id 对应）
+  defaultDays: { type: Number, default: 100 },        // 默认时间跨度
+  titlePrefix: { type: String, default: '' }
 })
 
-// === 颜色 & 深色模式 ===
-const normalColor = '#2563eb'   // 正常：蓝
-const abnormalColor = '#ef4444' // 异常：红
-const isDark = ref(
-    document.documentElement.classList.contains('dark') ||
-    window.matchMedia?.('(prefers-color-scheme: dark)').matches
-)
-const updateDark = () => {
-  isDark.value =
-      document.documentElement.classList.contains('dark') ||
-      window.matchMedia?.('(prefers-color-scheme: dark)').matches
-}
-
-// === 状态 ===
+// ===================== State =====================
 const days = ref(props.defaultDays)
-const chartRef = ref(null)
-let chart = null
+// "all" | "normal" | "abnormal"
+const filterMode = ref('all')
 
+// 原始点 [{x,y,value,ts}]
+const scatterRaw = ref([])
+
+// ===================== 时间范围 =====================
 const start = computed(() => {
   const d = new Date()
   d.setDate(d.getDate() - days.value)
@@ -88,188 +94,346 @@ const dateRangeText = computed(() => {
   return `${fmt(start.value)} ~ ${fmt(end.value)}`
 })
 
-const raw = ref({ points: [], stats: {} })
-const total = computed(() => raw.value.points.length)
-
-const kSigma = computed(() => props.kSigma)
-const confMin = computed(() => props.confMin)
-const confMax = computed(() => props.confMax)
-
-// 点数随天数变化
-const pointCountForDays = (d) => {
-  const basePerDay = 12 // 每天大约多少点
-  const n = Math.round(d * basePerDay)
-  return Math.max(200, Math.min(n, 4000))
+// ===================== 阈值矩形 =====================
+// 简单策略：用当前点云的中位数 ± 某个跨度(比如四分位距 * 1.5)
+// 这个区域就是“正常区”
+// 落在里面 => normal，外面 => abnormal
+function calcBox(values){
+  if(!values.length) return {mid:0, low:0, high:0}
+  const sorted = [...values].sort((a,b)=>a-b)
+  const q1 = sorted[Math.floor(sorted.length*0.25)]
+  const q2 = sorted[Math.floor(sorted.length*0.50)]
+  const q3 = sorted[Math.floor(sorted.length*0.75)]
+  // IQR:
+  const iqr = q3 - q1
+  return {
+    mid:q2,
+    low:q1 - 1.5*iqr,
+    high:q3 + 1.5*iqr
+  }
 }
 
-// 拆分正常/异常
-const splitData = computed(() => {
-  const { points, stats } = raw.value
-  const { cx = 50, cy = 50, sx = 12, sy = 12 } = stats
-  const k = kSigma.value
-  const xmin = cx - k * sx, xmax = cx + k * sx
-  const ymin = cy - k * sy, ymax = cy + k * sy
+// 先从原始点中抽 x/y
+const boxStats = computed(() => {
+  const xs = scatterRaw.value.map(p => p.x)
+  const ys = scatterRaw.value.map(p => p.y)
 
-  const normal = []
-  const abnormal = []
-  for (const p of points) {
-    const inRect = (p.x >= xmin && p.x <= xmax && p.y >= ymin && p.y <= ymax)
-    const confOk = (p.value >= confMin.value && p.value <= confMax.value)
-    const isAbn = !(inRect && confOk)
-    const row = [p.x, p.y, p.value, p.ts]
-    if (isAbn) abnormal.push(row)
-    else normal.push(row)
+  const xb = calcBox(xs)
+  const yb = calcBox(ys)
+
+  // 防御一下范围太窄/太爆，可夹在 [0,1] 区间（因为你现在的点基本落在0~1）
+  const clamp01 = v => Math.min(1, Math.max(0, v))
+
+  return {
+    xmin: clamp01(xb.low),
+    xmax: clamp01(xb.high),
+    ymin: clamp01(yb.low),
+    ymax: clamp01(yb.high)
   }
-  return { normal, abnormal, rect: { xmin, xmax, ymin, ymax } }
 })
 
-const normalCount = computed(() => splitData.value.normal.length)
-const abnormalCount = computed(() => splitData.value.abnormal.length)
+const xMin = computed(() => boxStats.value.xmin || 0)
+const xMax = computed(() => boxStats.value.xmax || 1)
+const yMin = computed(() => boxStats.value.ymin || 0)
+const yMax = computed(() => boxStats.value.ymax || 1)
 
-// === 行为 ===
-function reload() {
-  // 重新生成 mock 数据（设备 or 时间范围变化）
-  raw.value = genQualityPoints({
-    deviceKey: props.deviceKey || '未命名设备',
-    start: start.value,
-    end: end.value,
-    count: pointCountForDays(days.value)
-  })
+// ===================== 正常/异常分类 =====================
+const normalPoints = computed(() => {
+  return scatterRaw.value.filter(p =>
+      p.x >= xMin.value &&
+      p.x <= xMax.value &&
+      p.y >= yMin.value &&
+      p.y <= yMax.value
+  )
+})
+
+const abnormalPoints = computed(() => {
+  return scatterRaw.value.filter(p =>
+      !(p.x >= xMin.value &&
+          p.x <= xMax.value &&
+          p.y >= yMin.value &&
+          p.y <= yMax.value)
+  )
+})
+
+// 根据 filterMode，决定实际喂给图表的点
+const filteredPoints = computed(() => {
+  if (filterMode.value === 'normal') return normalPoints.value
+  if (filterMode.value === 'abnormal') return abnormalPoints.value
+  return scatterRaw.value
+})
+
+// ===================== 可视范围(让点居中) =====================
+// 我们自动根据所有点的 min/max 给轴加 padding，让点不要挤在角落
+const axisRange = computed(() => {
+  if (!scatterRaw.value.length) {
+    return { xMin:0, xMax:1, yMin:0, yMax:1 }
+  }
+  const xs = scatterRaw.value.map(p=>p.x)
+  const ys = scatterRaw.value.map(p=>p.y)
+  const xmin = Math.min(...xs)
+  const xmax = Math.max(...xs)
+  const ymin = Math.min(...ys)
+  const ymax = Math.max(...ys)
+
+  // 加一点边距（比如10%）
+  const padX = (xmax - xmin) * 0.1 || 0.05
+  const padY = (ymax - ymin) * 0.1 || 0.05
+
+  return {
+    xMin: xmin - padX,
+    xMax: xmax + padX,
+    yMin: ymin - padY,
+    yMax: ymax + padY
+  }
+})
+
+// 用于颜色映射
+const confMinVal = computed(() =>
+    filteredPoints.value.length
+        ? Math.min(...filteredPoints.value.map(p => p.value))
+        : 0
+)
+const confMaxVal = computed(() =>
+    filteredPoints.value.length
+        ? Math.max(...filteredPoints.value.map(p => p.value))
+        : 1
+)
+
+// ===================== ECharts =====================
+const chartRef = ref(null)
+let chart = null
+
+const resize = () => { chart && chart.resize() }
+
+function initChart() {
+  if (chart) chart.dispose()
+  chart = echarts.init(chartRef.value)
+  window.addEventListener('resize', resize)
+}
+
+// ===================== 数据加载 =====================
+async function reload() {
+  if (!props.deviceKey) {
+    scatterRaw.value = []
+    render()
+    return
+  }
+
+  const res = await fetchTableData(
+      1,
+      1000,
+      getSysConfigFormId("Real_Time_Device_Data"),
+      {}
+  )
+
+  const rows = Array.isArray(res?.data?.list) ? res.data.list : []
+  const pts = []
+
+  for (const r of rows) {
+    // 提取设备ID
+    const devId = typeof r.device_id === 'object' && r.device_id !== null
+        ? (r.device_id.id || r.device_id.name || r.device_id.component_code || r.device_id)
+        : r.device_id
+
+    if (String(devId) !== String(props.deviceKey)) continue
+
+    // 采集时间过滤
+    const ct = r.collect_time ? new Date(r.collect_time.replace(/-/g, '/')) : null
+    if (!ct || ct < start.value || ct > end.value) continue
+
+    // 解析 file_quality
+    let fq;
+    try {
+      // 尝试解析JSON
+      fq = JSON.parse(r.file_quality);
+      // 验证解析结果是否为对象（避免非对象类型导致后续属性访问错误）
+      if (typeof fq !== 'object' || fq === null) {
+        throw new Error('解析结果不是有效的对象');
+      }
+    } catch (error) {
+      // 解析失败时输出错误信息（便于调试），并跳过当前数据
+      console.error(`解析file_quality失败，数据行:`, r, '错误信息:', error.message);
+      continue;
+    }
+    pts.push({
+      x: Number(fq.x),
+      y: Number(fq.y),
+      value: Number(fq.value),
+      ts: ct.getTime()
+    })
+  }
+
+  scatterRaw.value = pts
   render()
 }
 
+// ===================== 导出 =====================
 function exportPng() {
   if (!chart) return
-  const bg = isDark.value ? '#0a0a0a' : '#ffffff'
-  const url = chart.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: bg })
+  const url = chart.getDataURL({ type: 'png', pixelRatio: 2 })
   const a = document.createElement('a')
   a.href = url
   a.download = `quality_scatter_${props.deviceKey || 'unknown'}.png`
   a.click()
 }
 
+// ===================== 渲染 =====================
 function render() {
   if (!chart) return
-  const { normal, abnormal, rect } = splitData.value
 
-  const axisColor = isDark.value ? '#d4d4d8' : '#404040'
-  const splitLineColor = isDark.value ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
-  const textColor = isDark.value ? '#e5e7eb' : '#374151'
+  // 转 echarts 数据结构
+  // dataNormal / dataAbnormal 永远都计算出来，这样图例可以切换它们
+  const dataNormal = normalPoints.value.map(p => [p.x, p.y, p.value, p.ts])
+  const dataAbn    = abnormalPoints.value.map(p => [p.x, p.y, p.value, p.ts])
+
+  const axisC = '#666'
+  const splitC = '#ddd'
+  const textC = '#333'
 
   const tooltipFmt = params => {
-    const [x, y, c, ts] = params.data
+    const [x, y, val, ts] = params.data
     const t = new Date(ts)
-    const tStr = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}:${String(t.getSeconds()).padStart(2,'0')}`
+    const tStr =
+        `${t.getFullYear()}/${t.getMonth()+1}/${t.getDate()} ` +
+        `${String(t.getHours()).padStart(2,'0')}:` +
+        `${String(t.getMinutes()).padStart(2,'0')}:` +
+        `${String(t.getSeconds()).padStart(2,'0')}`
+
     return [
       `<div><b>${params.seriesName}</b></div>`,
-      `<div>x: ${x.toFixed(2)}，y: ${y.toFixed(2)}</div>`,
-      `<div>时间: ${tStr}</div>`
+      `<div>质量值： ${val.toFixed(4)}</div>`,
+      `<div>x: ${x.toFixed(4)}，y: ${y.toFixed(4)}</div>`,
+      `<div>时间： ${tStr}</div>`
     ].join('')
   }
 
-  chart.clear() // 防止残留
+  // 矩形区域（正常区）作为 custom series
+  const rectSeries = {
+    name: '正常范围',
+    type: 'custom',
+    renderItem: (params, api) => {
+      const p0 = api.coord([xMin.value, yMin.value])
+      const p1 = api.coord([xMax.value, yMax.value])
+      return {
+        type: 'rect',
+        shape: {
+          x: p0[0],
+          y: p1[1],
+          width: p1[0] - p0[0],
+          height: p0[1] - p1[1]
+        },
+        style: {
+          stroke: '#10b981',
+          fill: 'rgba(16,185,129,0.08)',
+          lineWidth: 1
+        }
+      }
+    },
+    silent: true,
+    z: 1
+  }
+
+  // 组装最终 series
+  // 注意：我们不直接按 filterMode 过滤，这里全部画上
+  // 但我们可以用 selected legend 来控制显示
+  const series = [
+    rectSeries,
+    {
+      name: '正常',
+      type: 'scatter',
+      data: dataNormal,
+      symbolSize: 10,
+      itemStyle: {
+        opacity: 0.9
+      },
+      encode: { tooltip: [0,1,2,3] },
+      z: 2
+    },
+    {
+      name: '异常',
+      type: 'scatter',
+      data: dataAbn,
+      symbolSize: 10,
+      itemStyle: {
+        opacity: 0.95
+      },
+      encode: { tooltip: [0,1,2,3] },
+      z: 3
+    }
+  ]
+
+  // 根据 filterMode 决定图例初始选择
+  const selectedLegend = {
+    '正常': filterMode.value !== 'abnormal',
+    '异常': filterMode.value !== 'normal'
+  }
+
+  // visualMap 根据第三列 value 上色（正常/异常都会吃到这个调色）
+  const visualMap = [{
+    show: true,
+    dimension: 2, // 第3列 = 质量值
+    min: confMinVal.value,
+    max: confMaxVal.value,
+    calculable: true,
+    orient: 'vertical',
+    right: 10,
+    bottom: 20,
+    text: ['高', '低'],
+    textStyle: { color: textC },
+    inRange: {
+      color: ['#ffff00', '#ffa500', '#ff0000'] // 黄→橙→红
+    }
+  }]
+
   chart.setOption({
     grid: { left: 44, right: 60, top: 32, bottom: 44 },
+
     tooltip: {
       trigger: 'item',
       formatter: tooltipFmt,
-      backgroundColor: isDark.value ? '#111827' : '#ffffff',
-      borderColor: isDark.value ? '#374151' : '#e5e7eb',
-      textStyle: { color: textColor }
+      backgroundColor: '#fff',
+      borderColor: '#ddd',
+      textStyle: { color: textC }
     },
+
     legend: {
-      data: [
-        { name: '正常', icon: 'circle' },
-        { name: '异常', icon: 'circle' }
-      ],
       top: 0,
-      textStyle: { color: textColor }
+      data: ['正常', '异常'],
+      selected: selectedLegend,
+      textStyle: { color: textC }
     },
+
     xAxis: {
       type: 'value',
       name: 'X',
-      nameGap: 12,
-      axisLabel: { color: axisColor },
-      nameTextStyle: { color: axisColor },
-      axisLine: { lineStyle: { color: axisColor } },
-      splitLine: { lineStyle: { color: splitLineColor } }
+      min: axisRange.value.xMin,
+      max: axisRange.value.xMax,
+      axisLabel: { color: axisC },
+      nameTextStyle: { color: axisC },
+      splitLine: { lineStyle: { color: splitC } },
+      axisLine: { lineStyle: { color: axisC } }
     },
+
     yAxis: {
       type: 'value',
       name: 'Y',
-      nameGap: 12,
-      axisLabel: { color: axisColor },
-      nameTextStyle: { color: axisColor },
-      axisLine: { lineStyle: { color: axisColor } },
-      splitLine: { lineStyle: { color: splitLineColor } }
+      min: axisRange.value.yMin,
+      max: axisRange.value.yMax,
+      axisLabel: { color: axisC },
+      nameTextStyle: { color: axisC },
+      splitLine: { lineStyle: { color: splitC } },
+      axisLine: { lineStyle: { color: axisC } }
     },
-    // 置信度可视映射（仅用于图例标尺；正常/异常各自有固定色）
-    visualMap: [{
-      show: true,
-      dimension: 2,
-      min: 0, max: 1,
-      calculable: true,
-      orient: 'vertical',
-      right: 10, bottom: 20,
-      text: ['置信度高', '置信度低'],
-      textStyle: { color: textColor }
-    }],
-    series: [
-      {
-        name: '正常',
-        type: 'scatter',
-        data: normal,                 // [x, y, value, ts]
-        symbolSize: d => 6 + 10 * d[2],
-        itemStyle: { color: normalColor, opacity: 0.9 },
-        emphasis: { focus: 'series' },
-        z: 2
-      },
-      {
-        name: '异常',
-        type: 'scatter',
-        data: abnormal,
-        symbolSize: d => 6 + 10 * d[2],
-        itemStyle: { color: abnormalColor, opacity: 0.95 },
-        emphasis: { focus: 'series' },
-        z: 3
-      },
-      // 评估矩形（μ±kσ）
-      {
-        name: '评估范围',
-        type: 'custom',
-        renderItem: (params, api) => {
-          const p0 = api.coord([rect.xmin, rect.ymin])
-          const p1 = api.coord([rect.xmax, rect.ymax])
-          // 注意：echarts 坐标是左上原点，需要按 y 反向绘制
-          return {
-            type: 'rect',
-            shape: { x: p0[0], y: p1[1], width: p1[0] - p0[0], height: p0[1] - p1[1] },
-            style: {
-              stroke: isDark.value ? '#10b981' : '#15803d',
-              fill: isDark.value ? 'rgba(16,185,129,0.08)' : 'rgba(16,185,129,0.06)',
-              lineWidth: 1
-            }
-          }
-        },
-        silent: true,
-        z: 1
-      }
-    ]
+
+    visualMap,
+    series
   })
 }
 
-// === 生命周期 & 监听 ===
-function initChart() {
-  if (chart) chart.dispose()
-  chart = echarts.init(chartRef.value)
-  render()
-  window.addEventListener('resize', resize)
-}
-function resize() { chart && chart.resize() }
-
+// ===================== 生命周期 =====================
 onMounted(() => {
   initChart()
-  // 先 init 再 reload，保证有图
   reload()
 })
 
@@ -278,9 +442,11 @@ onBeforeUnmount(() => {
   if (chart) chart.dispose()
 })
 
-// 设备与时间范围变化 → 重新生成数据并渲染
+// 监听外部/内部交互
 watch(() => props.deviceKey, () => reload())
 watch(days, () => reload())
+watch(filterMode, () => render())   // 不重新拉数，只重画
+watch(scatterRaw, () => render())
 </script>
 
 <style scoped>
