@@ -33,21 +33,6 @@
               <span class="shrink-0">
         <span class="text-neutral-500">类型：</span>{{ f.fault_type || '—' }}
       </span>
-
-<!--              <span class="shrink-0">-->
-<!--        <span class="text-neutral-500">等级：</span>-->
-<!--        <span :class="levelClass(f.fault_level)">{{ f.fault_level || '—' }}</span>-->
-<!--      </span>-->
-
-<!--              <span class="shrink-0">-->
-<!--        <span class="text-neutral-500">置信度：</span>-->
-<!--        <span :class="confidenceClass(f.confidence)">{{ f.confidence ?? '—' }}</span>-->
-<!--      </span>-->
-
-<!--              <span class="hidden md:inline truncate">-->
-<!--        <span class="text-neutral-500">甄别：</span>{{ f.eva_status || '—' }}-->
-<!--      </span>-->
-
               <span class="ml-auto text-xs text-neutral-500">
         {{ f.diagnose_time || '—' }}
       </span>
@@ -90,14 +75,18 @@
         <!-- 实时数据卡 -->
         <!-- 替换后的左侧：质量散点图 -->
         <DeviceQualityScatter
-            :device-key="currentDeviceName || '未知设备'"
+            v-if="currentDeviceName"
+            :device-key="currentDeviceName"
             :default-days="100"
-            :k-sigma="2"
-            :conf-min="0.35"
-            :conf-max="0.95"
-            :title-prefix="currentDeviceName ? `${currentDeviceName} ` : ''"
+            :title-prefix="`${currentDeviceName} `"
         />
 
+        <DeviceQualityScatter
+            v-else
+            device-key="未知设备"
+            :default-days="100"
+            title-prefix="未知设备 "
+        />
 
         <!-- 右侧：ECharts 图表 -->
         <div class="lg:col-span-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm overflow-hidden">
@@ -127,10 +116,13 @@
             <thead class="sticky top-0 z-10">
             <tr class="bg-neutral-50 dark:bg-neutral-800 text-left text-[12px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
               <th class="px-4 py-3 font-medium">文件名</th>
-              <th class="px-4 py-3 font-medium">文件时间</th>
+              <th class="px-4 py-3 font-medium">采集时间</th>
+              <th class="px-4 py-3 font-medium">通道数</th>
+              <th class="px-4 py-3 font-medium">文件质量</th>
+              <th class="px-4 py-3 font-medium">特征质量</th>
               <th class="px-4 py-3 font-medium">工作状态</th>
-              <th class="px-4 py-3 font-medium">解析特征数量</th>
-              <th class="px-4 py-3 font-medium">文件大小</th>
+              <th class="px-4 py-3 font-medium">特征点数</th>
+              <th class="px-4 py-3 font-medium">大小(MB)</th>
               <th class="px-4 py-3 font-medium text-right">操作</th>
             </tr>
             </thead>
@@ -143,21 +135,48 @@
               <td class="px-4 py-3 whitespace-nowrap">
                 <div class="text-sm font-medium truncate" :title="item.file_name">{{ item.file_name }}</div>
               </td>
+
               <td class="px-4 py-3 whitespace-nowrap">
                 <div class="text-sm">{{ item.collect_time }}</div>
               </td>
+
+              <td class="px-4 py-3 whitespace-nowrap">
+                <div class="text-sm">{{ item.channel_count }}</div>
+              </td>
+
+              <td class="px-4 py-3 whitespace-nowrap">
+                    <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800 dark:bg-purple-800/40 dark:text-purple-200">
+                      {{ item.file_quality || '—' }}
+                    </span>
+                                </td>
+
+                                <td class="px-4 py-3 whitespace-nowrap">
+                    <span class="px-2 py-1 text-xs rounded-full bg-cyan-100 text-cyan-800 dark:bg-cyan-800/40 dark:text-cyan-200">
+                      {{ item.feature_quality || '—' }}
+                    </span>
+              </td>
+
               <td class="px-4 py-3 whitespace-nowrap">
                 <span :class="getStatusClass(item.work_situation)">{{ item.work_situation }}</span>
               </td>
+
               <td class="px-4 py-3 whitespace-nowrap">
                 <div class="text-sm">{{ item.feature_count }}</div>
               </td>
+
               <td class="px-4 py-3 whitespace-nowrap">
                 <div class="text-sm text-neutral-500">{{ item.file_size }} MB</div>
               </td>
+
               <td class="px-4 py-3 whitespace-nowrap text-right">
-                <button class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm" @click="openDetailDialog(item)">查看详情</button>
+                <button
+                    class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm"
+                    @click="openDetailDialog(item)"
+                >
+                  查看详情
+                </button>
               </td>
+
             </tr>
             </tbody>
           </table>
@@ -182,14 +201,17 @@
               <button
                   v-for="page in Math.min(5, totalPages)"
                   :key="page"
-                  @click="currentPage = page"
+                  @click="() => { currentPage.value = page; fetchDeviceData() }"
                   :class="[
-                  'px-3 py-1 border text-sm',
-                  page === currentPage
-                    ? 'bg-indigo-50 border-indigo-500 text-indigo-600'
-                    : 'bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800'
-                ]"
-              >{{ page }}</button>
+                        'px-3 py-1 border text-sm',
+                        page === currentPage
+                          ? 'bg-indigo-50 border-indigo-500 text-indigo-600'
+                          : 'bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800'
+                      ]"
+                   >
+                {{ page }}
+              </button>
+
               <button class="btn-white rounded-r-md" :disabled="currentPage >= totalPages" @click="nextPage">
                 <span class="sr-only">下一页</span><i class="fa fa-chevron-right"></i>
               </button>
@@ -199,53 +221,97 @@
       </div>
     </section>
 
-    <!-- 详情弹窗（UI 同步） -->
-    <div v-if="dialogVisible" class="fixed inset-0 z-50">
-      <div class="absolute inset-0 bg-black/40"></div>
-      <div class="relative mx-auto w-full max-w-lg mt-20 bg-white dark:bg-neutral-900 rounded-lg shadow-xl overflow-hidden">
-        <div class="px-5 pt-5 pb-3 border-b border-neutral-200 dark:border-neutral-700">
-          <h3 id="modal-title" class="text-lg font-semibold">{{ selectedItem.file_name }} 详情</h3>
+    <!-- 详情弹窗（优化 + 右上角关闭按钮） -->
+    <div v-if="dialogVisible" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto">
+      <!-- 半透明遮罩 -->
+      <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="dialogVisible = false"></div>
+
+      <!-- 弹窗容器 -->
+      <div
+          class="relative w-full max-w-4xl mx-auto mt-16 mb-10 bg-white dark:bg-neutral-900
+           rounded-xl shadow-2xl border border-neutral-200 dark:border-neutral-700
+           text-neutral-900 dark:text-neutral-100 overflow-hidden"
+      >
+        <!-- 标题栏 -->
+        <div class="flex items-center justify-between px-6 pt-5 pb-4 border-b border-neutral-200 dark:border-neutral-700">
+          <h3 class="text-lg font-semibold truncate pr-4">
+            {{ selectedItem.file_name || '文件详情' }}
+          </h3>
+          <button
+              class="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors"
+              @click="dialogVisible = false"
+          >
+            <i class="fa fa-times text-lg"></i>
+          </button>
         </div>
-        <div class="p-5 space-y-4">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <p class="text-xs text-neutral-500">文件时间</p>
-              <p class="text-sm font-medium">{{ selectedItem.collect_time }}</p>
+
+        <!-- 内容主体 -->
+        <div class="p-6 space-y-6 text-sm leading-relaxed overflow-y-auto max-h-[80vh]">
+          <!-- 基础信息 -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+            <div><p class="label">文件名</p><p class="value">{{ selectedItem.file_name || '—' }}</p></div>
+            <div><p class="label">采集时间</p><p class="value">{{ selectedItem.collect_time || '—' }}</p></div>
+            <div><p class="label">文件大小(MB)</p><p class="value">{{ selectedItem.file_size }} MB</p></div>
+            <div><p class="label">解析状态</p>
+              <span :class="getParseStatusClass(selectedItem.parse_status)">
+            {{ selectedItem.parse_status || '—' }}
+          </span>
             </div>
-            <div>
-              <p class="text-xs text-neutral-500">工作状态</p>
-              <p class="text-sm font-medium">
-                <span :class="getStatusClass(selectedItem.work_situation)">{{ selectedItem.work_situation }}</span>
-              </p>
+            <div><p class="label">工作状态</p>
+              <span :class="getStatusClass(selectedItem.work_situation)">
+            {{ selectedItem.work_situation || '—' }}
+          </span>
             </div>
-            <div>
-              <p class="text-xs text-neutral-500">解析特征数量</p>
-              <p class="text-sm font-medium">{{ selectedItem.feature_count }}</p>
+            <div><p class="label">特征点数</p><p class="value">{{ selectedItem.feature_count ?? '—' }}</p></div>
+            <div><p class="label">通道数</p><p class="value">{{ selectedItem.channel_count ?? '—' }}</p></div>
+            <div><p class="label">文件质量</p>
+              <span class="tag-purple">{{ selectedItem.file_quality || '—' }}</span>
             </div>
-            <div>
-              <p class="text-xs text-neutral-500">文件大小</p>
-              <p class="text-sm font-medium">{{ selectedItem.file_size }} MB</p>
+            <div><p class="label">特征质量</p>
+              <span class="tag-cyan">{{ selectedItem.feature_quality || '—' }}</span>
             </div>
           </div>
 
-          <div class="border-t border-neutral-200 dark:border-neutral-700 pt-4">
-            <p class="text-xs text-neutral-500 mb-1">文件路径</p>
-            <p class="text-sm font-medium truncate">{{ selectedItem.file_path }}</p>
+          <!-- 文件Meta -->
+          <div>
+            <p class="label">文件质量原始值</p>
+            <div class="block-box font-mono">{{ selectedItem.file_meta || '—' }}</div>
           </div>
 
-          <div class="border-t border-neutral-200 dark:border-neutral-700 pt-4">
-            <p class="text-xs text-neutral-500 mb-1">解析状态</p>
-            <p class="text-sm font-medium">
-              <span :class="getParseStatusClass(selectedItem.parse_status)">{{ selectedItem.parse_status }}</span>
-            </p>
+          <hr class="border-neutral-200 dark:border-neutral-700"/>
+
+          <!-- 文件路径 -->
+          <div>
+            <p class="label">文件路径</p>
+            <div class="block-box">{{ selectedItem.file_path || '—' }}</div>
+          </div>
+
+          <!-- 通道名称 -->
+          <div>
+            <p class="label">通道名称</p>
+            <div class="block-box">{{ selectedItem.channel_names || '—' }}</div>
+          </div>
+
+          <!-- 特征快照 -->
+          <div>
+            <p class="label">特征快照</p>
+            <pre class="block-pre font-mono">{{ selectedItem.feature_snapshot || '—' }}</pre>
+          </div>
+
+          <!-- 备注 -->
+          <div>
+            <p class="label">备注</p>
+            <div class="block-box">{{ selectedItem.remark || '—' }}</div>
           </div>
         </div>
-        <div class="px-5 py-3 bg-neutral-50 dark:bg-neutral-800 flex items-center justify-end gap-2">
-          <button class="btn-primary" @click="dialogVisible = false">确定</button>
-          <button class="btn-white" @click="dialogVisible = false">取消</button>
+
+        <!-- 底部按钮 -->
+        <div class="px-6 py-4 bg-neutral-50 dark:bg-neutral-800 border-t border-neutral-200 dark:border-neutral-700 flex justify-end">
+          <button class="btn-primary" @click="dialogVisible = false">关闭</button>
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
@@ -576,6 +642,28 @@ onBeforeUnmount(() => {
   text-white bg-[color:var(--primary-color)]
   hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2
   focus:ring-[color:var(--primary-color)];
+}
+
+.label {
+  @apply text-[12px] text-neutral-500 dark:text-neutral-400 mb-1;
+}
+.value {
+  @apply font-medium break-all;
+}
+.block-box {
+  @apply text-[13px] leading-relaxed break-all rounded border border-neutral-200 dark:border-neutral-700
+  bg-neutral-50 dark:bg-neutral-800 px-3 py-2 text-neutral-800 dark:text-neutral-200;
+}
+.block-pre {
+  @apply max-h-56 overflow-auto rounded border border-neutral-300 dark:border-neutral-600
+  bg-neutral-50 dark:bg-neutral-800 text-[12px] leading-relaxed p-3 whitespace-pre-wrap break-all
+  text-neutral-700 dark:text-neutral-200;
+}
+.tag-purple {
+  @apply inline-block px-2 py-0.5 rounded text-[12px] bg-purple-100 text-purple-800 dark:bg-purple-800/40 dark:text-purple-200 font-medium;
+}
+.tag-cyan {
+  @apply inline-block px-2 py-0.5 rounded text-[12px] bg-cyan-100 text-cyan-800 dark:bg-cyan-800/40 dark:text-cyan-200 font-medium;
 }
 </style>
 
