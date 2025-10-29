@@ -169,24 +169,35 @@ const axisRange = computed(() => {
   if (!scatterRaw.value.length) {
     return { xMin:0, xMax:1, yMin:0, yMax:1 }
   }
-  const xs = scatterRaw.value.map(p=>p.x)
-  const ys = scatterRaw.value.map(p=>p.y)
+
+  const xs = scatterRaw.value.map(p => p.x)
+  const ys = scatterRaw.value.map(p => p.y)
+
   const xmin = Math.min(...xs)
   const xmax = Math.max(...xs)
   const ymin = Math.min(...ys)
   const ymax = Math.max(...ys)
 
-  // 加一点边距（比如10%）
-  const padX = (xmax - xmin) * 0.1 || 0.05
-  const padY = (ymax - ymin) * 0.1 || 0.05
+  // 点云中心
+  const cx = (xmin + xmax) / 2
+  const cy = (ymin + ymax) / 2
+
+  // 点云跨度
+  const spanX = xmax - xmin
+  const spanY = ymax - ymin
+  let halfSpan = Math.max(spanX, spanY) / 2
+
+  // 给一点额外空间，比如 2 倍放大
+  halfSpan = halfSpan * 2 || 0.1  // 至少给0.1，避免单点时过小
 
   return {
-    xMin: xmin - padX,
-    xMax: xmax + padX,
-    yMin: ymin - padY,
-    yMax: ymax + padY
+    xMin: cx - halfSpan,
+    xMax: cx + halfSpan,
+    yMin: cy - halfSpan,
+    yMax: cy + halfSpan
   }
 })
+
 
 // 用于颜色映射
 const confMinVal = computed(() =>
