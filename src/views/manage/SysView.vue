@@ -34,6 +34,8 @@ const filters = ref({
 })
 
 
+
+
 // 设备特征值
 
 /** ───── 装置特征值（与设备页一致，可配置） ───── */
@@ -43,6 +45,18 @@ const featureDisplayCountUnit = ref(8)      // 面板显示数量
 const featureDialogVisibleUnit = ref(false) // 配置对话框显隐
 
 const makeFeatKeyUnit = f => `${f.name}|${f.source}`
+
+
+
+// 跳转到基地详情页
+function goBaseDetail() {
+  router.push({
+    name: 'ManageBaseView',
+    params: { baseId: String(baseId.value) }
+  })
+}
+
+
 
 async function loadUnitFeatures () {
   if (!unitId.value) { featureAllUnit.value = []; return }
@@ -456,6 +470,7 @@ function openDecision(){ dialogDecision.value = true }
         <el-select v-model="unitId" style="width:250px" placeholder="选择装置" @change="load">
           <el-option v-for="u in unitList" :key="u.id" :label="u.name" :value="String(u.id)" />
         </el-select>
+        <el-button type="primary" size="small" @click="goBaseDetail">返回上一级</el-button>
       </div>
 
       <!-- 第三行：装置信息 Tag（有色） -->

@@ -128,7 +128,12 @@ function renderCharts(){
 }
 onBeforeUnmount(disposeCharts)
 
-
+function goUnitDetail() {
+  router.push({
+    name: 'ManageSysView',
+    params: { baseId: String(baseId.value), unitId: String(unitId.value) }
+  })
+}
 // 每个分组一份勾选集：{ [groupId]: Row[] }
 const groupSelections = reactive({})
 
@@ -361,6 +366,7 @@ onMounted(loadAll)
         <el-select v-model="deviceId" style="width:250px" filterable @change="onDeviceChange" placeholder="选择设备">
           <el-option v-for="device in deviceList" :key="device.id" :label="device.device_name" :value="String(device.id)"/>
         </el-select>
+        <el-button type="primary" size="small" @click="goUnitDetail">返回上一级</el-button>
       </div>
 
       <!-- 信息胶囊 -->
