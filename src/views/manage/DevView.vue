@@ -13,6 +13,7 @@ import { fetchDevices, getBaseList, getAssessmentUnits } from '@/mock/fetchDataA
 import { getLatestFeatures } from '@/mock/featureMock.js'
 import FeatureConfigDialog from "@/buz/feature/FeatureConfigDialog.vue";
 import { loadFeaturePanelCfg as readFeaturePanelCfg } from '@/utils/featurePanelCfg'
+import DeviceStatusAssessment from "@/components/alg/DeviceStatusAssessment.vue";
 
 /** 新增：特征配置对话框（独立组件） */
 
@@ -100,6 +101,23 @@ const records = computed(() => {
   }
   return list
 })
+
+
+// 控制评估组件弹窗显隐（可选，也可完全依赖组件内部状态）
+const showAssessment = ref(false)
+
+// 处理评估完成回调（可选，接收组件返回的评估结果）
+function handleAssessmentComplete(result) {
+  console.log('设备状态评估完成，结果：', result)
+  // 可在此处更新页面KPI数据（如健康度、置信度）
+  ElMessage.success('设备状态评估成功完成')
+}
+
+// 处理评估错误回调（可选）
+function handleAssessmentError(error) {
+  console.error('设备状态评估失败：', error)
+  ElMessage.error(`评估失败：${error.message || '未知错误'}`)
+}
 
 /** 规则提示/QA */
 const tips = computed(() => data.value?.riskTips || [])
@@ -386,6 +404,18 @@ onMounted(loadAll)
         <div class="mb-4 flex items-center justify-between gap-3">
           <div class="text-xs opacity-70">* 高概率阈值：{{ highProbText }}；每条诊断可作为故障证据挂载。</div>
           <div class="flex items-center gap-2">
+            <DeviceStatusAssessment
+                :deviceInfo="dev"
+                :allFeatures="featureAll"
+                buttonText="开始故障诊断"
+                buttonIcon="CircleCheck"
+                buttonSize="large"
+                buttonType="primary"
+                :disabled="actionsDisabled || loading"
+                @complete="handleAssessmentComplete"
+                @error="handleAssessmentError"
+                @cancel="() => showAssessment.value = false"
+            />
             <el-button size="large" type="primary" :icon="CircleCheck" @click="goDiagnose" :disabled="actionsDisabled">开始故障诊断</el-button>
             <el-button size="large" type="primary" plain :icon="Upload" @click="goForecast" :disabled="actionsDisabled">趋势预测</el-button>
             <el-button size="large" type="success" @click="newOrLinkFault">新建故障 / 关联</el-button>
