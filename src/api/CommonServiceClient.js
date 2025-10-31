@@ -86,7 +86,9 @@ class CommonServiceClient {
         return this.invoke(SERVICE_CODES.EVALUE_STATE, params);
     }
 
-
+    async evaluateDevState(params) {
+        return this.invoke(SERVICE_CODES.EVALUE_DEV_STATE, params);
+    }
 
 
 }

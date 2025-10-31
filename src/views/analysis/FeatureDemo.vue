@@ -256,18 +256,25 @@ const toNum = v => (v === null || v === undefined || v === '' ? null : Number(v)
 const chartRefs = reactive({})
 const chartsMap = new Map()
 
-
 function handleSelectedPoints(payload) {
   const { device, features = [], featureName } = payload || {}
   if (!device) return
+
+  // 👉 判断是否为新设备：是则清空历史状态
+  if (currentDevice.value !== device) {
+    availableFeatureNames.value = []
+    selectedFeatureNames.value = []
+    Object.keys(featureMetaMap).forEach(k => delete featureMetaMap[k])
+  }
+
   currentDevice.value = device
 
-  // 统一从数据里提取特征名
+  // 统一提取特征名
   const namesFromData = Array.from(
       new Set(features.map(i => i.feature_name || i.feature_alia_name || i.name).filter(Boolean))
   )
 
-  // ✅ 新增：把单位/上下限缓存下来，供绘图使用
+  // ✅ 重建元数据缓存
   for (const r of features) {
     const n = r.feature_name || r.feature_alia_name || r.name
     if (!n) continue
@@ -279,17 +286,20 @@ function handleSelectedPoints(payload) {
     }
   }
 
-  // …（你原有的可选特征集合/默认选中特征逻辑保持不变）
-  const set = new Set([...(availableFeatureNames.value || []), ...namesFromData])
-  if (featureName) set.add(featureName)
-  availableFeatureNames.value = Array.from(set)
+  // ✅ 用新集合替换旧集合（不叠加历史）
+  availableFeatureNames.value = [...namesFromData]
+  if (featureName && !availableFeatureNames.value.includes(featureName)) {
+    availableFeatureNames.value.push(featureName)
+  }
 
+  // 默认选中逻辑
   if (!selectedFeatureNames.value.length) {
     selectedFeatureNames.value = featureName
         ? [featureName]
         : (namesFromData.length ? [namesFromData[0]] : [])
   }
 
+  // 若时间范围存在则重新加载数据
   const range = timeRange.value || []
   if (range.length === 2 && range[0] && range[1] && selectedFeatureNames.value.length) {
     refetchAllSelectedData()

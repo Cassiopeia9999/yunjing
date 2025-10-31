@@ -16,19 +16,46 @@ function daysAgo(n){ return iso(Date.now() - n*86400000); }
  */
 
 /** 获取 mock 的“最新特征值” */
+/** 获取真实的“最新特征值” */
+import { fetchTableData } from '@/api/querydata'
+import { getSysConfigFormId } from '@/api/constant/form_constant.js'
+
 export async function getLatestFeatures(deviceId) {
-    const id = String(deviceId || 'X');
-    // 你可以替换成自己的静态数组；这里只是示例
-    /** @type {FeatureRow[]} */
-    const list = [
-        { id:`${id}-rms-X`,     name:'振动X RMS', value:3.21, unit:'mm/s', source:'parsed',   ts:daysAgo(0) },
-        { id:`${id}-rms-Y`,     name:'振动Y RMS', value:3.14, unit:'mm/s', source:'parsed', ts:daysAgo(0) },
-        { id:`${id}-rms-Z`,     name:'振动Z RMS', value:1.18, unit:'mm/s', source:'parsed', ts:daysAgo(0) },
-        { id:`${id}-curr-X`,    name:'X加速度级',     value:108.9, unit:'dB',    source:'parsed',   ts:daysAgo(2) },
-        { id:`${id}-curr-Y`,    name:'X加速度级',     value:108.9, unit:'dB',    source:'parsed',   ts:daysAgo(2) },
-        { id:`${id}-curr-Z`,    name:'X加速度级',     value:108.9, unit:'dB',    source:'parsed',   ts:daysAgo(2) },
-        { id:`${id}-kurt-p`,    name:'峭度',     value:3.7,  unit:'',     source:'parsed',   ts:daysAgo(3) },
-        { id:`${id}-crest-p`,   name:'波峰因子', value:2.9,  unit:'',     source:'parsed',   ts:daysAgo(4) },
-    ];
-    return Promise.resolve(list);
+    if (!deviceId) return []
+
+    try {
+        // 按设备ID查询特征表（FEATURE_DATA_FORM_ID）
+        const queryParams = [
+            { key: 'device_id', value: String(deviceId), queryType: '=' }
+        ]
+
+        const res = await fetchTableData(
+            1,
+            1000,
+            getSysConfigFormId('FEATURE_DATA_FORM_ID'),
+            queryParams
+        )
+
+        const list = res?.data?.list || []
+
+        // 适配字段结构（保证与原 mock 格式一致）
+        return list.map(item => ({
+            id: item.id,
+            name: item.alia_name || item.feature_alia_name || item.name || '—',
+            value: item.latest_value ?? item.value ?? item.val ?? null,
+            unit: item.feature_unit || item.unit || '',
+            source: item.data_source || item.source || 'reported',
+            ts:
+                item.ts ||
+                item.time ||
+                item.collect_time ||
+                item.report_time ||
+                item.updated_at ||
+                null
+        }))
+    } catch (error) {
+        console.error('加载设备特征数据失败:', error)
+        return []
+    }
 }
+
