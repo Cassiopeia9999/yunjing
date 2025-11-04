@@ -47,33 +47,25 @@ export async function getDevicePageData(deviceId = 1, { days = 365 } = {}) {
     const sortedByProb = [...diagnoses].sort((a,b) => (b.probability||0) - (a.probability||0));
 
     // 本次诊断包含 1~4 条故障
-    const faultCount = Math.max(1, Math.min(4, randint(1, 4)));
-    const faults = sortedByProb.slice(0, faultCount).map((d, idx) => ({
-        id: d.id ?? (100000 + idx),
-        fault_name: d.fault_type.name || '未定义故障',
-        probability: d.probability ?? 0,
-        diagnosis_basis_short: d.diagnosis_basis ? String(d.diagnosis_basis).slice(0, 60) : '',
-        diagnosis_basis: d.diagnosis_basis || '',
-        raw_file_id: d.raw_file_id || ''
-    }));
-
+    const faults = sortedByProb.slice(0, randint(1, 4));
     const snapshot = { diagnose_time: snapshotTime, faults };
 
     // 诊断记录列表（仍然按天倒序渲染）
+// 诊断记录列表（完善 raw_file 赋值）
     const records = diagnoses.map((diag, i) => {
         const d = new Date(now.getTime() - i * 86400000);
         return {
             id: 10000 + i,
             diagnose_time: diag.diagnose_time,
-            fault_name: diag.fault_type.name || '未定义故障',
+            fault_name: diag.fault_type.name || '未定义故障', // 故障名称逻辑
             probability: diag.probability || 0,
             description:
                 (diag.probability || 0) > 85 ? '建议尽快检修'
                     : (diag.probability || 0) > 70 ? '建议重点观察'
                         : '—',
             diagnosis_basis: diag.diagnosis_basis || '未定义依据',
-            raw_file_id: diag.raw_file_id || '未定义',
-            confirmed: Math.random() > 0.8,
+
+            raw_file: (diag.raw_file?.name || diag.file_name) || '无文件', // 新增：来源文件字段
         };
     });
 

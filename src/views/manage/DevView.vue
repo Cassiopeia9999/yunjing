@@ -75,7 +75,7 @@ const recordGroups = computed(() => {
       id: time,                   // 父行 id
       time,                       // 时间（到秒）
       namesText: names.join('，'),
-      filesText: files.length ? files.join('，') : '—',
+      filesText: files.join('，'),
       count: arr.length,
       children: arr               // 展开表用原始行
     })
@@ -496,6 +496,8 @@ onMounted(loadAll)
 <!--                        <template #default="{row}">{{ fmtDT(row.diagnose_time) }}</template>-->
                       </el-table-column>
                       <el-table-column label="故障名称" min-width="180" show-overflow-tooltip prop="fault_name"/>
+                      <!-- 子表中，与“故障名称”列同级添加 -->
+                      <el-table-column label="来源文件" min-width="180" show-overflow-tooltip prop="raw_file" />
                       <el-table-column label="概率" width="90">
                         <template #default="{row}">
                           <el-tag :type="row.probability >= (data?.meta?.highProbThreshold||70) ? 'danger':'info'" size="small">
