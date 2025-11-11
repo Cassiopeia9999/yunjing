@@ -5,7 +5,7 @@
         <i class="fa fa-arrow-left "></i>全局地图
       </button>
     </div>
-    <!-- 标题 -->
+    <!-- 标题 -ss->
     <h1 class="title">{{baseName}}基地</h1>
 
     <!-- 设备卡片区域 -->
