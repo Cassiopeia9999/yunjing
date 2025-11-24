@@ -45,7 +45,7 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue'; // 移除 onMounted，因为数据获取由 watch 触发
 import PeriodSelector from '@/buz/common/PeriodSelector.vue'; // 确保路径正确
-import { fetchTableData } from '@/api/querydata.js';
+import { fetchTableData } from '@/api/query_data.js';
 import { getSysConfigFormId } from '@/api/constant/form_constant.js'; // 确保导入周期FORM_ID
 
 // 模板引用，用于访问 PeriodSelector 组件实例

@@ -1,14 +1,14 @@
-// CommonServiceClient.js
+// Common_service_client.js
 import request from '@/utils/request';
 import {getSysConfigFormId} from "@/api/constant/form_constant.js";
-import {fetchSubDataBatch, fetchTableData} from "@/api/querydata.js";
-import {SERVICE_CODES} from "@/api/constant/serviceCodes.js";
+import {fetchSubDataBatch, fetchTableData} from "@/api/query_data.js";
+import {SERVICE_CODES} from "@/api/constant/service_codes.js";
 
 const PARAM_LIST_FIELD_NAME = 'params';
 
 const SERVICE_CONFIG_FORM_ID = "SERVICE_CONFIG_FORM_ID";
 
-class CommonServiceClient {
+class Common_service_client {
     constructor() {
         this.serviceConfigMap = new Map();  // key: serviceName, value: service配置对象
         this._initialized = false;
@@ -93,4 +93,4 @@ class CommonServiceClient {
 
 }
 
-export const commonServiceClient = new CommonServiceClient();
+export const commonServiceClient = new Common_service_client();

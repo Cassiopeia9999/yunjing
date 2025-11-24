@@ -96,7 +96,7 @@
 <script setup >
 import {ref, onMounted} from 'vue'
 import {useRoute} from 'vue-router'
-import {fetchTableData} from '@/api/querydata.js'
+import {fetchTableData} from '@/api/query_data.js'
 import {getSysConfigFormId} from '@/api/constant/form_constant.js'
 import {Document} from '@element-plus/icons-vue'
 

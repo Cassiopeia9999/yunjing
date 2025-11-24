@@ -95,7 +95,7 @@
 <script setup>
 import { ref, watch, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import * as echarts from 'echarts'
-import { commonServiceClient } from '@/api/commonServiceClient'
+import { commonServiceClient } from '@/api/common_service_client.js'
 
 const props = defineProps({
   modelValue: Boolean,

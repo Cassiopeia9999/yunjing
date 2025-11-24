@@ -3,7 +3,7 @@
 // pointRowData.js (节选/新增)
 
 import { getSysConfigFormId, DEVICE_FORM_ID } from '@/api/constant/form_constant.js'
-import {fetchTableData} from "@/api/querydata.js";
+import {fetchTableData} from "@/api/query_data.js";
 
 function makeRand(seed = 1){
     let s = seed >>> 0

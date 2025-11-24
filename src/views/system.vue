@@ -81,7 +81,7 @@
 
 import {onMounted, ref} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
-import {fetchTableData} from '@/api/querydata.js'
+import {fetchTableData} from '@/api/query_data.js'
 import {getSysConfigFormId} from '@/api/constant/form_constant.js'
 import DeviceAssessmentModal from "@/buz/eavalue/DeviceAssessmentModal.vue";
 

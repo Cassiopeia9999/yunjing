@@ -137,7 +137,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { WarningFilled, CircleCheck } from '@element-plus/icons-vue'
-import { commonServiceClient } from '@/api/CommonServiceClient.js'
+import { commonServiceClient } from '@/api/common_service_client.js'
 
 // 组件属性
 const props = defineProps({

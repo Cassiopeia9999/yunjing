@@ -62,7 +62,7 @@
 <script setup>
 import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import * as echarts from 'echarts'
-import { fetchTableData } from '@/api/querydata.js'
+import { fetchTableData } from '@/api/query_data.js'
 import { getSysConfigFormId } from '@/api/constant/form_constant.js'
 
 // ===================== Props =====================

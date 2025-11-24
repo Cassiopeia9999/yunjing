@@ -153,9 +153,9 @@ import { ref, computed, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import * as echarts from 'echarts'
 import { Search, Refresh, Download, Document } from '@element-plus/icons-vue'
 
-import { fetchTableData } from '@/api/querydata.js'
+import { fetchTableData } from '@/api/query_data.js'
 import { getSysConfigFormId } from '@/api/constant/form_constant.js'
-import { fetchChannelWaveData } from '@/api/featureService.js' // 确保已在脚本顶部引入
+import { fetchChannelWaveData } from '@/api/feature_service.js' // 确保已在脚本顶部引入
 
 import {
   mockListPeriods,

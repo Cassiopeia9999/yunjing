@@ -160,7 +160,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { commonServiceClient } from '@/api/commonServiceClient'
+import { commonServiceClient } from '@/api/common_service_client.js'
 import VueJsonPretty from 'vue-json-pretty'
 import 'vue-json-pretty/lib/styles.css'
 

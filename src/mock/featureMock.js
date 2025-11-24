@@ -17,7 +17,7 @@ function daysAgo(n){ return iso(Date.now() - n*86400000); }
 
 /** 获取 mock 的“最新特征值” */
 /** 获取真实的“最新特征值” */
-import { fetchTableData } from '@/api/querydata'
+import { fetchTableData } from '@/api/query_data.js'
 import { getSysConfigFormId } from '@/api/constant/form_constant.js'
 
 export async function getLatestFeatures(deviceId) {

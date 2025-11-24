@@ -1,4 +1,4 @@
-// featureService.js
+// feature_service.js
 
 import request from '@/utils/request'
 import { tableFromIPC } from 'apache-arrow'

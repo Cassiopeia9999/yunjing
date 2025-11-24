@@ -1,5 +1,5 @@
 import { fetchDevices, fetchDiagnoses } from "@/mock/fetchDataApi.js";
-import { fetchDataById, fetchTableData } from '@/api/querydata';
+import { fetchDataById, fetchTableData } from '@/api/query_data.js';
 import { DEVICE_FORM_ID, DIAGNOSIS_FORM_ID, getSysConfigFormId } from '@/api/constant/form_constant';
 /**
  * Helper function to pad a number to two digits

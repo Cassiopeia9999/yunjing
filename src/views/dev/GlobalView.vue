@@ -14,7 +14,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import * as echarts from 'echarts'
-import { fetchTableData } from '@/api/querydata.js'
+import { fetchTableData } from '@/api/query_data.js'
 import { getSysConfigFormId } from "@/api/constant/form_constant.js";
 import { useRouter } from 'vue-router';
 

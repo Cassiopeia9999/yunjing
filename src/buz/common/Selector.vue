@@ -42,7 +42,7 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
-import { fetchTableData } from '@/api/querydata.js'
+import { fetchTableData } from '@/api/query_data.js'
 import {
   BASE_FORM_ID, DEVICE_FORM_ID, FEATURE_DATA_FORM_ID,
   getSysConfigFormId, UNIT_FORM_ID

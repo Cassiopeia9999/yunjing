@@ -5,7 +5,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import * as echarts from 'echarts'
-import { fetchTableData } from '@/api/querydata.js'
+import { fetchTableData } from '@/api/query_data.js'
 import { BASE_FORM_ID } from "@/api/constant/form_constant.js";
 import { useRouter } from 'vue-router';
 

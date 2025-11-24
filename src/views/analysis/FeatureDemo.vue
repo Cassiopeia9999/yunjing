@@ -195,10 +195,10 @@
 /* —— 业务逻辑完全沿用你的原实现，仅修正模板易错点 —— */
 import { ref, reactive, watch, nextTick, onUnmounted, computed } from 'vue'
 import * as echarts from 'echarts'
-import { fetchTableData } from '@/api/querydata.js'
+import { fetchTableData } from '@/api/query_data.js'
 import { getSysConfigFormId } from '@/api/constant/form_constant.js'
 import PointSelector from '@/buz/common/Selector.vue'
-import { fetchParsedFeatureData, formatTimestamp } from '@/api/featureService.js'
+import { fetchParsedFeatureData, formatTimestamp } from '@/api/feature_service.js'
 import FeatureForecastDialog from '@/buz/feature/FeatureForecastDialog.vue'
 import {Search, Histogram, Setting, Download, MagicStick} from '@element-plus/icons-vue'
 import StatusClassifier from "@/components/alg/StatusClassifier.vue";

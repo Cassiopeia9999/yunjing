@@ -1,4 +1,4 @@
-// constants/serviceCodes.js
+// constants/service_codes.js
 export const SERVICE_CODES = {
     REPAIR_PLAN: "REPAIR_PLAN",
     CHECK_QUERY: "CHECK_QUERY",

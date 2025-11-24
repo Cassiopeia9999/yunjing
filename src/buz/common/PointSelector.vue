@@ -37,7 +37,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { fetchTableData } from '@/api/querydata.js'
+import { fetchTableData } from '@/api/query_data.js'
 import {
   BASE_FORM_ID,
   UNIT_FORM_ID,

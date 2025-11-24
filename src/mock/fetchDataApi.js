@@ -6,7 +6,7 @@ import {
     getSysConfigFormId,
     UNIT_FORM_ID
 } from '@/api/constant/form_constant';
-import { fetchDataById, fetchTableData } from '@/api/querydata';
+import { fetchDataById, fetchTableData } from '@/api/query_data.js';
 
 
 // 获取设备数据

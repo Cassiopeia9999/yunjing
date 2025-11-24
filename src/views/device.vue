@@ -109,7 +109,7 @@
 <script setup lang="ts">
 import {ref, computed, onMounted} from 'vue'
 import {useRoute, useRouter} from 'vue-router' // 引入路由钩子
-import {fetchTableData} from '@/api/querydata.js'
+import {fetchTableData} from '@/api/query_data.js'
 import {getSysConfigFormId} from '@/api/constant/form_constant.js'
 // 顶部四个方块的设备数据
 

@@ -19,7 +19,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue' // 引入 defineExpose
-import { fetchTableData } from '@/api/querydata.js'
+import { fetchTableData } from '@/api/query_data.js'
 import {
   getSysConfigFormId
 } from '@/api/constant/form_constant.js'
