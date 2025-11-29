@@ -30,7 +30,7 @@ const DecisionView   = () => import('@/views/manage/DecisionView.vue')
 const FaultCenterView   = () => import('@/views/manage/FaultCenter.vue')
 import FullscreenLayout from '@/components/layouts/FullscreenLayout.vue'
 import PointDataView from "@/views/analysis/PointDataView.vue";
-
+import CourseIndexView from "@/views/course/index.vue";
 
 const routes = [
     {
@@ -42,6 +42,7 @@ const routes = [
             { path: 'login', name: 'Login', component: Login, meta: { requiresAuth: false } }
         ]
     },
+    { path: '/course/index', name: 'CourseIndexView', component: CourseIndexView, meta: { requiresAuth: false } },
 
     {
         // ✅ 独立大屏：/screen/dashboard
@@ -85,7 +86,6 @@ const routes = [
             { path: 'manage/devview/:baseId?/:unitId?/:deviceId?', name: 'ManageDevView', component: DevView, meta: { requiresAuth: true } }, // 设备详细视图
 
             // 其他管理功能视图
-            { path: 'manage/decision', name: 'DecisionView', component: DecisionView, meta: { requiresAuth: true } },
             { path: 'manage/faultcenter', name: 'FaultCenterView', component: FaultCenterView, meta: { requiresAuth: true } }
         ]
     }
