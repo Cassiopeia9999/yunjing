@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrome DevTools MCP 演示</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .demo-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 5px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .output {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chrome DevTools MCP 演示</h1>
+        
+        <div class="status info">
+            <strong>ℹ️ 信息:</strong> 这个演示展示了如何使用 Chrome DevTools MCP 与浏览器进行交互。
+        </div>
+
+        <div class="demo-section">
+            <h2>1. 连接状态</h2>
+            <div id="connection-status" class="status info">
+                等待连接...
+            </div>
+            <button onclick="connectToMCP()">连接到 MCP 服务器</button>
+            <button onclick="disconnectFromMCP()">断开连接</button>
+        </div>
+
+        <div class="demo-section">
+            <h2>2. 页面导航</h2>
+            <input type="text" id="navigate-url" value="http://localhost:8085/" style="width: 300px; padding: 8px;">
+            <button onclick="navigateToUrl()">导航</button>
+            <div id="navigate-output" class="output"></div>
+        </div>
+
+        <div class="demo-section">
+            <h2>3. 执行 JavaScript</h2>
+            <textarea id="js-code" rows="4" cols="60">document.title</textarea>
+            <button onclick="executeJavaScript()">执行</button>
+            <div id="js-output" class="output"></div>
+        </div>
+
+        <div class="demo-section">
+            <h2>4. 获取页面信息</h2>
+            <button onclick="getPageTitle()">获取标题</button>
+            <button onclick="getPerformanceData()">获取性能数据</button>
+            <button onclick="takeScreenshot()">截图</button>
+            <div id="info-output" class="output"></div>
+        </div>
+
+        <div class="demo-section">
+            <h2>5. 网络监控</h2>
+            <button onclick="enableNetworkMonitoring()">启用网络监控</button>
+            <button onclick="disableNetworkMonitoring()">禁用网络监控</button>
+            <div id="network-output" class="output"></div>
+        </div>
+
+        <div class="demo-section">
+            <h2>6. 调试日志</h2>
+            <div id="debug-log" class="output"></div>
+        </div>
+    </div>
+
+    <script>
+        let mcpConnection = null;
+        
+        // 日志函数
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('debug-log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] [${type}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        // 更新连接状态
+        function updateConnectionStatus(status, isConnected) {
+            const statusDiv = document.getElementById('connection-status');
+            statusDiv.textContent = status;
+            statusDiv.className = `status ${isConnected ? 'success' : 'error'}`;
+        }
+        
+        // 连接到 MCP 服务器
+        async function connectToMCP() {
+            try {
+                log('正在连接到 MCP 服务器...');
+                
+                // 这里使用 WebSocket 连接到 MCP 服务器
+                // 注意：实际实现需要根据 MCP 协议规范进行
+                const ws = new WebSocket('ws://localhost:8081');
+                
+                ws.onopen = () => {
+                    log('成功连接到 MCP 服务器');
+                    updateConnectionStatus('已连接到 MCP 服务器', true);
+                    mcpConnection = ws;
+                    
+                    ws.onmessage = (event) => {
+                        log('收到消息: ' + event.data, 'success');
+                    };
+                    
+                    ws.onerror = (error) => {
+                        log('WebSocket 错误: ' + error, 'error');
+                    };
+                    
+                    ws.onclose = () => {
+                        log('MCP 连接已关闭');
+                        updateConnectionStatus('已断开连接', false);
+                        mcpConnection = null;
+                    };
+                };
+                
+                ws.onerror = (error) => {
+                    log('连接失败: ' + error, 'error');
+                    updateConnectionStatus('连接失败', false);
+                };
+                
+            } catch (error) {
+                log('连接错误: ' + error, 'error');
+                updateConnectionStatus('连接错误', false);
+            }
+        }
+        
+        // 断开连接
+        function disconnectFromMCP() {
+            if (mcpConnection) {
+                mcpConnection.close();
+                mcpConnection = null;
+                updateConnectionStatus('已断开连接', false);
+                log('已断开与 MCP 服务器的连接');
+            }
+        }
+        
+        // 导航到指定 URL
+        function navigateToUrl() {
+            const url = document.getElementById('navigate-url').value;
+            const output = document.getElementById('navigate-output');
+            output.textContent = `正在导航到: ${url}`;
+            
+            // 实际实现需要发送 Page.navigate 命令
+            log(`发送导航命令: ${url}`);
+            
+            // 模拟导航结果
+            setTimeout(() => {
+                output.textContent += `\n导航完成: ${url}`;
+            }, 1000);
+        }
+        
+        // 执行 JavaScript 代码
+        function executeJavaScript() {
+            const code = document.getElementById('js-code').value;
+            const output = document.getElementById('js-output');
+            output.textContent = `执行代码: ${code}`;
+            
+            // 实际实现需要发送 Runtime.evaluate 命令
+            log(`执行 JavaScript: ${code}`);
+            
+            // 模拟执行结果
+            setTimeout(() => {
+                output.textContent += `\n执行结果: (模拟) Hello World`;
+            }, 500);
+        }
+        
+        // 获取页面标题
+        function getPageTitle() {
+            const output = document.getElementById('info-output');
+            output.textContent = '获取页面标题...';
+            
+            // 实际实现需要发送 Runtime.evaluate 命令
+            log('获取页面标题');
+            
+            // 模拟结果
+            setTimeout(() => {
+                output.textContent = `页面标题: Vue 应用`;
+            }, 500);
+        }
+        
+        // 获取性能数据
+        function getPerformanceData() {
+            const output = document.getElementById('info-output');
+            output.textContent = '获取性能数据...';
+            
+            // 实际实现需要发送 Runtime.evaluate 命令
+            log('获取性能数据');
+            
+            // 模拟结果
+            setTimeout(() => {
+                output.textContent = `性能数据: (模拟) 加载时间: 1234ms`;
+            }, 500);
+        }
+        
+        // 截图
+        function takeScreenshot() {
+            const output = document.getElementById('info-output');
+            output.textContent = '正在截图...';
+            
+            // 实际实现需要发送 Page.captureScreenshot 命令
+            log('获取页面截图');
+            
+            // 模拟结果
+            setTimeout(() => {
+                output.textContent = `截图已获取，大小: 123456 bytes`;
+            }, 500);
+        }
+        
+        // 启用网络监控
+        function enableNetworkMonitoring() {
+            const output = document.getElementById('network-output');
+            output.textContent = '已启用网络监控';
+            
+            // 实际实现需要发送 Network.enable 命令
+            log('启用网络监控');
+        }
+        
+        // 禁用网络监控
+        function disableNetworkMonitoring() {
+            const output = document.getElementById('network-output');
+            output.textContent = '已禁用网络监控';
+            
+            // 实际实现需要发送 Network.disable 命令
+            log('禁用网络监控');
+        }
+        
+        // 页面加载完成后自动连接
+        window.onload = function() {
+            log('页面加载完成，准备连接到 MCP 服务器');
+        };
+    </script>
+</body>
+</html>

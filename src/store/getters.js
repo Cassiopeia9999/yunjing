@@ -16,8 +16,6 @@ const getters = {
   sidebarRouters:state => state.permission.sidebarRouters,
   // 数据字典
   dict_datas: state => state.dict.dictDatas,
-  // 低代码数据字典
-  lowCode_dict_data: state => state.lowCodeDict.lowCodeDictData,
   gisTypeList: state => state.dict.gisTypeList,
   formTemplateDic:state => state.dict.formTemplateDic
 }
