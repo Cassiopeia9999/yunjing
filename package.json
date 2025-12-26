@@ -14,7 +14,9 @@
     "axios": "^1.9.0",
     "dotenv": "^16.5.0",
     "element-plus": "^2.9.9",
+    "ezuikit-js": "^8.2.3",
     "js-cookie": "^3.0.5",
+    "sass-embedded": "^1.97.1",
     "vue": "^3.5.13",
     "vue-router": "^4.5.1",
     "vuex": "^4.1.0"
