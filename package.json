@@ -13,6 +13,7 @@
     "@element-plus/icons-vue": "^2.3.1",
     "axios": "^1.9.0",
     "dotenv": "^16.5.0",
+    "echarts": "^6.0.0",
     "element-plus": "^2.9.9",
     "ezuikit-js": "^8.2.3",
     "js-cookie": "^3.0.5",
