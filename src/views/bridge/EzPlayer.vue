@@ -73,7 +73,7 @@ import { Sunny, BellFilled } from '@element-plus/icons-vue';
 // --- 配置区域 ---
 const videoUrl = 'ezopen://open.ys7.com/G02145391/1.hd.live';
 // ★★★ 请在这里填入你的真实 AccessToken ★★★
-const accessToken = '你的_ACCESS_TOKEN_在这里';
+const accessToken = 'at.bwn0mdf38dibfh5w79gwv98548u5x38w-6f15w2gkas-1yy6xu7-e0do9exn1';
 
 // --- 状态管理 ---
 const currentTime = ref('00:00:00');
