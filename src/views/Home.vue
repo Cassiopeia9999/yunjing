@@ -55,6 +55,20 @@
             </div>
           </div>
 
+
+          <div class="scenario-card" @click="navigateTo('/urcs-dashboard')">
+            <div class="card-image agv-bg">
+              <div class="overlay"></div>
+              <span class="status-badge success">运行中</span>
+            </div>
+            <div class="card-content">
+              <div class="icon-box"><i class="fa-solid fa-robot"></i></div>
+              <h3>AGV统一调度中枢</h3>
+              <p>面向多品牌异构AGV的统一管控平台。核心实现影子队列同步、全局路权智能裁决与混合充电策略。</p>
+              <div class="link-arrow">进入控制台 <i class="fa-solid fa-arrow-right"></i></div>
+            </div>
+          </div>
+
           <div class="scenario-card disabled">
             <div class="card-image site-img">
               <div class="overlay"></div>
@@ -178,7 +192,7 @@ h2 { text-align: center; font-size: 2rem; margin-bottom: 60px; }
 
 /* 卡片图片区 (使用渐变模拟图片，实际可换成 img) */
 .card-image { height: 200px; position: relative; background-size: cover; background-position: center; }
-.bridge-img { background-image: url('https://images.unsplash.com/photo-1513552084705-779872580a6b?q=80&w=800&auto=format'); }
+.bridge-img { background-image: url('/images/hero.png'); }
 .factory-img { background-image: url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=800&auto=format'); }
 .site-img { background-image: url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=800&auto=format'); }
 
@@ -210,7 +224,20 @@ h2 { text-align: center; font-size: 2rem; margin-bottom: 60px; }
 .base-item i { font-size: 2rem; color: var(--text-gray); margin-bottom: 15px; }
 .base-item h4 { font-size: 1.1rem; margin-bottom: 5px; color: white; }
 .base-item p { color: var(--text-gray); font-size: 0.9rem; }
+/* AGV 专属背景图 */
+.agv-bg {
+  /* 建议替换为真实的 AGV 小车或工厂跑道图片 */
+  background-image: url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80');
+  background-size: cover;
+  background-position: center;
+}
 
+/* 运行中状态 - 绿色样式 */
+.status-badge.success {
+  background: rgba(225, 243, 216, 0.9);
+  color: #67c23a;
+  border: 1px solid #e1f3d8;
+}
 footer { padding: 30px 0; text-align: center; color: #555; font-size: 0.9rem; border-top: 1px solid rgba(255,255,255,0.05); }
 
 /* 响应式 */

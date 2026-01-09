@@ -11,6 +11,7 @@ import PortalHome from '@/views/Home.vue'
 
 // [关键修改] 原来的 Home 改名为 BridgeHome，作为桥梁子系统的首页
 import BridgeHome from '@/views/bridge/BridgeHome.vue'
+import AvgHome from '@/views/agvlmd/AgvHome.vue'
 
 // 桥梁系统的具体工具页面
 import RadioMonitor from '@/views/bridge/RadioMonitor.vue'
@@ -19,6 +20,7 @@ import BridgeMonitor from '@/views/bridge/BridgeMonitor.vue'
 
 // [新增] 故障诊断子系统 (占位页)
 import FaultDiagnosis from '@/views/diagnosis/FaultDiagnosis.vue'
+
 
 // 其他页面
 import Login from '@/views/Login.vue'
@@ -54,6 +56,12 @@ const routes = [
                 path: 'diagnosis',
                 name: 'FaultDiagnosis',
                 component: FaultDiagnosis,
+                meta: { requiresAuth: false }
+            },
+            {
+                path: 'urcs-dashboard',
+                name: 'urss',
+                component: AvgHome,
                 meta: { requiresAuth: false }
             },
 
