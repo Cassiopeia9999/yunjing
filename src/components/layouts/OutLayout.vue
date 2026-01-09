@@ -18,7 +18,7 @@
         <!-- 左：Logo + 名称 -->
         <div class="flex items-center gap-2 min-w-0">
           <img src="/images/logo.svg" alt="logo" class="h-6 w-6" />
-          <span class="font-semibold truncate">AI 设备故障诊断平台</span>
+          <span class="font-semibold truncate">AI数智赋能平台</span>
         </div>
 
         <!-- 中：横向菜单（路由联动高亮） -->
