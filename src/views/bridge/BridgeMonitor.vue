@@ -158,7 +158,7 @@ import {
 import { ElMessage } from 'element-plus';
 
 // --- 配置常量 ---
-const EZ_ACCESS_TOKEN = 'at.bwn0mdf38dibfh5w79gwv98548u5x38w-6f15w2gkas-1yy6xu7-e0do9exn1';
+const EZ_ACCESS_TOKEN = 'at.ahc7oy27dky94otg69ycu9o527u0r25s-1sfjb890af-07h35ut-dsukqz9k1';
 const EZ_VIDEO_URL = 'ezopen://open.ys7.com/G02145391/1.hd.live';
 const WS_SID = '1001';
 
