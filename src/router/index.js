@@ -21,6 +21,8 @@ import BridgeMonitor from '@/views/bridge/BridgeMonitor.vue'
 // [新增] 故障诊断子系统 (占位页)
 import FaultDiagnosis from '@/views/diagnosis/FaultDiagnosis.vue'
 
+import AirportHome from '@/views/airport/AirportHome.vue' // 上面的代码
+import AirportGis from '@/views/airport/AirportGis.vue'   // 之前的 Map Dashboard
 
 // 其他页面
 import Login from '@/views/Login.vue'
@@ -69,6 +71,18 @@ const routes = [
             { path: 'radioMonitor', name: 'RadioMonitor', component: RadioMonitor, meta: { requiresAuth: false } },
             { path: 'EzPlayer', name: 'EzPlayer', component: EzPlayer, meta: { requiresAuth: false } },
 
+            {
+                path: 'airport',
+                name: 'AirportHome', // 1. 访问 /airport 显示这个首页
+                component: AirportHome,
+                meta: { requiresAuth: false }
+            },
+            {
+                path: 'airport/gis',
+                name: 'AirportGis', // 2. 首页卡片点击跳转到这里
+                component: AirportGis,
+                meta: { requiresAuth: false }
+            },
             // 1.5 通用页面
             { path: 'login', name: 'Login', component: Login, meta: { requiresAuth: false } },
             { path: 'word-card', name: 'WordCard', component: WordCard, meta: { requiresAuth: false } }

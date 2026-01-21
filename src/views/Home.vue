@@ -69,6 +69,19 @@
             </div>
           </div>
 
+          <div class="scenario-card" @click="navigateTo('/airport')">
+            <div class="card-image airport-img">
+              <div class="overlay"></div>
+              <span class="status-badge online">运行中</span>
+            </div>
+            <div class="card-content">
+              <div class="icon-box"><i class="fa-solid fa-plane-departure"></i></div>
+              <h3>机场道面智慧管养</h3>
+              <p>融合 GIS 与数字孪生技术，提供跑道病害全生命周期管理与巡检路径规划。</p>
+              <div class="link-arrow">进入系统 <i class="fa-solid fa-arrow-right"></i></div>
+            </div>
+          </div>
+
           <div class="scenario-card disabled">
             <div class="card-image site-img">
               <div class="overlay"></div>
@@ -196,6 +209,9 @@ h2 { text-align: center; font-size: 2rem; margin-bottom: 60px; }
 .factory-img { background-image: url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=800&auto=format'); }
 .site-img { background-image: url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=800&auto=format'); }
 
+/* [新增] 机场图片 */
+.airport-img { background-image: url('https://images.unsplash.com/photo-1474302770737-173ee21bab63?q=80&w=800&auto=format'); }
+
 .overlay { position: absolute; inset: 0; background: linear-gradient(to top, var(--bg-card), transparent); }
 
 .status-badge {
@@ -231,6 +247,8 @@ h2 { text-align: center; font-size: 2rem; margin-bottom: 60px; }
   background-size: cover;
   background-position: center;
 }
+
+
 
 /* 运行中状态 - 绿色样式 */
 .status-badge.success {
