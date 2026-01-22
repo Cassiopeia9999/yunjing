@@ -5,7 +5,7 @@
         <h1>机场道面智慧管养平台</h1>
         <p>Airport Pavement Intelligent Management System</p>
         <div class="weather-widget">
-          <span>🌤️ 重庆江北机场 | 24°C | 适宜巡检</span>
+          <span>🌤️ 乌兰查布机场 | 24°C | 适宜巡检</span>
         </div>
       </div>
       <div class="hero-image">
@@ -224,7 +224,7 @@ const navigateTo = (module) => {
 }
 
 .kpi-info .label {
-  font-size: 12px;
+  font-size: 20px;
   color: #8c8c8c;
 }
 
@@ -331,7 +331,8 @@ const navigateTo = (module) => {
 
 .panel-header h3 {
   margin: 0 0 16px 0;
-  font-size: 16px;
+  font-size: 22px;
+  color: #0B1220;
   border-left: 4px solid #1890ff;
   padding-left: 10px;
 }
@@ -343,6 +344,7 @@ const navigateTo = (module) => {
 }
 
 .activity-item {
+  font-size: 18px;
   display: flex;
   gap: 12px;
   padding: 12px 0;

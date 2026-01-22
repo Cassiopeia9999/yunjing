@@ -14,7 +14,7 @@
 
     <!-- 中：标题 + 搜索 -->
     <div class="flex items-center gap-3 min-w-0">
-      <div class="title truncate">故障诊断工作台</div>
+      <div class="title truncate">数智工作台</div>
 
       <!-- 搜索（可收缩） -->
       <div class="hidden md:flex items-center">

@@ -77,7 +77,7 @@ const onSubmit = () => {
     const token = getToken()
     if (token) {
       ElMessage.success('您已登录，正在跳转...')
-      router.push('/airport')
+      router.push('/inner/home')
       return
     }
     const userInfo = { username: form.value.username, password: form.value.password, tenantId: 180, type: 'username' }
@@ -91,7 +91,7 @@ const onSubmit = () => {
         Cookies.remove('remember_username')
         Cookies.remove('remember_password')
       }
-      router.push('/airport')
+      router.push('/inner/home')
     } catch (e) {
       ElMessage.error('登录失败，请检查用户名或密码')
       console.error(e)

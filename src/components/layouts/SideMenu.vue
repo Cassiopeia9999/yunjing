@@ -99,7 +99,7 @@ const route  = useRoute()
 
 const menuItems = [
   // 仪表盘 / 工作台
-  { name: '工作台',   icon: 'Odometer',     link: '/inner/dashboard' }
+  { name: '工作台',   icon: 'Odometer',     link: '/inner/home' }
 ]
 
 
