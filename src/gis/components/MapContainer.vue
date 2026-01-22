@@ -13,19 +13,34 @@ const emit = defineEmits(['map-ready']);
 const map = shallowRef(null);
 
 onMounted(() => {
-  // 1. 初始化地图实例
-  map.value = L.map('map-container', {
-    center: [29.562, 106.544], // 默认中心点 (重庆)
-    zoom: 18,
-    zoomControl: false, // 隐藏默认缩放控件，方便自定义位置
-    attributionControl: false // 隐藏右下角版权信息
-  });
+  console.log('MapContainer onMounted called');
+  
+  try {
+    // 1. 初始化地图实例
+    map.value = L.map('map-container', {
+      center: [29.562, 106.544], // 默认中心点 (重庆)
+      zoom: 12, // 默认缩放级别
+      zoomControl: false, // 隐藏默认缩放控件，方便自定义位置
+      attributionControl: false, // 隐藏右下角版权信息
+      layers: [] // 不添加默认底图，由BaseMapSwitch组件管理
+    });
 
-  // 添加缩放控件到右下角
-  L.control.zoom({ position: 'bottomright' }).addTo(map.value);
-
-  // 2. 通知父组件地图已就绪
-  emit('map-ready', map.value);
+    console.log('Map instance created:', map.value);
+    
+    // 添加缩放控件到右下角
+    L.control.zoom({ position: 'bottomright' }).addTo(map.value);
+    
+    // 添加地图加载事件监听，用于调试
+    map.value.on('load', () => {
+      console.log('Map loaded successfully');
+    });
+    
+    // 2. 通知父组件地图已就绪
+    emit('map-ready', map.value);
+    console.log('Map ready event emitted');
+  } catch (error) {
+    console.error('Error initializing map:', error);
+  }
 });
 
 // 销毁地图，防止内存泄漏

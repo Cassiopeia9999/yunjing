@@ -2,25 +2,15 @@
 
 export const BASE_MAP_CONFIG = [
     {
-        key: 'gaode_vec',
-        name: '高德地图',
-        type: 'gcj02', // 标识坐标系，用于后续判断是否纠偏
-        url: 'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',
+        key: 'openstreetmap',
+        name: 'OpenStreetMap',
+        type: 'wgs84', // 标识坐标系，用于后续判断是否纠偏
+        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         options: {
-            subdomains: ['1', '2', '3', '4'],
+            subdomains: ['a', 'b', 'c'],
             minZoom: 3,
-            maxZoom: 20
-        }
-    },
-    {
-        key: 'gaode_img',
-        name: '高德卫星',
-        type: 'gcj02',
-        url: 'https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}',
-        options: {
-            subdomains: ['1', '2', '3', '4'],
-            minZoom: 3,
-            maxZoom: 20
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
         }
     },
     {

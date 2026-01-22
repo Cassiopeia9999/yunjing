@@ -114,7 +114,8 @@ const navigateTo = (module) => {
       router.push({ name: 'AirportGis' }); // 跳转到 GIS Dashboard
       break;
     case 'monitor':
-      router.push({ name: 'AirportMonitor' }); // 跳转到大屏
+      // 暂时提示开发中，因为AirportMonitor组件尚未实现
+      alert('实时监控大屏模块开发中...');
       break;
     case 'report':
       // 暂时跳到故障诊断或提示开发中
