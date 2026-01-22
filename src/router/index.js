@@ -117,7 +117,7 @@ const routes = [
                 path: 'gis',
                 name: 'AirportGis',
                 component: AirportGis,
-                meta: { requiresAuth: false }
+                meta: { requiresAuth: true }
             }
         ]
     },
