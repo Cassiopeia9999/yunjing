@@ -1,333 +1,225 @@
 <template>
-  <div class="dashboard">
-    <!-- 地图容器区域，占据整个空间 -->
-    <div class="map-container-wrapper">
+  <div class="gis-dashboard">
+    <div class="map-wrapper">
       <MapContainer @map-ready="handleMapReady" />
-      
-      <!-- 浮动控制面板容器 -->
-      <div class="floating-controls">
-        <!-- 底图切换控件 - 右上角，点击下拉 -->
-        <div class="control-panel base-map-panel">
-          <div 
-            class="panel-header" 
-            @click="toggleBaseMapPanel"
-          >
-            <span class="panel-icon">🗺️</span>
-            <span class="panel-title">底图切换</span>
-            <span class="panel-toggle" :class="{ expanded: isBaseMapPanelExpanded }">
-              {{ isBaseMapPanelExpanded ? '▼' : '▶' }}
-            </span>
-          </div>
-          <div 
-            class="panel-content" 
-            v-show="isBaseMapPanelExpanded"
-          >
-            <BaseMapSwitch
-                v-if="mapInst"
-                :map-instance="mapInst"
-                @change-crs="handleCrsChange"
-            />
-          </div>
+    </div>
+
+    <div class="header-bar">
+      <div class="project-title">
+        <div class="logo-icon">✈️</div>
+        <div class="text-group">
+          <h1>机场道面智慧管养平台</h1>
+          <span class="subtitle">Digital Twin Pavement Management System</span>
         </div>
-        
-        <!-- 业务图层管理控件 - 左上角，点击下拉 -->
-        <div class="control-panel layer-management-panel">
-          <div 
-            class="panel-header" 
-            @click="toggleLayerPanel"
-          >
-            <span class="panel-icon">📋</span>
-            <span class="panel-title">图层管理</span>
-            <span class="panel-toggle" :class="{ expanded: isLayerPanelExpanded }">
-              {{ isLayerPanelExpanded ? '▼' : '▶' }}
-            </span>
+      </div>
+      <div class="status-widget">
+        <span class="status-dot online"></span> 实时监控中
+      </div>
+    </div>
+
+    <div class="right-toolbar">
+
+      <div class="tool-buttons">
+        <button
+            class="tool-btn"
+            :class="{ active: activePanel === 'data' }"
+            @click="togglePanel('data')"
+            title="业务数据"
+        >
+          <span class="icon">📊</span>
+          <span class="label">数据</span>
+        </button>
+
+        <button
+            class="tool-btn"
+            :class="{ active: activePanel === 'layer' }"
+            @click="togglePanel('layer')"
+            title="图层管理"
+        >
+          <span class="icon">📚</span>
+          <span class="label">图层</span>
+        </button>
+
+        <button
+            class="tool-btn"
+            :class="{ active: activePanel === 'basemap' }"
+            @click="togglePanel('basemap')"
+            title="底图切换"
+        >
+          <span class="icon">🌍</span>
+          <span class="label">底图</span>
+        </button>
+      </div>
+
+      <transition name="slide-fade">
+        <div class="panel-container" v-show="activePanel" style="width: 340px;">
+
+          <div class="panel-header">
+            <h3>{{ activePanelTitle }}</h3>
+            <button class="close-btn" @click="closePanel">×</button>
           </div>
-          <div 
-            class="panel-content layer-content" 
-            v-show="isLayerPanelExpanded"
-          >
+
+          <div class="panel-body custom-scroll" :class="{ 'no-padding': activePanel === 'data' }">
+
+            <DataBoard
+                v-if="activePanel === 'data'"
+                :list="featureTableList"
+                @locate="handleLocateFeature"
+            />
+
             <LayerControl
-                v-if="mapInst"
+                v-if="activePanel === 'layer' && mapInst"
                 :layers="layerList"
                 @toggle="toggleLayer"
                 @reorder="reorderLayers"
             />
+
+            <BaseMapSwitch
+                v-if="activePanel === 'basemap'"
+                :list="baseMapList"
+                :current-key="currentBaseMapKey"
+                @switch="handleBaseMapSwitch"
+            />
           </div>
         </div>
-      </div>
+      </transition>
     </div>
+
   </div>
 </template>
 
 <script setup>
-import { shallowRef, ref, onMounted } from 'vue';
+import { shallowRef, ref, computed } from 'vue';
 import MapContainer from '@/gis/components/MapContainer.vue';
 import LayerControl from '@/gis/components/LayerControl.vue';
 import BaseMapSwitch from '@/gis/components/BaseMapSwitch.vue';
+// 引入新组件
+import DataBoard from '@/gis/components/DataBoard.vue';
+
 import { useLayerManager } from '@/gis/core/useLayerManager.js';
+import { useBaseMap } from '@/gis/core/useBaseMap.js';
 import { BUSINESS_LAYERS_CONFIG } from '@/gis/config/layerConfig.js';
 import L from 'leaflet';
 
 const mapInst = shallowRef(null);
-const { layerList, initLayers, toggleLayer, reorderLayers } = useLayerManager(mapInst);
 
-// 控制面板展开状态
-const isBaseMapPanelExpanded = ref(false);
-const isLayerPanelExpanded = ref(false);
+// 解构出 featureTableList
+const { layerList, featureTableList, initLayers, toggleLayer, reorderLayers } = useLayerManager(mapInst);
+const { baseMapList, currentBaseMapKey, setBaseMap } = useBaseMap(mapInst);
 
-// 自定义瓦片图层实例
-let customTileLayer = null;
+const activePanel = ref('layer');
 
-// 测试GeoJSON数据
-const testGeoJSONData = {
-  "type": "FeatureCollection",
-  "features": [
-    {
-      "type": "Feature",
-      "geometry": {
-        "coordinates": [
-          [103.98198524355136, 30.656042039844614],
-          [103.98198698978139, 30.65604266501561],
-          [103.98198909922745, 30.65604295325885]
-        ],
-        "type": "LineString"
-      },
-      "properties": {
-        "date": 1725961256828,
-        "severity": "DL_NORMAL",
-        "area": 0.07711241970092751,
-        "typeName": "表观病害",
-        "length": 0.3855620985046375,
-        "disCode": "4",
-        "archiveId": "",
-        "disType": "横向裂缝",
-        "imageUrl": "",
-        "name": "2.4L-1",
-        "id": 1134614,
-        "status": "UNCHANGED"
-      }
-    }
-  ]
+const activePanelTitle = computed(() => {
+  if (activePanel.value === 'data') return '业务数据'; // 新增标题
+  if (activePanel.value === 'layer') return '业务图层';
+  if (activePanel.value === 'basemap') return '底图切换';
+  return '';
+});
+
+const togglePanel = (panelName) => {
+  activePanel.value = activePanel.value === panelName ? null : panelName;
 };
 
-// 地图加载完成
+const closePanel = () => {
+  activePanel.value = null;
+};
+
 const handleMapReady = (map) => {
   mapInst.value = map;
-  
-  // 添加自定义瓦片图层
-  addCustomTileLayer();
-  
-  // 初始化业务图层
-  initLayers(BUSINESS_LAYERS_CONFIG, testGeoJSONData);
-  
-  // 调整地图视角以适配GeoJSON数据
-  fitMapToGeoJSON();
+  setBaseMap('tianditu_vec');
+  initLayers(BUSINESS_LAYERS_CONFIG);
 };
 
-// 添加自定义瓦片图层
-const addCustomTileLayer = () => {
-  if (!mapInst.value) return;
-  
-  // 移除已存在的自定义瓦片图层
-  if (customTileLayer) {
-    mapInst.value.removeLayer(customTileLayer);
-  }
-  
-  // 添加新的自定义瓦片图层
-  customTileLayer = L.tileLayer('https://home.gm-robot.com:9104/image/103919/image/tile/{z}/{x}/{y}.png', {
-    maxZoom: 27,
-    minZoom: 2,
-    tileSize: 256,
-    opacity: 0.8,
-    attribution: 'Custom Tile Layer'
-  }).addTo(mapInst.value);
-  
-  console.log('Custom tile layer added');
+const handleBaseMapSwitch = (key) => {
+  setBaseMap(key);
 };
 
-// 调整地图视角以适配GeoJSON数据
-const fitMapToGeoJSON = () => {
-  if (!mapInst.value) return;
-  
-  // 创建临时GeoJSON图层用于计算边界
-  const tempLayer = L.geoJSON(testGeoJSONData);
-  const bounds = tempLayer.getBounds();
-  
-  // 调整地图视角
-  mapInst.value.fitBounds(bounds, { padding: [50, 50] });
-  
-  // 设置合适的缩放级别
-  mapInst.value.setZoom(18);
-  
-  // 移除临时图层
-  tempLayer.remove();
-  
-  console.log('Map view adjusted to fit GeoJSON data');
-};
+// 3. 处理列表点击定位
+const handleLocateFeature = (item) => {
+  if (!mapInst.value || !item.center) return;
 
-// 底图切换 (处理 WGS84 <-> GCJ02 逻辑)
-const handleCrsChange = (crsType) => {
-  console.log('坐标系变更为:', crsType);
-  // 这里可以根据坐标系类型重新加载数据
-};
+  // 飞到目标点
+  mapInst.value.flyTo([item.center.lat, item.center.lng], 18, {
+    duration: 1.5
+  });
 
-// 切换底图面板展开状态
-const toggleBaseMapPanel = () => {
-  isBaseMapPanelExpanded.value = !isBaseMapPanelExpanded.value;
-  // 如果展开底图面板，关闭图层面板
-  if (isBaseMapPanelExpanded.value) {
-    isLayerPanelExpanded.value = false;
-  }
-};
-
-// 切换图层管理面板展开状态
-const toggleLayerPanel = () => {
-  isLayerPanelExpanded.value = !isLayerPanelExpanded.value;
-  // 如果展开图层面板，关闭底图面板
-  if (isLayerPanelExpanded.value) {
-    isBaseMapPanelExpanded.value = false;
-  }
+  // 可选：创建一个高亮光圈或者打开 Popup
+  // 简单的做法是打开 Popup，需要通过图层实例找到具体的 Layer，这里简化处理直接飞过去
+  console.log('Locating:', item.name, item.center);
 };
 </script>
 
 <style scoped>
-/* 重置默认样式，确保全屏显示 */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-/* 主容器，全屏显示 */
-.dashboard {
-  display: flex;
+/* 这里保留你原有的样式 */
+.gis-dashboard {
+  position: relative;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background-color: #f5f7fa;
+  background-color: #050a14;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-/* 地图容器包装器，占据整个空间 */
-.map-container-wrapper {
-  flex: 1;
-  position: relative;
-  height: 100%;
-  min-height: 100%;
-  background-color: #e0e0e0;
+.map-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+.header-bar {
+  position: absolute; top: 0; left: 0; width: 100%; height: 80px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+  z-index: 10; display: flex; justify-content: space-between; align-items: center;
+  padding: 0 30px; pointer-events: none;
 }
+.project-title { display: flex; align-items: center; gap: 15px; pointer-events: auto; }
+.logo-icon { font-size: 32px; filter: drop-shadow(0 0 10px rgba(0,168,255,0.5)); }
+.text-group h1 { margin: 0; font-size: 22px; color: #fff; font-weight: 600; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+.text-group .subtitle { font-size: 12px; color: rgba(255,255,255,0.7); display: block; margin-top: 2px; text-transform: uppercase; }
+.status-widget { color: rgba(255,255,255,0.9); font-size: 14px; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 20px; backdrop-filter: blur(4px); pointer-events: auto; display: flex; align-items: center; gap: 8px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background-color: #52c41a; box-shadow: 0 0 8px #52c41a; }
 
-/* 确保地图容器占据整个父元素空间 */
-:deep(.map-view) {
-  width: 100% !important;
-  height: 100% !important;
-  background-color: #f0f2f5;
+.right-toolbar {
+  position: absolute; top: 90px; right: 20px; z-index: 20;
+  display: flex; align-items: flex-start; gap: 12px; flex-direction: row-reverse;
 }
-
-/* 浮动控制面板容器 */
-.floating-controls {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none; /* 让点击事件穿透到地图 */
-  z-index: 1000;
+.tool-buttons { display: flex; flex-direction: column; gap: 12px; }
+.tool-btn {
+  width: 48px; height: 48px; border-radius: 8px; border: none;
+  background: rgba(255, 255, 255, 0.9); box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); color: #555;
 }
+.tool-btn:hover { background: #fff; transform: translateX(-2px); color: #1890ff; }
+.tool-btn.active { background: #1890ff; color: white; }
+.tool-btn .icon { font-size: 20px; line-height: 1; margin-bottom: 2px; }
+.tool-btn .label { font-size: 10px; transform: scale(0.9); }
 
-/* 通用控制面板样式 */
-.control-panel {
-  position: absolute;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  pointer-events: auto; /* 恢复点击事件 */
-  transition: all 0.3s ease;
+.panel-container {
+  /* 这里由行内样式 style="width: 340px" 覆盖，但保留默认值 */
+  width: 320px;
+  background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+  border-radius: 8px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  overflow: hidden; border: 1px solid rgba(255,255,255,0.5);
+  display: flex; flex-direction: column; max-height: calc(100vh - 120px);
 }
-
-/* 控制面板头部 */
 .panel-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background-color: #f8f9fa;
-  cursor: pointer;
-  user-select: none;
-  border-bottom: 1px solid #e9ecef;
+  padding: 14px 16px; background: rgba(245, 247, 250, 0.8);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  display: flex; justify-content: space-between; align-items: center;
 }
+.panel-header h3 { margin: 0; font-size: 15px; font-weight: 600; color: #1f2937; }
+.close-btn { background: none; border: none; font-size: 20px; color: #999; cursor: pointer; padding: 0 4px; }
+.close-btn:hover { color: #333; }
 
-.panel-header:hover {
-  background-color: #e9ecef;
-}
+.panel-body { padding: 12px; overflow-y: auto; }
+/* DataBoard 不需要 padding，因为它自带 list 滚动 */
+.panel-body.no-padding { padding: 0; }
 
-/* 面板图标 */
-.panel-icon {
-  font-size: 18px;
-}
+.slide-fade-enter-active, .slide-fade-leave-active { transition: all 0.3s ease; }
+.slide-fade-enter-from, .slide-fade-leave-to { transform: translateX(20px); opacity: 0; }
+.custom-scroll::-webkit-scrollbar { width: 4px; }
+.custom-scroll::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
 
-/* 面板标题 */
-.panel-title {
-  flex: 1;
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
+:deep(.layer-control-panel), :deep(.base-map-switch) {
+  width: 100% !important; box-shadow: none !important;
+  background: transparent !important; border-radius: 0 !important; padding: 0 !important;
 }
-
-/* 面板展开/收起按钮 */
-.panel-toggle {
-  font-size: 12px;
-  color: #666;
-  transition: transform 0.3s ease;
-}
-
-.panel-toggle.expanded {
-  transform: rotate(90deg);
-}
-
-/* 面板内容区域 */
-.panel-content {
-  padding: 16px;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-/* 底图切换面板 - 右上角 */
-.base-map-panel {
-  top: 20px;
-  right: 20px;
-  min-width: 200px;
-}
-
-/* 图层管理面板 - 左上角 */
-.layer-management-panel {
-  top: 20px;
-  left: 20px;
-  min-width: 250px;
-  max-width: 300px;
-}
-
-/* 图层内容区域 */
-.layer-content {
-  padding: 8px;
-}
-
-/* 自定义滚动条 */
-.panel-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.panel-content::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.panel-content::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.panel-content::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
-}
+:deep(.layer-control-panel .panel-header) { display: none !important; }
+:deep(.layer-list) { max-height: none !important; }
 </style>

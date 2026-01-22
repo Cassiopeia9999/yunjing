@@ -189,6 +189,77 @@
 	// 添加自定义瓦片图层
 	map.add(layer);
 	
+	// 创建第二个自定义瓦片图层
+	var layer2 = new AMap.TileLayer.Flexible({
+		cacheSize: 300,
+		zIndex: 4, // 更高的zIndex，显示在第一个自定义图层之上
+		tileSize: 256,
+		dataZooms:[2, 27],
+		createTile: function (x, y, z, success, fail) {
+			const canvas = document.createElement('canvas');
+			canvas.width = canvas.height = 256;
+			const ctx = canvas.getContext('2d');
+
+			// 获取当前 GCJ-02 瓦片的范围
+			const bounds = getTileBounds(x, y, z);
+
+			// 将 GCJ-02 范围转换为 WGS-84 范围
+			const wgsTL = gcj02_To_wgs84(bounds.minLon, bounds.maxLat);
+			const wgsRD = gcj02_To_wgs84(bounds.maxLon, bounds.minLat);
+
+			// 计算 WGS-84 瓦片的 x, y 范围
+			let tileTL = lonLatToTileXY(wgsTL.lng, wgsTL.lat, z);
+			let tileRD = lonLatToTileXY(wgsRD.lng, wgsRD.lat, z);
+
+			// 下载并拼接所有相关的 WGS-84 瓦片
+			const promises = [];
+			for (let wgsX = tileTL.x; wgsX <= tileRD.x; wgsX++) {
+				for (let wgsY = tileTL.y; wgsY <= tileRD.y; wgsY++) {
+					// 使用不同的瓦片URL或参数，这里可以替换为实际的第二个瓦片源
+					const url = `https://home.gm-robot.com:9104/image/103919/image/tile/${z}/${wgsX}/${wgsY}.png`;
+					promises.push(
+						loadTile(url)
+							.then(img => ({ img, wgsX, wgsY }))
+							.catch(() => {
+								console.log('Second layer tile failed:', wgsX, wgsY);
+							})
+					);
+				}
+			}
+
+			// 等待所有瓦片下载完成
+			Promise.all(promises).then(results => {
+				results.forEach(result => {
+					if (result) {
+						const { img, wgsX, wgsY } = result;
+						// 计算当前 WGS-84 瓦片的范围
+						const wgsBounds = getTileBounds(wgsX, wgsY, z);
+						// 转到高德坐标系下计算
+						const picPoint = wgs84ToGcj02(wgsBounds.minLon, wgsBounds.maxLat);
+						const picPointRD = wgs84ToGcj02(wgsBounds.maxLon, wgsBounds.minLat);
+						let picTL = lonLatToGlobalPixelXY(picPoint.lng, picPoint.lat, z);
+						let tileTL1 = lonLatToGlobalPixelXY(bounds.minLon, bounds.maxLat, z);
+						let picRD = lonLatToGlobalPixelXY(picPointRD.lng, picPointRD.lat, z);
+						let tileRD = lonLatToGlobalPixelXY(bounds.maxLon, bounds.minLat, z);
+						
+						let offsetX = tileTL1.xp - picTL.xp;
+						let offsetY = tileTL1.yp - picTL.yp;
+						let width = picRD.xp - picTL.xp;
+						let height = picRD.yp - picTL.yp;
+
+						// 绘制瓦片到 Canvas 上，添加透明度以区分不同图层
+						ctx.globalAlpha = 0.7;
+						ctx.drawImage(img, -offsetX, -offsetY, width+1, height+1);
+						ctx.globalAlpha = 1.0;
+					}
+				});
+				success(canvas);
+			}).catch(fail);
+		}
+	});
+	
+	// 添加第二个自定义瓦片图层
+	map.add(layer2);
 	
 	// GeoJSON 数据
         let geojsonData = {

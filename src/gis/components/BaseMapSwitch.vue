@@ -1,96 +1,161 @@
 <template>
   <div class="base-map-switch">
     <div
-        v-for="item in BASE_MAP_CONFIG"
+        v-for="item in list"
         :key="item.key"
-        class="map-btn"
+        class="map-card"
         :class="{ active: currentKey === item.key }"
-        @click="changeBaseMap(item)"
+        @click="handleSwitch(item.key)"
     >
-      {{ item.name }}
+      <div class="card-preview" :style="getPreviewStyle(item)">
+        <span class="type-icon">{{ getTypeIcon(item) }}</span>
+        <div class="active-mask" v-if="currentKey === item.key">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="white">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="card-label">
+        {{ item.name }}
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
-import L from 'leaflet';
-import { BASE_MAP_CONFIG } from '@/gis/config/baseMaps';
-
 const props = defineProps({
-  mapInstance: {
-    type: Object, // Leaflet Map 实例
-    required: false // 初始可能为空
-  }
+  currentKey: { type: String, required: true },
+  list: { type: Array, default: () => [] }
 });
 
-const emit = defineEmits(['change-crs']); // 发出坐标系变更事件
+const emit = defineEmits(['switch']);
 
-const currentKey = ref(BASE_MAP_CONFIG[0].key);
-const currentLayer = ref(null);
-const annotationLayer = ref(null); // 用于天地图注记
-
-// 切换底图核心逻辑
-const changeBaseMap = (config) => {
-  if (!props.mapInstance) return;
-  const map = props.mapInstance;
-
-  currentKey.value = config.key;
-
-  // 1. 移除旧图层
-  if (currentLayer.value) map.removeLayer(currentLayer.value);
-  if (annotationLayer.value) map.removeLayer(annotationLayer.value);
-
-  // 2. 创建新图层
-  currentLayer.value = L.tileLayer(config.url, config.options).addTo(map);
-
-  // 2.1 如果有注记层 (如天地图)
-  if (config.annotationUrl) {
-    annotationLayer.value = L.tileLayer(config.annotationUrl, {
-      ...config.options,
-      zIndex: 1 // 注记要在底图之上
-    }).addTo(map);
-  }
-
-  // 3. 将新底图推送到最底层 (避免遮挡业务图层)
-  currentLayer.value.bringToBack();
-
-  // 4. 通知父组件坐标系类型 (决定是否需要对业务数据进行纠偏)
-  emit('change-crs', config.type); // 'gcj02' 或 'wgs84'
+const handleSwitch = (key) => {
+  emit('switch', key);
 };
 
-// 监听 map 实例就绪，初始化默认底图
-watch(() => props.mapInstance, (newMap) => {
-  if (newMap) {
-    changeBaseMap(BASE_MAP_CONFIG[0]);
+// 根据地图类型生成简单的 CSS 渐变背景，提升视觉区分度
+const getPreviewStyle = (item) => {
+  const k = item.key.toLowerCase();
+  let gradient = '';
+
+  if (k.includes('img') || k.includes('satellite') || k.includes('private')) {
+    // 影像/卫星：深蓝绿渐变
+    gradient = 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)';
+  } else if (k.includes('ter') || k.includes('terrain')) {
+    // 地形：土黄渐变
+    gradient = 'linear-gradient(135deg, #d7d2cc 0%, #304352 100%)';
+  } else if (k.includes('sea') || k.includes('blue')) {
+    // 海图：海洋蓝
+    gradient = 'linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%)';
+  } else if (k.includes('google')) {
+    // 谷歌：清爽灰白
+    gradient = 'linear-gradient(135deg, #E0EAFC 0%, #CFDEF3 100%)';
+  } else {
+    // 默认矢量：米色/浅灰
+    gradient = 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)';
   }
-});
+
+  return { background: gradient };
+};
+
+// 简单的文字图标映射
+const getTypeIcon = (item) => {
+  const k = item.key.toLowerCase();
+  if (k.includes('img') || k.includes('private')) return '🛰️'; // 卫星
+  if (k.includes('ter')) return '⛰️'; // 山地
+  if (k.includes('sea')) return '🌊'; // 海洋
+  if (k.includes('gaode')) return '🗺️'; // 高德
+  if (k.includes('google')) return 'G'; // Google
+  return '📍'; // 默认
+};
 </script>
 
 <style scoped>
 .base-map-switch {
-  background: white;
-  padding: 4px;
-  border-radius: 4px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  display: flex;
-  gap: 4px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 两列布局 */
+  gap: 12px;
 }
 
-.map-btn {
-  padding: 6px 12px;
-  font-size: 13px;
+.map-card {
+  position: relative;
+  border-radius: 8px;
   cursor: pointer;
-  border-radius: 3px;
-  color: #555;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+  background-color: #fff;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
-.map-btn:hover { background: #f3f4f6; }
+.map-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
 
-.map-btn.active {
-  background: #1890ff;
-  color: white;
+/* 选中状态：蓝色边框 */
+.map-card.active {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* 预览区域 (模拟缩略图) */
+.card-preview {
+  height: 60px;
+  width: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.type-icon {
+  font-size: 20px;
+  opacity: 0.8;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+/* 选中时的右上角对勾遮罩 */
+.active-mask {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 24px 24px 0; /* 三角形 */
+  border-color: transparent #1890ff transparent transparent;
+  z-index: 2;
+}
+
+.active-mask svg {
+  position: absolute;
+  top: 1px;
+  right: -24px;
+  width: 12px;
+  height: 12px;
+}
+
+/* 底部文字标签 */
+.card-label {
+  font-size: 12px;
+  color: #333;
+  padding: 6px 4px;
+  text-align: center;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-weight: 500;
+}
+
+.map-card.active .card-label {
+  color: #1890ff;
+  font-weight: 600;
+  background: #f0f9ff;
 }
 </style>

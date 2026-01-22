@@ -29,6 +29,7 @@ import Login from '@/views/Login.vue'
 import WordCard from '@/views/WordCard.vue'
 
 import { getToken } from '@/utils/auth.js'
+import IntroPage from "@/views/airport/IntroPage.vue";
 
 const routes = [
     // --- 组1：平台门户与子系统 (使用 OutLayout，带统一导航栏) ---
@@ -77,12 +78,7 @@ const routes = [
                 component: AirportHome,
                 meta: { requiresAuth: false }
             },
-            {
-                path: 'airport/gis',
-                name: 'AirportGis', // 2. 首页卡片点击跳转到这里
-                component: AirportGis,
-                meta: { requiresAuth: false }
-            },
+
             // 1.5 通用页面
             { path: 'login', name: 'Login', component: Login, meta: { requiresAuth: false } },
             { path: 'word-card', name: 'WordCard', component: WordCard, meta: { requiresAuth: false } }
@@ -99,6 +95,28 @@ const routes = [
                 path: 'monitor', // 访问地址: /bridge-view/monitor
                 name: 'BridgeMonitor',
                 component: BridgeMonitor,
+                meta: { requiresAuth: false }
+            }
+        ]
+    },
+    // --- 组4：机场智慧管养系统 (使用 FullscreenLayout) ---
+    // [说明] 介绍页和 GIS 地图都需要全屏展示，不受 OutLayout 框架限制
+    {
+        path: '/airport',
+        component: FullscreenLayout,
+        children: [
+            // [新增] 机场系统门户介绍页 (访问地址: /airport/intro)
+            {
+                path: 'intro',
+                name: 'IntroPage',
+                component: IntroPage,
+                meta: { requiresAuth: false }
+            },
+            // 机场 GIS 业务主页 (访问地址: /airport/gis)
+            {
+                path: 'gis',
+                name: 'AirportGis',
+                component: AirportGis,
                 meta: { requiresAuth: false }
             }
         ]
