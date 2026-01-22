@@ -69,7 +69,7 @@
             </div>
           </div>
 
-          <div class="scenario-card" @click="navigateTo('/airport')">
+          <div class="scenario-card" @click="navigateTo('/airport/intro')">
             <div class="card-image airport-img">
               <div class="overlay"></div>
               <span class="status-badge online">运行中</span>

@@ -243,7 +243,7 @@ const scrollToSection = (id) => {
 
 const enterSystem = () => {
   console.log("Entering System...");
-  router.push('/airport/gis'); // 确保路由路径正确
+  router.push('/inner/gis'); // 确保路由路径正确
 };
 </script>
 

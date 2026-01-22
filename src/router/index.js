@@ -130,7 +130,9 @@ const routes = [
         children: [
             // 注意：这里的 Home 如果是指内部首页，可能需要确认是否复用 PortalHome 还是另外的组件
             // 暂时保持原样，如果需要指向原来的桥梁首页，请改为 BridgeHome
-            { path: 'home', name: 'InnerHome', component: AirportHome, meta: { requiresAuth: true } }
+            { path: 'home', name: 'InnerHome', component: AirportHome, meta: { requiresAuth: true } },
+            { path: 'gis', name: 'gis', component: AirportGis, meta: { requiresAuth: true } }
+
         ]
     }
 ]
