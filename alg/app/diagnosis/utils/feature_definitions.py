@@ -1,0 +1,26 @@
+# feature_definitions.py
+FEATURE_DEFINITIONS = [
+    {"id": "zero_crossing_rate", "name": "过零率", "type": "时域特征", "desc": "单位时间内信号变化方向的次数，反映频率特征", "unit": "次/s"},
+    {"id": "variance", "name": "方差", "type": "统计特征", "desc": "衡量信号整体离散程度的重要指标", "unit": "（单位）²"},
+    {"id": "custom_index", "name": "自定义特征", "type": "其他", "desc": "用户自定义或外部导入的特征定义", "unit": "-"},
+    {"id": "harmonic_distortion", "name": "谐波畸变", "type": "频域特征", "desc": "衡量信号谐波干扰程度的特征", "unit": "%"},
+    {"id": "spectral_kurtosis", "name": "频谱峭度", "type": "频域特征", "desc": "频谱中的冲击强度分布情况", "unit": "-"},
+    {"id": "signal_entropy", "name": "信号熵", "type": "统计特征", "desc": "度量信号复杂程度与不确定性的统计量", "unit": "bit"},
+    {"id": "clearance_factor", "name": "间隙因子", "type": "统计特征", "desc": "识别滚动轴承间隙松动的重要特征", "unit": "-"},
+    {"id": "impulse_index", "name": "冲击指标", "type": "时域特征", "desc": "用于识别信号中突变点或冲击", "unit": "-"},
+    {"id": "stft_energy", "name": "STFT能量", "type": "时频特征", "desc": "短时傅里叶变换后计算的能量值", "unit": "dB"},
+    {"id": "cwt_energy", "name": "小波能量", "type": "时频特征", "desc": "连续小波变换后得到的局部能量指标", "unit": "dB"},
+    {"id": "envelope_peak", "name": "包络峰值", "type": "时频特征", "desc": "包络解调信号中的最大幅值", "unit": "V"},
+    {"id": "3x_amp", "name": "3X频率幅值", "type": "频域特征", "desc": "基频三倍频位置的幅值大小", "unit": "V"},
+    {"id": "2x_amp", "name": "2X频率幅值", "type": "频域特征", "desc": "基频二倍频位置的幅值大小", "unit": "V"},
+    {"id": "1x_amp", "name": "1X频率幅值", "type": "频域特征", "desc": "基频位置的频域幅值大小", "unit": "V"},
+    {"id": "max_freq_amp", "name": "最大频率幅值", "type": "频域特征", "desc": "频域中最大幅值对应的频率", "unit": "Hz"},
+    {"id": "std_dev", "name": "标准差", "type": "统计特征", "desc": "反映信号波动强度的指标", "unit": "V"},
+    {"id": "mean", "name": "均值", "type": "统计特征", "desc": "信号所有值的平均数", "unit": "V"},
+    {"id": "kurtosis", "name": "峭度", "type": "统计特征", "desc": "衡量信号是否存在冲击的指标", "unit": "-"},
+    {"id": "skewness", "name": "偏度", "type": "统计特征", "desc": "反映信号分布偏斜程度的统计量", "unit": "-"},
+    {"id": "crest_factor", "name": "峰值因子", "type": "时域特征", "desc": "描述信号中尖峰程度的指标", "unit": "-"},
+    {"id": "peak", "name": "峰值", "type": "时域特征", "desc": "信号中出现的最大绝对值", "unit": "V"},
+    {"id": "rms", "name": "均方根值", "type": "时域特征", "desc": "反映信号整体能量的稳定指标", "unit": "V"},
+]
+
