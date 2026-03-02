@@ -95,6 +95,19 @@
             </div>
           </div>
 
+          <div class="scenario-card" @click="navigateTo('/html-to-pdf')">
+            <div class="card-image pdf-img">
+              <div class="overlay"></div>
+              <span class="status-badge online">运行中</span>
+            </div>
+            <div class="card-content">
+              <div class="icon-box"><i class="fa-solid fa-file-pdf"></i></div>
+              <h3>HTML 转 PDF</h3>
+              <p>将 HTML 压缩包转换为 PDF 文件，支持多页合并与自定义页面尺寸。</p>
+              <div class="link-arrow">进入工具 <i class="fa-solid fa-arrow-right"></i></div>
+            </div>
+          </div>
+
         </div>
       </div>
     </section>
@@ -211,6 +224,9 @@ h2 { text-align: center; font-size: 2rem; margin-bottom: 60px; }
 
 /* [新增] 机场图片 */
 .airport-img { background-image: url('https://images.unsplash.com/photo-1474302770737-173ee21bab63?q=80&w=800&auto=format'); }
+
+/* [新增] PDF 工具图片 */
+.pdf-img { background-image: url('https://images.unsplash.com/photo-1586281380349-632531db7ed4?q=80&w=800&auto=format'); }
 
 .overlay { position: absolute; inset: 0; background: linear-gradient(to top, var(--bg-card), transparent); }
 
